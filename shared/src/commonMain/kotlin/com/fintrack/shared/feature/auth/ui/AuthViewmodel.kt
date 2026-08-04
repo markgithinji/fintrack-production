@@ -300,7 +300,8 @@ class AuthViewModel(
         val newState = currentState.copy(
             password = password,
             passwordError = null,
-            activeError = if (currentState.activeError == currentState.passwordError) null else currentState.activeError,
+            confirmPasswordError = if (result.confirmPasswordResult is ValidationResult.Success) null else currentState.confirmPasswordError,
+            activeError = if (currentState.activeError == currentState.passwordError || (result.confirmPasswordResult is ValidationResult.Success && currentState.activeError == currentState.confirmPasswordError)) null else currentState.activeError,
             passwordStrength = result.passwordStrength,
             isFormValid = result.isValid
         )
@@ -320,11 +321,15 @@ class AuthViewModel(
 
         val isDirty = currentState.isPasswordDirty || trigger == ValidationTrigger.FocusLoss
         val showError = isDirty && passwordError != null
+        
+        // Also update confirm password error if it was a mismatch and is now resolved
+        val confirmPasswordError = if (result.confirmPasswordResult is ValidationResult.Success) null else currentState.confirmPasswordError
 
         val newState = currentState.copy(
             passwordError = if (showError) passwordError else null,
+            confirmPasswordError = confirmPasswordError,
             activeError = (if (showError) passwordError else null) ?: currentState.nameError
-            ?: currentState.emailError ?: currentState.confirmPasswordError,
+            ?: currentState.emailError ?: confirmPasswordError,
             isFormValid = result.isValid,
             isPasswordDirty = isDirty
         )
@@ -342,7 +347,8 @@ class AuthViewModel(
         val newState = currentState.copy(
             confirmPassword = confirmPassword,
             confirmPasswordError = null,
-            activeError = if (currentState.activeError == currentState.confirmPasswordError) null else currentState.activeError,
+            passwordError = if (result.passwordResult is ValidationResult.Success) null else currentState.passwordError,
+            activeError = if (currentState.activeError == currentState.confirmPasswordError || (result.passwordResult is ValidationResult.Success && currentState.activeError == currentState.passwordError)) null else currentState.activeError,
             isFormValid = result.isValid
         )
         _registerFormState.value = newState
@@ -363,10 +369,14 @@ class AuthViewModel(
         val isDirty = currentState.isConfirmPasswordDirty || trigger == ValidationTrigger.FocusLoss
         val showError = isDirty && confirmPasswordError != null
 
+        // Also update password error if it was resolved
+        val passwordError = if (result.passwordResult is ValidationResult.Success) null else currentState.passwordError
+
         val newState = currentState.copy(
             confirmPasswordError = if (showError) confirmPasswordError else null,
+            passwordError = passwordError,
             activeError = (if (showError) confirmPasswordError else null) ?: currentState.nameError
-            ?: currentState.emailError ?: currentState.passwordError,
+            ?: currentState.emailError ?: passwordError,
             isFormValid = result.isValid,
             isConfirmPasswordDirty = isDirty
         )
@@ -405,6 +415,16 @@ class AuthViewModel(
             )
             return
         }
+
+        // Clear errors if validation passes
+        _registerFormState.value = formState.copy(
+            nameError = null,
+            emailError = null,
+            passwordError = null,
+            confirmPasswordError = null,
+            activeError = null,
+            isFormValid = true
+        )
 
         _registerState.value = AuthState.Loading("Creating account...")
         viewModelScope.launch {

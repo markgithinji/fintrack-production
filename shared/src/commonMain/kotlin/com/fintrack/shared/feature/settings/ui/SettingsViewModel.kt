@@ -441,11 +441,35 @@ class SettingsViewModel(
     }
 
     fun updateNewPassword(password: String) {
-        _changePasswordFormState.update { it.copy(newPassword = password, newPasswordError = null) }
+        val currentState = _changePasswordFormState.value
+        val result = validationUseCase(
+            currentPassword = currentState.currentPassword,
+            newPassword = password,
+            confirmPassword = currentState.confirmPassword
+        )
+        _changePasswordFormState.update { 
+            it.copy(
+                newPassword = password, 
+                newPasswordError = null,
+                confirmPasswordError = if (result.confirmPasswordResult is ValidationResult.Success) null else it.confirmPasswordError
+            ) 
+        }
     }
 
     fun updateConfirmPassword(password: String) {
-        _changePasswordFormState.update { it.copy(confirmPassword = password, confirmPasswordError = null) }
+        val currentState = _changePasswordFormState.value
+        val result = validationUseCase(
+            currentPassword = currentState.currentPassword,
+            newPassword = currentState.newPassword,
+            confirmPassword = password
+        )
+        _changePasswordFormState.update { 
+            it.copy(
+                confirmPassword = password, 
+                confirmPasswordError = null,
+                newPasswordError = if (result.newPasswordResult is ValidationResult.Success) null else it.newPasswordError
+            ) 
+        }
     }
 
     fun changePassword() {
@@ -465,6 +489,15 @@ class SettingsViewModel(
                 )
             }
             return
+        }
+
+        // Clear errors if validation passes
+        _changePasswordFormState.update {
+            it.copy(
+                currentPasswordError = null,
+                newPasswordError = null,
+                confirmPasswordError = null
+            )
         }
 
         viewModelScope.launch {
