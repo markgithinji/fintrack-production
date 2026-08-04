@@ -83,6 +83,7 @@ class TransactionViewModel(
     private var recentTransactionsJob: Job? = null
     private val importJobs = mutableMapOf<String?, Job>()
     private val lastAutoSyncTimes = mutableMapOf<String?, Instant>()
+    private val sessionSyncStarted = mutableSetOf<String?>()
     
     private var lastPagingParams: TransactionPagingParams? = null
     private var cachedPagingFlow: Flow<PagingData<Transaction>>? = null
@@ -96,6 +97,7 @@ class TransactionViewModel(
         cancelImport(accountId)
 
         lastAutoSyncTimes[accountId] = Clock.System.now()
+        sessionSyncStarted.add(accountId)
         val job = viewModelScope.launch {
             _importState.update { it + (accountId to Result.Loading) }
             _importProgress.update { it + (accountId to 0f) }
@@ -117,12 +119,25 @@ class TransactionViewModel(
         importJobs[accountId] = job
     }
 
-    fun autoSyncTransactions(accountId: String? = null) {
+    fun autoSyncTransactions(accountId: String? = null, lastSyncedAt: Instant? = null) {
         val now = Clock.System.now()
-        val lastSync = lastAutoSyncTimes[accountId]
-        if (lastSync == null || (now - lastSync) >= 2.minutes) {
-            importTransactions(accountId)
+        val isFirstTimeInSession = !sessionSyncStarted.contains(accountId)
+        
+        // App Open: 2 mins cooldown | Screen Resume: 15 mins cooldown
+        val cooldown = if (isFirstTimeInSession) 2.minutes else 15.minutes
+
+        // 1. Check against the persistent last successful sync time (from DB)
+        if (lastSyncedAt != null && (now - lastSyncedAt) < cooldown) {
+            return
         }
+        
+        // 2. Check against the in-memory last attempt time
+        val lastInMemorySync = lastAutoSyncTimes[accountId]
+        if (lastInMemorySync != null && (now - lastInMemorySync) < cooldown) {
+            return
+        }
+
+        importTransactions(accountId)
     }
 
     fun resetImportState(accountId: String? = null) {
