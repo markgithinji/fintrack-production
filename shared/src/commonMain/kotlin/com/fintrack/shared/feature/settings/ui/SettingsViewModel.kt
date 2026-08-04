@@ -237,12 +237,30 @@ class SettingsViewModel(
     fun setMpesaListenerEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsDataSource.setMpesaListenerEnabled(enabled)
+            if (enabled) {
+                val linkedIds = settingsDataSource.mpesaLinkedAccountIds.first()
+                if (linkedIds.isEmpty()) {
+                    _error.value = "Tracking enabled, but no account is linked to M-Pesa. Enable 'M-Pesa SMS Link' in the Accounts screen."
+                }
+                if (!notificationService.areNotificationsEnabled()) {
+                    _showPermissionRequest.value = true
+                }
+            }
         }
     }
 
     fun setEquityListenerEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsDataSource.setEquityListenerEnabled(enabled)
+            if (enabled) {
+                val linkedIds = settingsDataSource.equityLinkedAccountIds.first()
+                if (linkedIds.isEmpty()) {
+                    _error.value = "Tracking enabled, but no account is linked to Equity. Enable 'Equity Bank SMS Link' in the Accounts screen."
+                }
+                if (!notificationService.areNotificationsEnabled()) {
+                    _showPermissionRequest.value = true
+                }
+            }
         }
     }
 

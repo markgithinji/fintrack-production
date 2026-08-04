@@ -17,4 +17,5 @@ interface NotificationService {
     fun showSummaryNotification(title: String, content: String)
     fun scheduleSummaryNotification(time: LocalTime)
     fun cancelSummaryNotification()
+    fun areNotificationsEnabled(): Boolean
 }
