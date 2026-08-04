@@ -81,7 +81,7 @@ class TransactionViewModel(
 
     private var lastLoadedRecentAccountId: String? = null
     private var recentTransactionsJob: Job? = null
-    private var importJob: Job? = null
+    private val importJobs = mutableMapOf<String?, Job>()
     private val lastAutoSyncTimes = mutableMapOf<String?, Instant>()
     
     private var lastPagingParams: TransactionPagingParams? = null
@@ -92,11 +92,11 @@ class TransactionViewModel(
             return
         }
         
-        // Stop any existing sync and clean up loading states to avoid stale indicators
-        cancelImport()
+        // Stop any existing sync for THIS specific account if it's already running
+        cancelImport(accountId)
 
         lastAutoSyncTimes[accountId] = Clock.System.now()
-        importJob = viewModelScope.launch {
+        val job = viewModelScope.launch {
             _importState.update { it + (accountId to Result.Loading) }
             _importProgress.update { it + (accountId to 0f) }
             try {
@@ -110,8 +110,11 @@ class TransactionViewModel(
                     _importState.update { it + (accountId to Result.Error(e)) }
                     _importEvents.emit(ImportEvent.Error(accountId, e))
                 }
+            } finally {
+                importJobs.remove(accountId)
             }
         }
+        importJobs[accountId] = job
     }
 
     fun autoSyncTransactions(accountId: String? = null) {
@@ -127,15 +130,30 @@ class TransactionViewModel(
         _importProgress.update { it - accountId }
     }
 
-    fun cancelImport() {
-        importJob?.cancel()
+    fun cancelImport(accountId: String? = null) {
+        if (accountId == null && importJobs.isNotEmpty()) {
+            // Cancel all if no ID provided (legacy behavior/global cancel)
+            importJobs.values.forEach { it.cancel() }
+            importJobs.clear()
+        } else {
+            importJobs[accountId]?.cancel()
+            importJobs.remove(accountId)
+        }
+
         _importState.update { currentMap ->
-            currentMap.filterValues { it !is Result.Loading }
+            if (accountId == null) {
+                currentMap.filterValues { it !is Result.Loading }
+            } else {
+                currentMap.filter { (id, state) -> id != accountId || state !is Result.Loading }
+            }
         }
         _importProgress.update { currentMap ->
-            // Also clean up progress for accounts that were loading
-            currentMap.filter { entry -> 
-                _importState.value[entry.key] !is Result.Loading 
+            if (accountId == null) {
+                currentMap.filter { entry -> 
+                    _importState.value[entry.key] !is Result.Loading 
+                }
+            } else {
+                currentMap.filter { entry -> entry.key != accountId || _importState.value[entry.key] !is Result.Loading }
             }
         }
     }

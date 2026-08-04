@@ -325,8 +325,7 @@ fun HomeScreen(
                     syncProgress = importProgress,
                     onAccountSelected = { accountId ->
                         onAccountSelected(accountId)
-                        // Cancel existing sync and clear progress if we switch accounts
-                        transactionsViewModel.cancelImport()
+                        // No longer canceling sync here to allow background sync to continue
                     },
                     onToggleBalanceVisibility = { settingsViewModel.setBalanceHidden(it) },
                     onManualSync = {
