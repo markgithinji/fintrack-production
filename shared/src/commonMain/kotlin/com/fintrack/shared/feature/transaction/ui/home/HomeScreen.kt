@@ -167,6 +167,15 @@ fun HomeScreen(
             }
         }
     }
+
+    // Handle completed sync states even if the event was missed (e.g., user was on another screen)
+    LaunchedEffect(importState, accountId) {
+        if (importState is Result.Success && accountId != null) {
+            onGlobalRefresh()
+            delay(1500)
+            transactionsViewModel.resetImportState(accountId)
+        }
+    }
     val throttledOnEditTransaction = rememberThrottleClick(onClick = onEditTransaction)
     val throttledOnCardClick = rememberThrottleClick<Pair<String, Boolean?>> { (accId, isInc) ->
         onCardClick(accId, isInc)
@@ -262,7 +271,7 @@ fun HomeScreen(
 
             // Trigger auto-sync only if the account has linked sources
             if (acc.linkedSources.contains("mpesa") || acc.linkedSources.contains("equity")) {
-                transactionsViewModel.autoSyncTransactions(acc.id, acc.lastSyncedAt)
+                transactionsViewModel.autoSyncTransactions(acc.id)
             }
         }
     }
