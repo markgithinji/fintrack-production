@@ -65,11 +65,6 @@ import kotlinx.datetime.Month
 @Composable
 fun IncomeExpensesOverview(overviewResult: Result<OverviewSummary>) {
     var selectedPeriod by remember { mutableStateOf(OverviewPeriod.Weekly) }
-    var lastOverview by remember { mutableStateOf<OverviewSummary?>(null) }
-
-    if (overviewResult is Result.Success) {
-        lastOverview = overviewResult.data
-    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -87,19 +82,10 @@ fun IncomeExpensesOverview(overviewResult: Result<OverviewSummary>) {
         ) { result ->
             when (result) {
                 is Result.Loading -> {
-                    val currentData = lastOverview
-                    if (currentData != null) {
-                        OverviewSuccessState(
-                            overview = currentData,
-                            selectedPeriod = selectedPeriod,
-                            onPeriodSelected = { period -> selectedPeriod = period }
-                        )
-                    } else {
-                        OverviewLoadingState(
-                            selectedPeriod = selectedPeriod,
-                            onPeriodSelected = { period -> selectedPeriod = period }
-                        )
-                    }
+                    OverviewLoadingState(
+                        selectedPeriod = selectedPeriod,
+                        onPeriodSelected = { period -> selectedPeriod = period }
+                    )
                 }
 
                 is Result.Error -> {

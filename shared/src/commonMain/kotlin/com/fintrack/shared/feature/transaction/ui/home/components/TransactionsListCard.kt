@@ -72,11 +72,6 @@ fun TransactionsListCard(
 ) {
     val sharedTransitionScope = LocalSharedTransitionScope.current
 
-    var lastTransactions by remember(accountId) { mutableStateOf<List<Transaction>?>(null) }
-    if (transactionsResult is Result.Success) {
-        lastTransactions = transactionsResult.data
-    }
-
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -111,16 +106,7 @@ fun TransactionsListCard(
             ) { result ->
                 when (result) {
                     is Result.Loading -> {
-                        val currentData = lastTransactions
-                        if (currentData != null && currentData.isNotEmpty()) {
-                            TransactionsListContent(
-                                transactions = currentData,
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                onTransactionClick = onTransactionClick
-                            )
-                        } else {
-                            TransactionsLoadingState()
-                        }
+                        TransactionsLoadingState()
                     }
 
                     is Result.Error -> {

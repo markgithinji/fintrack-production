@@ -139,14 +139,15 @@ class StatisticsViewModel(
         }
 
         highlightsJob?.cancel()
+        
+        // Immediately set to loading state if parameters changed to avoid stale data
+        if (paramsChanged || force) {
+            _highlights.value = Result.Loading
+        }
+
         highlightsJob = viewModelScope.launch {
-            if (current !is Result.Success || paramsChanged) {
-                _highlights.value = Result.Loading
-            }
-            
             lastHighlightsAccountId = accountId
             lastHighlightsPeriod = period
-            
             _highlights.value = summaryRepository.getHighlightsSummary(accountId, period)
         }
     }
@@ -179,14 +180,15 @@ class StatisticsViewModel(
         
         if (!force && current is Result.Success && !paramsChanged) return
 
+        // Immediately set to loading state if parameters changed
+        if (paramsChanged || force) {
+            targetFlow.value = Result.Loading
+        }
+
         val job = viewModelScope.launch {
             when (type) {
                 TransactionType.Income -> lastIncomeDistributionParams = paramKey
                 TransactionType.Expense -> lastExpenseDistributionParams = paramKey
-            }
-
-            if (current !is Result.Success || paramsChanged) {
-                targetFlow.value = Result.Loading
             }
             
             val distribution = summaryRepository.getDistributionSummary(
@@ -221,6 +223,21 @@ class StatisticsViewModel(
         }
 
         availablePeriodsJob?.cancel()
+        
+        // Immediately clear available periods if account changed to trigger loading states in UI
+        if (accountChanged || force) {
+            _availableWeeks.value = emptyList()
+            _availableMonths.value = emptyList()
+            _availableYears.value = emptyList()
+            _selectedPeriod.value = null
+            
+            // Also set distributions to loading
+            _incomeDistribution.value = Result.Loading
+            _expenseDistribution.value = Result.Loading
+            _highlights.value = Result.Loading
+            _categoryComparisons.value = Result.Loading
+        }
+
         availablePeriodsJob = viewModelScope.launch {
             try {
                 lastAvailablePeriodsAccountId = accountId
@@ -278,10 +295,13 @@ class StatisticsViewModel(
         if (!force && current is Result.Success && !paramsChanged) return
         
         overviewJob?.cancel()
+        
+        // Immediately enter loading state if account changed or if forced
+        if (paramsChanged || force) {
+            _overview.value = Result.Loading
+        }
+
         overviewJob = viewModelScope.launch {
-            if (current !is Result.Success || paramsChanged) {
-                _overview.value = Result.Loading
-            }
             lastOverviewAccountId = accountId
             _overview.value = summaryRepository.getOverviewSummary(accountId)
         }
@@ -300,11 +320,13 @@ class StatisticsViewModel(
         if (!force && current is Result.Success && !paramsChanged) return
 
         categoryComparisonsJob?.cancel()
-        categoryComparisonsJob = viewModelScope.launch {
-            if (current !is Result.Success || paramsChanged) {
-                _categoryComparisons.value = Result.Loading
-            }
+        
+        // Immediately enter loading state
+        if (paramsChanged || force) {
+            _categoryComparisons.value = Result.Loading
+        }
 
+        categoryComparisonsJob = viewModelScope.launch {
             lastCategoryComparisonAccountId = accountId
             lastCategoryComparisonPeriod = period
 

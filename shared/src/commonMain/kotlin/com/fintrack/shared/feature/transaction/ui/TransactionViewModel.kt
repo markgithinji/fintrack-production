@@ -178,11 +178,16 @@ class TransactionViewModel(
     }
 
     fun loadRecentTransactions(accountId: String, limit: Int = 6, force: Boolean = false) {
-        if (!force && accountId == lastLoadedRecentAccountId && _recentTransactions.value is Result.Success) return
+        val paramsChanged = accountId != lastLoadedRecentAccountId
+        if (!force && !paramsChanged && _recentTransactions.value is Result.Success) return
+        
         lastLoadedRecentAccountId = accountId
         recentTransactionsJob?.cancel()
+        
+        // Synchronously set to loading state to prevent stale data display
+        _recentTransactions.value = Result.Loading
+        
         recentTransactionsJob = viewModelScope.launch {
-            _recentTransactions.value = Result.Loading
             val result = repo.getTransactions(limit = limit, sortBy = "dateTime", order = "desc", accountId = accountId)
             _recentTransactions.value = when (result) {
                 is Result.Success -> Result.Success(result.data.first)

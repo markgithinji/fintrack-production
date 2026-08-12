@@ -64,11 +64,6 @@ fun CategoryComparisonCard(
     accountId: String? = null,
     modifier: Modifier = Modifier
 ) {
-    var lastSummary by remember(accountId) { mutableStateOf<CategoryComparisonSummary?>(null) }
-    if (categoryComparisonResult is Result.Success) {
-        lastSummary = categoryComparisonResult.data
-    }
-
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -90,7 +85,6 @@ fun CategoryComparisonCard(
                 )
 
                 val displayPeriod = (categoryComparisonResult as? Result.Success)?.data?.let { it.period to it.isCurrent }
-                    ?: lastSummary?.let { it.period to it.isCurrent }
 
                 if (displayPeriod != null) {
                     val (period, isCurrent) = displayPeriod
@@ -116,26 +110,9 @@ fun CategoryComparisonCard(
             ) { result ->
                 when (result) {
                     is Result.Loading -> {
-                        val currentData = lastSummary?.data
-                        if (currentData != null) {
-                            Column {
-                                val sortedData = currentData.sortedWith(
-                                    compareByDescending<CategoryComparison> { it.isIncome }
-                                        .thenBy { it.category == "Transaction Fees" }
-                                )
-                                sortedData.forEachIndexed { index, comparison ->
-                                    CategoryComparisonItem(
-                                        comparison = comparison,
-                                        isCurrent = lastSummary?.isCurrent ?: true,
-                                        isLast = index == sortedData.lastIndex
-                                    )
-                                }
-                            }
-                        } else {
-                            Column {
-                                repeat(2) { index ->
-                                    LoadingCategoryComparisonItem(isLast = index == 1)
-                                }
+                        Column {
+                            repeat(2) { index ->
+                                LoadingCategoryComparisonItem(isLast = index == 1)
                             }
                         }
                     }
