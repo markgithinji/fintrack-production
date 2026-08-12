@@ -50,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +65,8 @@ import com.fintrack.shared.feature.account.domain.model.Account
 import com.fintrack.shared.feature.account.ui.AccountsViewModel
 import com.fintrack.shared.feature.core.data.model.ApiException
 import com.fintrack.shared.feature.core.data.model.getUserFriendlyMessage
+import com.fintrack.shared.feature.core.ui.AccountSelectionSection
+import com.fintrack.shared.feature.core.ui.MultiAccountSelectionSection
 import com.fintrack.shared.feature.core.ui.FinanceAmountHeader
 import com.fintrack.shared.feature.core.ui.FinanceCategorySelection
 import com.fintrack.shared.feature.core.ui.FinanceInputSection
@@ -74,6 +77,7 @@ import com.fintrack.shared.feature.core.domain.SaveState
 import com.fintrack.shared.feature.core.domain.ValidationResult
 import com.fintrack.shared.feature.core.ui.KMPBackHandler
 import com.fintrack.shared.feature.core.ui.MaterialToast
+import com.fintrack.shared.feature.core.ui.AnimatedShimmerBox
 import com.fintrack.shared.feature.core.ui.CommonErrorState
 import com.fintrack.shared.feature.core.ui.ConfirmationDialog
 import com.fintrack.shared.feature.core.util.Result
@@ -81,7 +85,7 @@ import com.fintrack.shared.feature.core.util.formatAsShortDateWithYear
 import com.fintrack.shared.feature.core.ui.FintrackDatePickerDialog
 import com.fintrack.shared.feature.core.ui.LocalSharedTransitionScope
 import androidx.compose.ui.platform.LocalFocusManager
-import com.fintrack.shared.feature.transaction.ui.home.components.AccountIcon
+import com.fintrack.shared.feature.core.ui.AccountIcon
 import org.koin.compose.viewmodel.koinViewModel
 import kotlinx.coroutines.delay
 import kotlinx.datetime.DatePeriod
@@ -383,309 +387,6 @@ fun BudgetDetailScreen(
                     viewModel.handleAmountBackspace()
                 },
                 onDoneClick = { showNumpad = false }
-            )
-        }
-    }
-}
-
-@Composable
-fun AccountSelectionSection(
-    accountsResult: Result<List<Account>>,
-    selectedAccount: Account?,
-    onAccountSelected: (Account) -> Unit,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val selectedAccountId by remember(selectedAccount) { mutableStateOf(selectedAccount?.id) }
-
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = "Select Account",
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 16.sp
-        )
-
-        when (accountsResult) {
-            is Result.Loading -> {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp)
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-            }
-
-            is Result.Error -> {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Failed to load accounts",
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        Button(
-                            onClick = onRetry,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = accountChipBorder
-                            )
-                        ) {
-                            Text("Retry")
-                        }
-                    }
-                }
-            }
-
-            is Result.Success -> {
-                if (accountsResult.data.isEmpty()) {
-                    Card(
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(80.dp)
-                        ) {
-                            Text(
-                                text = "No accounts available. Create an account first.",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                } else {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(horizontal = 4.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        items(accountsResult.data) { account ->
-                            AccountChip(
-                                account = account,
-                                isSelected = selectedAccountId == account.id,
-                                onClick = { onAccountSelected(account) }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun MultiAccountSelectionSection(
-    accountsResult: Result<List<Account>>,
-    selectedAccounts: Set<Account>,
-    onAccountToggle: (Account) -> Unit,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Select Accounts",
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp
-            )
-            
-            Text(
-                text = "${selectedAccounts.size} selected",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-
-        when (accountsResult) {
-            is Result.Loading -> {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp)
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-            }
-
-            is Result.Error -> {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Failed to load accounts",
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        Button(
-                            onClick = onRetry,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = accountChipBorder
-                            )
-                        ) {
-                            Text("Retry")
-                        }
-                    }
-                }
-            }
-
-            is Result.Success -> {
-                if (accountsResult.data.isEmpty()) {
-                    Card(
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(80.dp)
-                        ) {
-                            Text(
-                                text = "No accounts available. Create an account first.",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                } else {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(horizontal = 4.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        items(accountsResult.data) { account ->
-                            AccountChip(
-                                account = account,
-                                isSelected = selectedAccounts.any { it.id == account.id },
-                                onClick = { onAccountToggle(account) }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun AccountChip(
-    account: Account,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val accountIcon = AccountIcon.fromAccountType(account.type, account.name)
-
-    val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.02f else 1.0f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
-    )
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-        animationSpec = tween(300)
-    )
-    val borderColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-        animationSpec = tween(300)
-    )
-    val elevation by animateDpAsState(
-        targetValue = if (isSelected) 2.dp else 0.dp,
-        animationSpec = tween(300)
-    )
-
-    Card(
-        modifier = modifier
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .clickable { onClick() }
-            .widthIn(min = 120.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = backgroundColor
-        ),
-        border = BorderStroke(
-            width = 2.dp,
-            color = borderColor
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = elevation)
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = accountIcon.icon,
-                contentDescription = account.name,
-                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp)
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = account.name,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Text(
-                text = account.balance?.toCurrencyString() ?: "${LocalCurrency.current.symbol} --",
-                fontSize = 12.sp,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

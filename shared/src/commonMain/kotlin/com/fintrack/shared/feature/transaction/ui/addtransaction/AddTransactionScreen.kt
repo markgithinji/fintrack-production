@@ -28,7 +28,8 @@ import com.fintrack.shared.ui.theme.GreenIncome
 import com.fintrack.shared.ui.theme.PinkExpense
 import androidx.compose.ui.platform.LocalFocusManager
 import com.fintrack.shared.feature.account.ui.AccountsViewModel
-import com.fintrack.shared.feature.budget.ui.AccountSelectionSection
+import com.fintrack.shared.feature.core.ui.AccountSelectionSection
+import com.fintrack.shared.feature.core.ui.AccountIcon
 import com.fintrack.shared.feature.core.data.model.ApiException
 import com.fintrack.shared.feature.core.data.model.getUserFriendlyMessage
 import androidx.compose.foundation.interaction.MutableInteractionSource

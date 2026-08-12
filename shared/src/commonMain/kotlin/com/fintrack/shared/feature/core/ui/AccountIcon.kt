@@ -1,4 +1,4 @@
-package com.fintrack.shared.feature.transaction.ui.home.components
+package com.fintrack.shared.feature.core.ui
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance

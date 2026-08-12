@@ -79,7 +79,7 @@ import com.fintrack.shared.feature.navigation.ui.LocalBiometricAuthenticator
 import com.fintrack.shared.feature.navigation.ui.toCurrencyString
 import com.fintrack.shared.feature.core.ui.biometric.BiometricResult
 import com.fintrack.shared.feature.settings.ui.SettingsViewModel
-import com.fintrack.shared.feature.transaction.ui.home.components.AccountIcon
+import com.fintrack.shared.feature.core.ui.AccountIcon
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
