@@ -31,7 +31,6 @@ import com.fintrack.shared.feature.account.domain.model.Account
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.navigation.ui.LocalCurrency
 import com.fintrack.shared.feature.navigation.ui.toCurrencyString
-import com.fintrack.shared.ui.theme.accountChipBorder
 
 @Composable
 fun AccountSelectionSection(
@@ -67,33 +66,11 @@ fun AccountSelectionSection(
             }
 
             is Result.Error -> {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Failed to load accounts",
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        Button(
-                            onClick = onRetry,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = accountChipBorder
-                            )
-                        ) {
-                            Text("Retry")
-                        }
-                    }
-                }
+                CommonErrorState(
+                    title = "Failed to load accounts",
+                    error = accountsResult.exception,
+                    onRetry = onRetry
+                )
             }
 
             is Result.Success -> {
@@ -180,33 +157,11 @@ fun MultiAccountSelectionSection(
             }
 
             is Result.Error -> {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Failed to load accounts",
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        Button(
-                            onClick = onRetry,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = accountChipBorder
-                            )
-                        ) {
-                            Text("Retry")
-                        }
-                    }
-                }
+                CommonErrorState(
+                    title = "Failed to load accounts",
+                    error = accountsResult.exception,
+                    onRetry = onRetry
+                )
             }
 
             is Result.Success -> {

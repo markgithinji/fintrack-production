@@ -283,45 +283,18 @@ private fun CurrentBalanceErrorState(
     error: Throwable,
     onRetry: () -> Unit
 ) {
-    val displayMessage = remember(error) {
-        error.getUserFriendlyMessage()
-    }
-
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "Failed to load account",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimary
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = displayMessage,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Surface(
-                onClick = onRetry,
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f))
-            ) {
-                Text(
-                    text = "Retry",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                )
-            }
-        }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        CommonErrorState(
+            title = "Failed to load account",
+            error = error,
+            onRetry = onRetry,
+            useOnPrimaryColors = true
+        )
     }
 }
 
