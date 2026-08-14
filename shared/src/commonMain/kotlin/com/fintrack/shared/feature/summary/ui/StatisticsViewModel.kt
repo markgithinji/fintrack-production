@@ -460,7 +460,6 @@ class StatisticsViewModel(
             }
         } else {
             if (_isSyncing.value) {
-                println("StatsVM: Period is null but sync is in progress, keeping loading states")
                 return
             }
 
