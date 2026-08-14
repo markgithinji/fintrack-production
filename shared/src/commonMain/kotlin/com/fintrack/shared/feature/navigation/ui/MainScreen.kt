@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fintrack.shared.feature.auth.domain.model.AuthState
 import com.fintrack.shared.feature.auth.ui.AuthViewModel
@@ -59,6 +62,22 @@ fun MainScreen(
             val mainToast by mainViewModel.toastMessage.collectAsStateWithLifecycle()
             
             val scope = rememberCoroutineScope()
+            
+            // Observe app lifecycle for biometric lock
+            val lifecycleOwner = LocalLifecycleOwner.current
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    when (event) {
+                        Lifecycle.Event.ON_STOP -> authViewModel.onAppBackgrounded()
+                        Lifecycle.Event.ON_START -> authViewModel.onAppForegrounded()
+                        else -> {}
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
+                }
+            }
             
             // Track the last error for smooth transitions on retry
             var lastError by remember { mutableStateOf<AuthState.Error?>(null) }

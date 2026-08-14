@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
 
 class AuthViewModel(
     private val repository: AuthRepository,
@@ -34,6 +35,9 @@ class AuthViewModel(
 
     private val _isAppLocked = MutableStateFlow(false)
     val isAppLocked: StateFlow<Boolean> = _isAppLocked.asStateFlow()
+
+    private var backgroundTimestamp: Long? = null
+    private val lockTimeoutMillis = 30000L // 30 seconds
 
     private val _loginState = MutableStateFlow<AuthState<AuthResponse>>(AuthState.Idle)
     val loginState: StateFlow<AuthState<AuthResponse>> = _loginState
@@ -76,6 +80,30 @@ class AuthViewModel(
 
     fun unlockWithBiometrics() {
         _isAppLocked.value = false
+    }
+
+    fun onAppBackgrounded() {
+        val currentStatus = _authStatus.value
+        val isAuthenticated = (currentStatus as? AuthState.Success)?.data ?: false
+        if (isAuthenticated) {
+            backgroundTimestamp = Clock.System.now().toEpochMilliseconds()
+        }
+    }
+
+    fun onAppForegrounded() {
+        val timestamp = backgroundTimestamp ?: return
+        val now = Clock.System.now().toEpochMilliseconds()
+        val elapsed = now - timestamp
+
+        if (elapsed >= lockTimeoutMillis) {
+            viewModelScope.launch {
+                val isBiometricEnabled = settingsDataSource.isBiometricEnabled.first()
+                if (isBiometricEnabled) {
+                    _isAppLocked.value = true
+                }
+            }
+        }
+        backgroundTimestamp = null
     }
 
     private fun observeTokenChanges() {

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -17,6 +18,9 @@ import androidx.compose.ui.unit.sp
 fun LockScreen(
     onUnlock: () -> Unit,
 ) {
+    LaunchedEffect(Unit) {
+        onUnlock()
+    }
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
