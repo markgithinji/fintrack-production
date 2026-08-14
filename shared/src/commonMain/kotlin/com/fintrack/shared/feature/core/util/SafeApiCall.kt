@@ -15,6 +15,8 @@ suspend fun <T> safeApiCall(apiCall: suspend () -> T): Result<T> {
     return try {
         val result = apiCall()
         Result.Success(result)
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         val domainException = convertToDomainException(e)
         Result.Error(domainException)

@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -63,7 +64,10 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month
 
 @Composable
-fun IncomeExpensesOverview(overviewResult: Result<OverviewSummary>) {
+fun IncomeExpensesOverview(
+    overviewResult: Result<OverviewSummary>,
+    onRetry: () -> Unit = {}
+) {
     var selectedPeriod by remember { mutableStateOf(OverviewPeriod.Weekly) }
 
     Card(
@@ -91,7 +95,8 @@ fun IncomeExpensesOverview(overviewResult: Result<OverviewSummary>) {
                 is Result.Error -> {
                     OverviewErrorState(
                         selectedPeriod = selectedPeriod,
-                        onPeriodSelected = { period -> selectedPeriod = period }
+                        onPeriodSelected = { period -> selectedPeriod = period },
+                        onRetry = onRetry
                     )
                 }
 
@@ -151,12 +156,15 @@ private fun OverviewLoadingState(
 @Composable
 private fun OverviewErrorState(
     selectedPeriod: OverviewPeriod,
-    onPeriodSelected: (OverviewPeriod) -> Unit
+    onPeriodSelected: (OverviewPeriod) -> Unit,
+    onRetry: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.Transparent)
+            .padding(bottom = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         OverviewHeader(
             selectedPeriod = selectedPeriod,
@@ -166,7 +174,7 @@ private fun OverviewErrorState(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(240.dp),
+                .height(200.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -182,6 +190,13 @@ private fun OverviewErrorState(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onRetry,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Retry")
+                }
             }
         }
     }

@@ -14,6 +14,7 @@ import com.fintrack.shared.feature.summary.domain.model.TransactionCountSummary
 import com.fintrack.shared.feature.summary.domain.model.TransactionType
 import com.fintrack.shared.feature.summary.domain.repository.SummaryRepository
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -43,6 +44,21 @@ class StatisticsViewModel(
 
     private val _availableYears = MutableStateFlow<List<String>>(emptyList())
     val availableYears: StateFlow<List<String>> = _availableYears
+
+    private val _metadataState = MutableStateFlow<Result<Unit>>(Result.Loading)
+    val metadataState: StateFlow<Result<Unit>> = _metadataState
+
+    private val _isSyncing = MutableStateFlow(false)
+    fun setSyncing(syncing: Boolean) {
+        if (_isSyncing.value != syncing) {
+            _isSyncing.value = syncing
+            if (!syncing && _selectedPeriod.value == null) {
+                // If sync finished and we still have no period, we might need to re-fetch metadata
+                // or confirm it's empty
+                loadAvailablePeriods(lastAvailablePeriodsAccountId, force = true)
+            }
+        }
+    }
 
     private val _overview = MutableStateFlow<Result<OverviewSummary>>(Result.Loading)
     val overview: StateFlow<Result<OverviewSummary>> = _overview
@@ -134,8 +150,9 @@ class StatisticsViewModel(
         val paramsChanged = lastHighlightsAccountId != accountId || lastHighlightsPeriod != period
         val current = _highlights.value
         
-        if (!force && current is Result.Success && !paramsChanged) {
-            return
+        if (!force && !paramsChanged) {
+            if (current is Result.Success) return
+            if (highlightsJob?.isActive == true) return
         }
 
         highlightsJob?.cancel()
@@ -178,7 +195,15 @@ class StatisticsViewModel(
         val paramsChanged = lastParams != paramKey
         val current = targetFlow.value
         
-        if (!force && current is Result.Success && !paramsChanged) return
+        if (!force && !paramsChanged) {
+            if (current is Result.Success) return
+            
+            val currentJob = when (type) {
+                TransactionType.Income -> incomeDistributionJob
+                TransactionType.Expense -> expenseDistributionJob
+            }
+            if (currentJob?.isActive == true) return
+        }
 
         // Immediately set to loading state if parameters changed
         if (paramsChanged || force) {
@@ -191,15 +216,13 @@ class StatisticsViewModel(
                 TransactionType.Expense -> lastExpenseDistributionParams = paramKey
             }
             
-            val distribution = summaryRepository.getDistributionSummary(
+            targetFlow.value = summaryRepository.getDistributionSummary(
                 weekOrMonthCode = weekOrMonthCode,
                 type = type.apiName,
                 start = start,
                 end = end,
                 accountId = accountId
             )
-            
-            targetFlow.value = distribution
         }
 
         when (type) {
@@ -217,21 +240,32 @@ class StatisticsViewModel(
     private var lastAvailablePeriodsAccountId: String? = null
     fun loadAvailablePeriods(accountId: String? = null, force: Boolean = false) {
         val accountChanged = lastAvailablePeriodsAccountId != accountId
-        if (!force && !accountChanged && (_availableWeeks.value.isNotEmpty() || _availableMonths.value.isNotEmpty() || _availableYears.value.isNotEmpty())) {
-            reloadDistributionForCurrentSelection(accountId, force = false)
-            return
+        
+        // If not forced and account hasn't changed, check if we already have data OR if we're currently loading it
+        if (!force && !accountChanged) {
+            val hasData = _availableWeeks.value.isNotEmpty() || _availableMonths.value.isNotEmpty() || _availableYears.value.isNotEmpty()
+            val isLoading = availablePeriodsJob?.isActive == true
+            
+            if (hasData) {
+                reloadDistributionForCurrentSelection(accountId, force = false)
+                return
+            }
+            if (isLoading) {
+                return
+            }
         }
 
         availablePeriodsJob?.cancel()
+        lastAvailablePeriodsAccountId = accountId
         
-        // Immediately clear available periods if account changed to trigger loading states in UI
+        // Synchronously set loading states
         if (accountChanged || force) {
+            _metadataState.value = Result.Loading
             _availableWeeks.value = emptyList()
             _availableMonths.value = emptyList()
             _availableYears.value = emptyList()
             _selectedPeriod.value = null
             
-            // Also set distributions to loading
             _incomeDistribution.value = Result.Loading
             _expenseDistribution.value = Result.Loading
             _highlights.value = Result.Loading
@@ -240,30 +274,31 @@ class StatisticsViewModel(
 
         availablePeriodsJob = viewModelScope.launch {
             try {
-                lastAvailablePeriodsAccountId = accountId
-                val weeksDeferred = viewModelScope.async {
-                    val result = summaryRepository.getAvailableWeeks(accountId)
-                    if (result is Result.Success) result.data.weeks else emptyList()
+                val weeksResult = summaryRepository.getAvailableWeeks(accountId)
+                val monthsResult = summaryRepository.getAvailableMonths(accountId)
+                val yearsResult = summaryRepository.getAvailableYears(accountId)
+
+                // Check if any of them failed
+                if (weeksResult is Result.Error || monthsResult is Result.Error || yearsResult is Result.Error) {
+                    val error = (weeksResult as? Result.Error ?: monthsResult as? Result.Error ?: yearsResult as? Result.Error)!!.exception
+                    _metadataState.value = Result.Error(error)
+                    return@launch
                 }
 
-                val monthsDeferred = viewModelScope.async {
-                    val result = summaryRepository.getAvailableMonths(accountId)
-                    if (result is Result.Success) result.data.months else emptyList()
-                }
-
-                val yearsDeferred = viewModelScope.async {
-                    val result = summaryRepository.getAvailableYears(accountId)
-                    if (result is Result.Success) result.data.years else emptyList()
-                }
-
-                // Wait for all results
-                val weeks = weeksDeferred.await()
-                val months = monthsDeferred.await()
-                val years = yearsDeferred.await()
+                val weeks = (weeksResult as Result.Success).data.weeks
+                val months = (monthsResult as Result.Success).data.months
+                val years = (yearsResult as Result.Success).data.years
 
                 _availableWeeks.value = weeks
                 _availableMonths.value = months
                 _availableYears.value = years
+                
+                // If lists are empty but we are still syncing, stay in loading state
+                if (weeks.isEmpty() && months.isEmpty() && years.isEmpty() && _isSyncing.value) {
+                    _metadataState.value = Result.Loading
+                } else {
+                    _metadataState.value = Result.Success(Unit)
+                }
 
                 // Reset selection if account changed or if nothing is selected
                 if (accountChanged || _selectedPeriod.value == null) {
@@ -275,14 +310,11 @@ class StatisticsViewModel(
                     }
                 }
 
-                // Load BOTH income and expense data for the selection
                 reloadDistributionForCurrentSelection(accountId, force = force)
             } catch (e: Exception) {
-                _availableWeeks.value = emptyList()
-                _availableMonths.value = emptyList()
-                _availableYears.value = emptyList()
-                _selectedPeriod.value = null
-                reloadDistributionForCurrentSelection(accountId, force = force)
+                if (e !is CancellationException) {
+                    _metadataState.value = Result.Error(e)
+                }
             }
         }
     }
@@ -292,7 +324,10 @@ class StatisticsViewModel(
         val paramsChanged = lastOverviewAccountId != accountId
         val current = _overview.value
         
-        if (!force && current is Result.Success && !paramsChanged) return
+        if (!force && !paramsChanged) {
+            if (current is Result.Success) return
+            if (overviewJob?.isActive == true) return
+        }
         
         overviewJob?.cancel()
         
@@ -317,7 +352,10 @@ class StatisticsViewModel(
         val paramsChanged = lastCategoryComparisonAccountId != accountId || lastCategoryComparisonPeriod != period
         val current = _categoryComparisons.value
         
-        if (!force && current is Result.Success && !paramsChanged) return
+        if (!force && !paramsChanged) {
+            if (current is Result.Success) return
+            if (categoryComparisonsJob?.isActive == true) return
+        }
 
         categoryComparisonsJob?.cancel()
         
@@ -397,6 +435,7 @@ class StatisticsViewModel(
 
     fun reloadDistributionForCurrentSelection(accountId: String? = null, force: Boolean = false) {
         val currentPeriod = _selectedPeriod.value
+
         if (currentPeriod != null) {
             val periodCode = when (currentPeriod) {
                 is Period.Week -> currentPeriod.code
@@ -420,6 +459,11 @@ class StatisticsViewModel(
                 loadCategoryComparisons(accountId = accountId, period = periodCode, force = force)
             }
         } else {
+            if (_isSyncing.value) {
+                println("StatsVM: Period is null but sync is in progress, keeping loading states")
+                return
+            }
+
             // Clear all summary states if no period is selected (e.g., empty account)
             lastIncomeDistributionParams = null
             lastExpenseDistributionParams = null
@@ -482,14 +526,17 @@ class StatisticsViewModel(
         hasCost: Boolean? = null,
         force: Boolean = false
     ) {
-        if (!force && _transactionCounts.value is Result.Success &&
-            lastTransactionCountsAccountId == accountId &&
-            lastTransactionCountsIsIncome == isIncome &&
-            lastTransactionCountsCategoryId == categoryId &&
-            lastTransactionCountsStart == start &&
-            lastTransactionCountsEnd == end &&
-            lastTransactionCountsHasCost == hasCost
-        ) return
+        val paramsChanged = lastTransactionCountsAccountId != accountId ||
+            lastTransactionCountsIsIncome != isIncome ||
+            lastTransactionCountsCategoryId != categoryId ||
+            lastTransactionCountsStart != start ||
+            lastTransactionCountsEnd != end ||
+            lastTransactionCountsHasCost != hasCost
+
+        if (!force && !paramsChanged) {
+            if (_transactionCounts.value is Result.Success) return
+            if (transactionCountsJob?.isActive == true) return
+        }
 
         transactionCountsJob?.cancel()
         transactionCountsJob = viewModelScope.launch {

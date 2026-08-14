@@ -62,6 +62,7 @@ import com.ionspin.kotlin.bignum.decimal.BigDecimal
 fun CategoryComparisonCard(
     categoryComparisonResult: Result<CategoryComparisonSummary>,
     accountId: String? = null,
+    onRetry: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -119,7 +120,7 @@ fun CategoryComparisonCard(
 
                     is Result.Error -> {
                         CategoryComparisonErrorState(
-                            onRetry = { /* Add retry logic */ }
+                            onRetry = onRetry
                         )
                     }
 

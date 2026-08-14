@@ -354,11 +354,21 @@ fun HomeScreen(
                 )
             }
 
-            item { IncomeExpensesOverview(overviewResult) }
+            item { 
+                IncomeExpensesOverview(
+                    overviewResult = overviewResult,
+                    onRetry = {
+                        accountId?.let { statsViewModel.loadOverview(it, force = true) }
+                    }
+                ) 
+            }
             item {
                 CategoryComparisonCard(
                     categoryComparisonResult = categoryComparisonResult,
-                    accountId = (enrichedSelectedAccount as? Result.Success)?.data?.id,
+                    accountId = accountId,
+                    onRetry = {
+                        accountId?.let { statsViewModel.loadCategoryComparisons(it, force = true) }
+                    },
                     modifier = Modifier.fillMaxWidth()
                 )
             }

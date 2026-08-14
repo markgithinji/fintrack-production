@@ -30,6 +30,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,11 +42,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fintrack.shared.feature.core.ui.CommonErrorState
+import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.summary.domain.model.TabType
 import com.fintrack.shared.feature.summary.ui.components.CategoryTotalsCardWithTabs
 import com.fintrack.shared.feature.summary.ui.components.SpendingHighlightsSection
 import com.fintrack.shared.ui.theme.GreenIncome
 import com.fintrack.shared.ui.theme.PinkExpense
+import com.fintrack.shared.feature.transaction.ui.TransactionViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -52,6 +58,7 @@ fun StatisticsScreen(
     selectedAccountId: String?,
     refreshTrigger: Int,
     viewModel: StatisticsViewModel = koinViewModel(),
+    transactionsViewModel: TransactionViewModel = koinViewModel(),
     paddingValues: PaddingValues = PaddingValues(0.dp),
     animatedVisibilityScope: AnimatedVisibilityScope,
     onCategoryClick: (categoryName: String, categoryId: String, isIncome: Boolean, startDate: String?, endDate: String?, accountId: String) -> Unit = { _, _, _, _, _, _ -> }
@@ -63,9 +70,21 @@ fun StatisticsScreen(
     val availableYears by viewModel.availableYears.collectAsStateWithLifecycle()
     val highlights by viewModel.highlights.collectAsStateWithLifecycle()
     val distributionResult by viewModel.distribution.collectAsStateWithLifecycle()
+    val metadataState by viewModel.metadataState.collectAsStateWithLifecycle()
     val hasNextPeriod by viewModel.hasNextPeriod.collectAsStateWithLifecycle()
     val hasPreviousPeriod by viewModel.hasPreviousPeriod.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+
+    val importStateMap by transactionsViewModel.importState.collectAsStateWithLifecycle()
+
+    // Syncing state from TransactionViewModel
+    LaunchedEffect(selectedAccountId, importStateMap) {
+        val isSyncing = selectedAccountId != null && importStateMap[selectedAccountId] is Result.Loading
+        viewModel.setSyncing(isSyncing)
+    }
+
+    // Keep track of the last processed refresh trigger to avoid redundant refreshes
+    var lastProcessedRefreshTrigger by rememberSaveable { mutableIntStateOf(refreshTrigger) }
 
     val safePeriod = selectedPeriod ?: remember(availableWeeks, availableMonths, availableYears) {
         getDefaultPeriod(availableWeeks, availableMonths, availableYears)
@@ -73,9 +92,10 @@ fun StatisticsScreen(
 
     LaunchedEffect(selectedAccountId, refreshTrigger) {
         if (selectedAccountId != null) {
-            val force = refreshTrigger > 0
+            val force = refreshTrigger > lastProcessedRefreshTrigger
             viewModel.loadAvailablePeriods(selectedAccountId, force = force)
             viewModel.loadOverview(selectedAccountId, force = force)
+            lastProcessedRefreshTrigger = refreshTrigger
         }
     }
 
@@ -83,6 +103,18 @@ fun StatisticsScreen(
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
+        return
+    }
+
+    if (metadataState is Result.Error) {
+        CommonErrorState(
+            title = "Unable to load statistics",
+            error = (metadataState as Result.Error).exception,
+            onRetry = {
+                viewModel.loadAvailablePeriods(selectedAccountId, force = true)
+                viewModel.loadOverview(selectedAccountId, force = true)
+            }
+        )
         return
     }
 
