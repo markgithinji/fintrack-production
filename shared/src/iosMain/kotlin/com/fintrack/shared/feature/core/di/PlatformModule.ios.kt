@@ -1,5 +1,6 @@
 package com.fintrack.shared.feature.core.di
 
+import com.fintrack.shared.db.DriverFactory
 import com.fintrack.shared.feature.auth.data.local.IOSTokenDataSource
 import com.fintrack.shared.feature.auth.domain.datasource.TokenDataSource
 import com.fintrack.shared.feature.core.domain.service.NotificationService
@@ -14,6 +15,7 @@ import org.koin.dsl.bind
 import org.koin.dsl.module
 
 actual val platformModule: org.koin.core.module.Module = module {
+    single { DriverFactory() }
     single { IOSTokenDataSource() } bind TokenDataSource::class
     single { IOSSettingsDataSource() } bind SettingsDataSource::class
     single { IOSNotificationService(get()) } bind NotificationService::class

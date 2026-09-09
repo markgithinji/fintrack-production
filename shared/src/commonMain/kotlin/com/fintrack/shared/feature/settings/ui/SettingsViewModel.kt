@@ -4,8 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fintrack.shared.feature.account.domain.model.Account
 import com.fintrack.shared.feature.account.domain.repository.AccountRepository
-import com.fintrack.shared.feature.auth.domain.repository.AuthRepository
-import com.fintrack.shared.feature.auth.domain.usecase.ChangePasswordValidationUseCase
 import com.fintrack.shared.feature.budget.domain.model.BudgetWithStatus
 import com.fintrack.shared.feature.budget.domain.repository.BudgetRepository
 import com.fintrack.shared.feature.category.data.LocalCategoryDataSource
@@ -41,8 +39,6 @@ class SettingsViewModel(
     private val settingsDataSource: SettingsDataSource,
     private val exportTransactionsUseCase: ExportTransactionsUseCase,
     private val notificationService: NotificationService,
-    private val authRepository: AuthRepository,
-    private val validationUseCase: ChangePasswordValidationUseCase,
     private val deleteAccountUseCase: DeleteAccountUseCase,
     private val userRepository: UserRepository,
     private val localCategoryDataSource: LocalCategoryDataSource,
@@ -435,85 +431,14 @@ class SettingsViewModel(
         _exportEndDate.value = endDate
     }
 
-    // Password change methods
-    fun updateCurrentPassword(password: String) {
-        _changePasswordFormState.update { it.copy(currentPassword = password, currentPasswordError = null) }
-    }
+    // Password change methods (No-op in offline mode)
+    fun updateCurrentPassword(password: String) {}
 
-    fun updateNewPassword(password: String) {
-        val currentState = _changePasswordFormState.value
-        val result = validationUseCase(
-            currentPassword = currentState.currentPassword,
-            newPassword = password,
-            confirmPassword = currentState.confirmPassword
-        )
-        _changePasswordFormState.update { 
-            it.copy(
-                newPassword = password, 
-                newPasswordError = null,
-                confirmPasswordError = if (result.confirmPasswordResult is ValidationResult.Success) null else it.confirmPasswordError
-            ) 
-        }
-    }
+    fun updateNewPassword(password: String) {}
 
-    fun updateConfirmPassword(password: String) {
-        val currentState = _changePasswordFormState.value
-        val result = validationUseCase(
-            currentPassword = currentState.currentPassword,
-            newPassword = currentState.newPassword,
-            confirmPassword = password
-        )
-        _changePasswordFormState.update { 
-            it.copy(
-                confirmPassword = password, 
-                confirmPasswordError = null,
-                newPasswordError = if (result.newPasswordResult is ValidationResult.Success) null else it.newPasswordError
-            ) 
-        }
-    }
+    fun updateConfirmPassword(password: String) {}
 
-    fun changePassword() {
-        val form = _changePasswordFormState.value
-        val validationResult = validationUseCase(
-            currentPassword = form.currentPassword,
-            newPassword = form.newPassword,
-            confirmPassword = form.confirmPassword
-        )
-
-        if (!validationResult.isValid) {
-            _changePasswordFormState.update {
-                it.copy(
-                    currentPasswordError = (validationResult.currentPasswordResult as? ValidationResult.Error)?.message,
-                    newPasswordError = (validationResult.newPasswordResult as? ValidationResult.Error)?.message,
-                    confirmPasswordError = (validationResult.confirmPasswordResult as? ValidationResult.Error)?.message
-                )
-            }
-            return
-        }
-
-        // Clear errors if validation passes
-        _changePasswordFormState.update {
-            it.copy(
-                currentPasswordError = null,
-                newPasswordError = null,
-                confirmPasswordError = null
-            )
-        }
-
-        viewModelScope.launch {
-            _changePasswordState.value = SaveState.Loading
-            when (val result = authRepository.changePassword(form.currentPassword, form.newPassword)) {
-                is Result.Success -> {
-                    _changePasswordState.value = SaveState.Success(Unit)
-                    _changePasswordFormState.value = ChangePasswordFormState()
-                }
-                is Result.Error -> {
-                    _changePasswordState.value = SaveState.Error(result.exception)
-                }
-                else -> {}
-            }
-        }
-    }
+    fun changePassword() {}
 
     fun resetChangePasswordState() {
         _changePasswordState.value = SaveState.Idle

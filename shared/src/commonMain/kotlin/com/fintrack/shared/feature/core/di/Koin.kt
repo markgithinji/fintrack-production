@@ -23,6 +23,7 @@ object Koin {
     fun init(
         environment: Environment = Environment.STAGING,
         enableNetworkLogs: Boolean = false,
+        isOffline: Boolean = false,
         appDeclaration: KoinApplication.() -> Unit = {}
     ) {
         ApiConfig.initialize(environment)
@@ -33,13 +34,15 @@ object Koin {
             properties(
                 mapOf(
                     "baseUrl" to ApiConfig.BASE_URL,
-                    "enableNetworkLogs" to enableNetworkLogs.toString()
+                    "enableNetworkLogs" to enableNetworkLogs.toString(),
+                    "isOffline" to isOffline.toString()
                 )
             )
 
             modules(
                 platformModule,
                 coreModule,
+                databaseModule,
                 authModule,
                 accountModule,
                 categoryModule,

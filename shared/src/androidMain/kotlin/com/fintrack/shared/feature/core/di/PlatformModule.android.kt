@@ -1,5 +1,6 @@
 package com.fintrack.shared.feature.core.di
 
+import com.fintrack.shared.db.DriverFactory
 import com.fintrack.shared.feature.auth.data.local.AndroidTokenDataSource
 import com.fintrack.shared.feature.auth.domain.datasource.TokenDataSource
 import com.fintrack.shared.feature.core.domain.service.NotificationService
@@ -14,6 +15,7 @@ import org.koin.dsl.bind
 import org.koin.dsl.module
 
 actual val platformModule: org.koin.core.module.Module = module {
+    single { DriverFactory(context = get()) }
     single { AndroidTokenDataSource(context = get()) } bind TokenDataSource::class
     single { AndroidSettingsDataSource(get()) } bind SettingsDataSource::class
     single {
