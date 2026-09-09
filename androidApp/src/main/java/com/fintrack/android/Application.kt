@@ -18,6 +18,7 @@ class FintrackApp : Application() {
         Koin.init(
             environment = environment,
             enableNetworkLogs = BuildConfig.DEBUG,
+            isOffline = true,
             appDeclaration = {
                 androidContext(this@FintrackApp)
             }

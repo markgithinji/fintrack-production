@@ -2,7 +2,7 @@ package com.fintrack.shared.feature.user.di
 
 import com.fintrack.shared.feature.user.ui.ProfileViewModel
 import com.fintrack.shared.feature.user.data.UserApi
-import com.fintrack.shared.feature.user.data.UserRepositoryImpl
+import com.fintrack.shared.feature.user.data.UserRepositoryOfflineImpl
 import com.fintrack.shared.feature.user.domain.repository.UserRepository
 import com.fintrack.shared.feature.user.domain.usecase.DeleteAccountUseCase
 import com.fintrack.shared.feature.user.domain.usecase.ProfileValidationUseCase
@@ -13,7 +13,7 @@ import org.koin.dsl.module
 
 val userModule = module {
     singleOf(::UserApi)
-    singleOf(::UserRepositoryImpl) { bind<UserRepository>() }
+    single<UserRepository> { UserRepositoryOfflineImpl() }
     singleOf(::DeleteAccountUseCase)
     singleOf(::ProfileValidationUseCase)
     viewModelOf(::ProfileViewModel)
