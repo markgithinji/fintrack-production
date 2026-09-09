@@ -1,7 +1,6 @@
 package com.fintrack.shared.feature.budget.di
 
-import com.fintrack.shared.feature.budget.data.remote.BudgetApi
-import com.fintrack.shared.feature.budget.data.repository.BudgetRepositoryImpl
+import com.fintrack.shared.feature.budget.data.repository.BudgetRepositoryOfflineImpl
 import com.fintrack.shared.feature.budget.domain.repository.BudgetRepository
 import com.fintrack.shared.feature.budget.domain.usecase.BudgetValidationUseCase
 import com.fintrack.shared.feature.budget.domain.usecase.CheckBudgetThresholdsUseCase
@@ -12,8 +11,7 @@ import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val budgetModule = module {
-    singleOf(::BudgetApi)
-    singleOf(::BudgetRepositoryImpl) { bind<BudgetRepository>() }
+    single<BudgetRepository> { BudgetRepositoryOfflineImpl(database = get()) }
     singleOf(::BudgetValidationUseCase)
     singleOf(::CheckBudgetThresholdsUseCase)
     viewModelOf(::BudgetViewModel)
