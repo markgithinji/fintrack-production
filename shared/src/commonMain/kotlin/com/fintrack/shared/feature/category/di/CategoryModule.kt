@@ -2,6 +2,7 @@ package com.fintrack.shared.feature.category.di
 
 import com.fintrack.shared.feature.category.data.CategoryApi
 import com.fintrack.shared.feature.category.data.CategoryRepositoryImpl
+import com.fintrack.shared.feature.category.data.repository.CategoryRepositoryOfflineImpl
 import com.fintrack.shared.feature.category.data.LocalCategoryDataSource
 import com.fintrack.shared.feature.category.domain.repository.CategoryRepository
 import com.fintrack.shared.feature.category.domain.usecase.AddCategoryUseCase
@@ -16,7 +17,10 @@ import org.koin.dsl.module
 val categoryModule = module {
     singleOf(::CategoryApi)
     singleOf(::LocalCategoryDataSource)
-    singleOf(::CategoryRepositoryImpl) { bind<CategoryRepository>() }
+    
+    single<CategoryRepository> {
+        CategoryRepositoryOfflineImpl(database = get())
+    }
     
     singleOf(::SyncCategoriesUseCase)
     singleOf(::AddCategoryUseCase)
