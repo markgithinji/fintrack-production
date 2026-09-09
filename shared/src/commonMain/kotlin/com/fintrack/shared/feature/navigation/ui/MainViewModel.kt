@@ -59,39 +59,29 @@ class MainViewModel(
     init {
         // Initialize selected account from default settings or first available account
         viewModelScope.launch {
-            combine(
-                tokenDataSource.accessToken,
-                settingsDataSource.defaultAccountId
-            ) { token, defaultId -> token to defaultId }
-                .collectLatest { (token, defaultId) ->
-                    if (token != null) {
-                        if (defaultId != null) {
-                            _selectedAccountId.value = defaultId
-                        } else if (_selectedAccountId.value == null) {
-                            fetchAndSelectFirstAccount()
-                        }
-                        
-                        // Maintenance tasks that need a token
-                        checkBudgets()
-                        syncBills()
-                    } else {
-                        _selectedAccountId.value = null
-                        _refreshTrigger.value = 0
-                    }
+            settingsDataSource.defaultAccountId.collectLatest { defaultId ->
+                if (defaultId != null) {
+                    _selectedAccountId.value = defaultId
+                } else if (_selectedAccountId.value == null) {
+                    fetchAndSelectFirstAccount()
                 }
+
+                // Maintenance tasks
+                checkBudgets()
+                syncBills()
+            }
         }
 
         // Maintenance tasks that react to settings changes
         viewModelScope.launch {
             // React to settings changes for bills
             combine(
-                tokenDataSource.accessToken,
                 settingsDataSource.isBillReminderEnabled,
                 settingsDataSource.billReminderDaysBefore,
-            ) { token, enabled, days -> Triple(token, enabled, days) }
+            ) { enabled, days -> enabled to days }
                 .distinctUntilChanged()
-                .collectLatest { (token, enabled, _) ->
-                    if (token != null && enabled) {
+                .collectLatest { (enabled, _) ->
+                    if (enabled) {
                         syncBills()
                     }
                 }
