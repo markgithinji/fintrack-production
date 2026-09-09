@@ -323,16 +323,6 @@ fun ProfileScreen(
                     onClick = onNavigateToSettings
                 )
             }
-
-            item {
-                ProfileOptionItem(
-                    title = "Log Out",
-                    icon = Icons.AutoMirrored.Filled.Logout,
-                    description = "Securely sign out of your account",
-                    onClick = { showLogoutConfirmation = true },
-                    isDanger = true
-                )
-            }
         }
     }
 }
