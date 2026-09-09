@@ -1,0 +1,166 @@
+import kotlinx.datetime.Instant;
+
+CREATE TABLE AccountEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    isDefault INTEGER NOT NULL DEFAULT 0,
+    type TEXT NOT NULL,
+    balance TEXT NOT NULL DEFAULT '0',
+    createdAt INTEGER AS Instant NOT NULL,
+    lastSyncedAt INTEGER AS Instant
+);
+
+CREATE TABLE CategoryEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT,
+    name TEXT NOT NULL,
+    isExpense INTEGER NOT NULL DEFAULT 1,
+    iconName TEXT,
+    isDefault INTEGER NOT NULL DEFAULT 0,
+    createdAt INTEGER AS Instant NOT NULL
+);
+
+CREATE TABLE TransactionEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    accountId TEXT NOT NULL,
+    categoryId TEXT NOT NULL,
+    isIncome INTEGER NOT NULL,
+    amount TEXT NOT NULL,
+    transactionCost TEXT NOT NULL DEFAULT '0',
+    dateTime INTEGER AS Instant NOT NULL,
+    description TEXT,
+    externalId TEXT,
+    balance TEXT,
+    createdAt INTEGER AS Instant NOT NULL,
+    updatedAt INTEGER AS Instant NOT NULL,
+    FOREIGN KEY (accountId) REFERENCES AccountEntity(id) ON DELETE CASCADE,
+    FOREIGN KEY (categoryId) REFERENCES CategoryEntity(id) ON DELETE CASCADE
+);
+
+CREATE TABLE BudgetEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    limitAmount TEXT NOT NULL,
+    isExpense INTEGER NOT NULL DEFAULT 1,
+    startDate TEXT NOT NULL, -- LocalDate as string
+    endDate TEXT NOT NULL, -- LocalDate as string
+    categoryIds TEXT NOT NULL, -- Comma-separated IDs
+    accountIds TEXT NOT NULL, -- Comma-separated IDs
+    createdAt INTEGER AS Instant NOT NULL
+);
+
+-- Indices
+CREATE INDEX transaction_user_date ON TransactionEntity(userId, dateTime);
+CREATE INDEX transaction_account_date ON TransactionEntity(accountId, dateTime);
+CREATE INDEX category_user_name ON CategoryEntity(userId, name);
+CREATE INDEX budget_user ON BudgetEntity(userId);
+
+-- Queries
+insertAccount:
+INSERT INTO AccountEntity(id, userId, name, isDefault, type, balance, createdAt, lastSyncedAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+selectAllAccounts:
+SELECT * FROM AccountEntity WHERE userId = ?;
+
+selectAccountById:
+SELECT * FROM AccountEntity WHERE id = ?;
+
+updateAccountBalance:
+UPDATE AccountEntity SET balance = ? WHERE id = ?;
+
+deleteAccount:
+DELETE FROM AccountEntity WHERE id = ?;
+
+insertCategory:
+INSERT INTO CategoryEntity(id, userId, name, isExpense, iconName, isDefault, createdAt)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+selectAllCategories:
+SELECT * FROM CategoryEntity WHERE userId = ? OR isDefault = 1;
+
+selectCategoryById:
+SELECT * FROM CategoryEntity WHERE id = ?;
+
+deleteCategory:
+DELETE FROM CategoryEntity WHERE id = ?;
+
+insertTransaction:
+INSERT INTO TransactionEntity(id, userId, accountId, categoryId, isIncome, amount, transactionCost, dateTime, description, externalId, balance, createdAt, updatedAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectAllTransactionsWithCategory:
+SELECT T.*, C.name AS categoryName
+FROM TransactionEntity T
+LEFT JOIN CategoryEntity C ON T.categoryId = C.id
+WHERE T.userId = ?
+ORDER BY T.dateTime DESC;
+
+selectAllTransactions:
+SELECT * FROM TransactionEntity WHERE userId = ? ORDER BY dateTime DESC;
+
+selectTransactionsByRange:
+SELECT T.*, C.name AS categoryName
+FROM TransactionEntity T
+LEFT JOIN CategoryEntity C ON T.categoryId = C.id
+WHERE T.userId = ? AND T.dateTime >= ? AND T.dateTime <= ?
+ORDER BY T.dateTime DESC;
+
+selectTransactionsByAccount:
+SELECT * FROM TransactionEntity WHERE accountId = ? ORDER BY dateTime DESC;
+
+deleteTransaction:
+DELETE FROM TransactionEntity WHERE id = ?;
+
+selectTransactionById:
+SELECT * FROM TransactionEntity WHERE id = ?;
+
+countTransactions:
+SELECT COUNT(*) FROM TransactionEntity WHERE userId = ?;
+
+selectTransactionsPaged:
+SELECT T.*, C.name AS categoryName
+FROM TransactionEntity T
+LEFT JOIN CategoryEntity C ON T.categoryId = C.id
+WHERE T.userId = ?
+ORDER BY T.dateTime DESC
+LIMIT :limit OFFSET :offset;
+
+-- Aggregation Queries
+getDailyTotals:
+SELECT
+    date(dateTime / 1000, 'unixepoch') AS day,
+    SUM(CASE WHEN isIncome = 1 THEN CAST(amount AS REAL) ELSE 0 END) AS incomeTotal,
+    SUM(CASE WHEN isIncome = 0 THEN CAST(amount AS REAL) ELSE 0 END) AS expenseTotal
+FROM TransactionEntity
+WHERE userId = ? AND dateTime >= ? AND dateTime <= ?
+GROUP BY day;
+
+getCategoryTotals:
+SELECT
+    C.name AS catName,
+    SUM(CAST(T.amount AS REAL)) AS totalSum
+FROM TransactionEntity T
+JOIN CategoryEntity C ON T.categoryId = C.id
+WHERE T.userId = ? AND T.isIncome = 1 AND T.dateTime >= ? AND T.dateTime <= ?
+GROUP BY catName;
+
+-- Budget Queries
+insertBudget:
+INSERT INTO BudgetEntity(id, userId, name, limitAmount, isExpense, startDate, endDate, categoryIds, accountIds, createdAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectAllBudgets:
+SELECT * FROM BudgetEntity WHERE userId = ?;
+
+selectBudgetById:
+SELECT * FROM BudgetEntity WHERE id = ?;
+
+deleteBudget:
+DELETE FROM BudgetEntity WHERE id = ?;
+
+deleteAllBudgets:
+DELETE FROM BudgetEntity WHERE userId = ?;
