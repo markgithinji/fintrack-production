@@ -1,3 +1,6 @@
+// Workaround for AndroidLocationsBuildService error on some Windows systems
+System.setProperty("android.user.home", "${rootDir}/.android_home")
+
 rootProject.name = "Fintrack"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 

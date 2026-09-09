@@ -8,6 +8,15 @@ plugins {
     alias(libs.plugins.kotlinxSerialization)
     alias(libs.plugins.detekt)
     alias(libs.plugins.spotless)
+    alias(libs.plugins.sqldelight)
+}
+
+sqldelight {
+    databases {
+        create("FintrackDatabase") {
+            packageName.set("com.fintrack.shared.db")
+        }
+    }
 }
 
 kotlin {
@@ -49,6 +58,7 @@ kotlin {
             implementation(libs.androidx.paging.runtime)
             implementation(libs.androidx.work.runtime.ktx)
             implementation(libs.androidx.paging.compose)
+            implementation(libs.sqldelight.android.driver)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -76,10 +86,13 @@ kotlin {
             implementation(libs.androidx.paging.common)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.bignum)
+            implementation(libs.sqldelight.coroutines.extensions)
+            implementation(libs.sqldelight.paging)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
             implementation(libs.koin.core)
+            implementation(libs.sqldelight.native.driver)
         }
 
         commonTest.dependencies {
@@ -91,6 +104,7 @@ kotlin {
 android {
     namespace = "com.fintrack.shared"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
+    buildToolsVersion = "35.0.0"
 
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
