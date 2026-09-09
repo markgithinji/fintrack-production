@@ -15,7 +15,7 @@
         android:name=".FintrackApp"
         android:allowBackup="false"
         android:icon="@mipmap/fintrack_app_icon"
-        android:label="@string/app_name"
+        android:label="${appName}"
         android:roundIcon="@mipmap/fintrack_app_icon"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
@@ -24,7 +24,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
+            android:label="${appName}"
             android:theme="@style/Theme.App.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

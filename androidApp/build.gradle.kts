@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.fintrack.android"
-    compileSdk = 37
+    compileSdk = 35
+    buildToolsVersion = "35.0.0"
 
     buildFeatures {
         buildConfig = true
@@ -15,11 +16,22 @@ android {
     defaultConfig {
         applicationId = "com.fintrack.android"
         minSdk = 24
-        targetSdk = 37
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["appName"] = "Fintrack"
+    }
+
+    flavorDimensions += "version"
+    productFlavors {
+        create("production") {
+            dimension = "version"
+            applicationIdSuffix = ".production"
+            versionNameSuffix = "-production"
+            manifestPlaceholders["appName"] = "Fintrack"
+        }
     }
 
 
@@ -27,11 +39,13 @@ android {
         debug {
             isDebuggable = true
             applicationIdSuffix = ".debug"  // Enables simultaneous installation
+            manifestPlaceholders["appName"] = "Fintrack (Debug)"
             isMinifyEnabled = false
             isShrinkResources = false
         }
         release {
             isDebuggable = false
+            manifestPlaceholders["appName"] = "Fintrack"
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
