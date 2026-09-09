@@ -2,6 +2,7 @@ package com.fintrack.shared.feature.transaction.di
 
 import com.fintrack.shared.feature.transaction.data.TransactionApi
 import com.fintrack.shared.feature.transaction.data.TransactionRepositoryImpl
+import com.fintrack.shared.feature.transaction.data.repository.TransactionRepositoryOfflineImpl
 import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository
 import com.fintrack.shared.feature.transaction.domain.usecase.CreateTransactionUseCase
 import com.fintrack.shared.feature.transaction.domain.usecase.ExportTransactionsUseCase
@@ -16,7 +17,10 @@ import org.koin.dsl.module
 
 val transactionModule = module {
     singleOf(::TransactionApi)
-    singleOf(::TransactionRepositoryImpl) { bind<TransactionRepository>() }
+    
+    single<TransactionRepository> {
+        TransactionRepositoryOfflineImpl(database = get())
+    }
 
     singleOf(::ValidateTransactionUseCase)
     singleOf(::CreateTransactionUseCase)
