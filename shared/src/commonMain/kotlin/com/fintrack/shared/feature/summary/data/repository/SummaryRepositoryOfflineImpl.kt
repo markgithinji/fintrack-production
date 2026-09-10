@@ -5,10 +5,13 @@ import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.summary.domain.model.*
 import com.fintrack.shared.feature.summary.domain.repository.SummaryRepository
 import com.fintrack.shared.feature.core.logger.KMPLogger
+import com.fintrack.shared.feature.core.util.DateTimeUtils
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.*
+import kotlin.time.Clock
 
 class SummaryRepositoryOfflineImpl(
     private val database: FintrackDatabase,
@@ -26,12 +29,15 @@ class SummaryRepositoryOfflineImpl(
         try {
             val result = queries.getHighlights(accountId = accountId, userId = offlineUserId).executeAsOne()
             
+            val income = BigDecimal.fromDouble(result.incomeTotal ?: 0.0)
+            val expense = BigDecimal.fromDouble(result.expenseTotal ?: 0.0)
+
             Result.Success(
                 StatisticsSummary(
                     period = period ?: "All Time",
-                    income = BigDecimal.fromDouble(result.incomeTotal ?: 0.0),
-                    expense = BigDecimal.fromDouble(result.expenseTotal ?: 0.0),
-                    balance = BigDecimal.fromDouble((result.incomeTotal ?: 0.0) - (result.expenseTotal ?: 0.0)),
+                    income = income,
+                    expense = expense,
+                    balance = income - expense,
                     totalTransactionCost = BigDecimal.fromDouble(result.feesTotal ?: 0.0)
                 )
             )
@@ -49,37 +55,117 @@ class SummaryRepositoryOfflineImpl(
         accountId: String?
     ): Result<DistributionSummary> = withContext(Dispatchers.IO) {
         try {
+            val isIncome = type?.lowercase() == "income"
+            
+            val startInstant = start?.let { Instant.parse(it) } ?: Instant.fromEpochSeconds(0)
+            val endInstant = end?.let { Instant.parse(it) } ?: Clock.System.now()
+
+            val categoryTotals = queries.getCategoryTotals(
+                userId = offlineUserId,
+                accountId = accountId,
+                isIncome = if (isIncome) 1L else 0L,
+                start = startInstant,
+                end = endInstant
+            ).executeAsList()
+
+            val totalAmount = categoryTotals.fold(0.0) { acc, it -> acc + (it.totalSum ?: 0.0) }
+            
+            val categorySummaries = categoryTotals.map { 
+                val amount = it.totalSum ?: 0.0
+                val percentage = if (totalAmount > 0) (amount / totalAmount) * 100 else 0.0
+                CategorySummary(
+                    category = it.catName,
+                    categoryId = it.catId,
+                    total = BigDecimal.fromDouble(amount),
+                    percentage = BigDecimal.fromDouble(percentage),
+                    transactionCount = it.txCount.toInt()
+                )
+            }
+
             Result.Success(
                 DistributionSummary(
-                    period = "All Time",
+                    period = weekOrMonthCode,
                     totalTransactionCost = BigDecimal.ZERO,
-                    incomeCategories = emptyList(),
-                    expenseCategories = emptyList(),
+                    incomeCategories = if (isIncome) categorySummaries else emptyList(),
+                    expenseCategories = if (!isIncome) categorySummaries else emptyList(),
                     othersInsightSummary = null
                 )
             )
+        } catch (e: Exception) {
+            logger.error(TAG, "Error calculating distribution", e)
+            Result.Error(e)
+        }
+    }
+
+    override suspend fun getAvailableWeeks(accountId: String?): Result<AvailableWeeks> = withContext(Dispatchers.IO) {
+        try {
+            val weeks = queries.selectDistinctWeeks(offlineUserId, accountId).executeAsList()
+            Result.Success(AvailableWeeks(weeks))
         } catch (e: Exception) {
             Result.Error(e)
         }
     }
 
-    override suspend fun getAvailableWeeks(accountId: String?): Result<AvailableWeeks> = Result.Success(AvailableWeeks(emptyList()))
+    override suspend fun getAvailableMonths(accountId: String?): Result<AvailableMonths> = withContext(Dispatchers.IO) {
+        try {
+            val months = queries.selectDistinctMonths(offlineUserId, accountId).executeAsList()
+            Result.Success(AvailableMonths(months))
+        } catch (e: Exception) {
+            Result.Error(e)
+        }
+    }
 
-    override suspend fun getAvailableMonths(accountId: String?): Result<AvailableMonths> = Result.Success(AvailableMonths(emptyList()))
-
-    override suspend fun getAvailableYears(accountId: String?): Result<AvailableYears> = Result.Success(AvailableYears(emptyList()))
+    override suspend fun getAvailableYears(accountId: String?): Result<AvailableYears> = withContext(Dispatchers.IO) {
+        try {
+            val years = queries.selectDistinctYears(offlineUserId, accountId).executeAsList()
+            Result.Success(AvailableYears(years))
+        } catch (e: Exception) {
+            Result.Error(e)
+        }
+    }
 
     override suspend fun getOverviewSummary(accountId: String?): Result<OverviewSummary> = withContext(Dispatchers.IO) {
         try {
+            val now = Clock.System.now()
+            val weekAgo = now.minus(7, DateTimeUnit.DAY, TimeZone.currentSystemDefault())
+            val monthAgo = now.minus(30, DateTimeUnit.DAY, TimeZone.currentSystemDefault())
+
+            val weeklyData = queries.getDailyTotals(
+                userId = offlineUserId,
+                accountId = accountId,
+                start = weekAgo,
+                end = now
+            ).executeAsList().map {
+                DaySummary(
+                    date = it.day,
+                    income = BigDecimal.fromDouble(it.incomeTotal ?: 0.0),
+                    expense = BigDecimal.fromDouble(it.expenseTotal ?: 0.0)
+                )
+            }
+
+            val monthlyData = queries.getDailyTotals(
+                userId = offlineUserId,
+                accountId = accountId,
+                start = monthAgo,
+                end = now
+            ).executeAsList().map {
+                DaySummary(
+                    date = it.day,
+                    income = BigDecimal.fromDouble(it.incomeTotal ?: 0.0),
+                    expense = BigDecimal.fromDouble(it.expenseTotal ?: 0.0)
+                )
+            }
+
             Result.Success(
                 OverviewSummary(
-                    period = "All Time",
+                    period = "Last 30 Days",
                     isCurrent = true,
-                    weeklyOverview = emptyList(),
-                    monthlyOverview = emptyList()
+                    weeklyOverview = weeklyData,
+                    monthlyOverview = monthlyData
                 )
             )
         } catch (e: Exception) {
+            logger.error(TAG, "Error calculating overview", e)
             Result.Error(e)
         }
     }
@@ -87,13 +173,60 @@ class SummaryRepositoryOfflineImpl(
     override suspend fun getCategoryComparisons(
         accountId: String?,
         period: String?
-    ): Result<CategoryComparisonSummary> = Result.Success(
-        CategoryComparisonSummary(
-            period = period ?: "All Time",
-            isCurrent = true,
-            data = emptyList()
-        )
-    )
+    ): Result<CategoryComparisonSummary> = withContext(Dispatchers.IO) {
+        try {
+            val dateRange = if (period != null) DateTimeUtils.getMonthRange(period) else null
+            
+            if (dateRange == null) {
+                return@withContext Result.Success(CategoryComparisonSummary(period ?: "All Time", true, emptyList()))
+            }
+
+            val currentTotals = queries.getCategoryTotals(
+                userId = offlineUserId,
+                accountId = accountId,
+                isIncome = 0L,
+                start = dateRange.first.atStartOfDayIn(TimeZone.currentSystemDefault()),
+                end = dateRange.second.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+            ).executeAsList()
+
+            val prevMonthStart = dateRange.first.minus(1, DateTimeUnit.MONTH)
+            val prevMonthEnd = dateRange.first.minus(1, DateTimeUnit.DAY)
+            
+            val previousTotals = queries.getCategoryTotals(
+                userId = offlineUserId,
+                accountId = accountId,
+                isIncome = 0L,
+                start = prevMonthStart.atStartOfDayIn(TimeZone.currentSystemDefault()),
+                end = prevMonthEnd.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+            ).executeAsList()
+
+            val comparisons = currentTotals.map { current ->
+                val prev = previousTotals.find { it.catId == current.catId }
+                val currentVal = current.totalSum ?: 0.0
+                val prevVal = prev?.totalSum ?: 0.0
+                
+                val change = if (prevVal > 0) ((currentVal - prevVal) / prevVal) * 100 else 0.0
+                
+                CategoryComparison(
+                    category = current.catName,
+                    currentTotal = BigDecimal.fromDouble(currentVal),
+                    previousTotal = BigDecimal.fromDouble(prevVal),
+                    changePercentage = BigDecimal.fromDouble(change)
+                )
+            }
+
+            Result.Success(
+                CategoryComparisonSummary(
+                    period = period ?: "",
+                    isCurrent = true,
+                    data = comparisons
+                )
+            )
+        } catch (e: Exception) {
+            logger.error(TAG, "Error calculating category comparisons", e)
+            Result.Error(e)
+        }
+    }
 
     override suspend fun getTransactionCounts(
         accountId: String,
@@ -120,13 +253,29 @@ class SummaryRepositoryOfflineImpl(
         }
     }
 
-    override suspend fun getProfileMetrics(): Result<ProfileMetrics> = Result.Success(
-        ProfileMetrics(
-            name = "Offline User",
-            email = "offline@fintrack.local",
-            netWorth = BigDecimal.ZERO,
-            savingsRate = null,
-            essentialSpendRatio = null
-        )
-    )
+    override suspend fun getProfileMetrics(): Result<ProfileMetrics> = withContext(Dispatchers.IO) {
+        try {
+            val netWorthResult = queries.getNetWorth(offlineUserId).executeAsOne()
+            val netWorthDouble = netWorthResult.netWorth ?: 0.0
+            
+            val highlights = queries.getHighlights(accountId = null, userId = offlineUserId).executeAsOne()
+            val income = highlights.incomeTotal ?: 0.0
+            val expense = highlights.expenseTotal ?: 0.0
+            
+            val savingsRate = if (income > 0) ((income - expense) / income) * 100 else 0.0
+
+            Result.Success(
+                ProfileMetrics(
+                    name = "Offline User",
+                    email = "offline@fintrack.local",
+                    netWorth = BigDecimal.fromDouble(netWorthDouble),
+                    savingsRate = BigDecimal.fromDouble(savingsRate),
+                    essentialSpendRatio = null 
+                )
+            )
+        } catch (e: Exception) {
+            logger.error(TAG, "Error fetching profile metrics", e)
+            Result.Error(e)
+        }
+    }
 }

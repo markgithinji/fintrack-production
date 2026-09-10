@@ -142,17 +142,21 @@ SELECT
     SUM(CASE WHEN isIncome = 1 THEN CAST(amount AS REAL) ELSE 0 END) AS incomeTotal,
     SUM(CASE WHEN isIncome = 0 THEN CAST(amount AS REAL) ELSE 0 END) AS expenseTotal
 FROM TransactionEntity
-WHERE userId = ? AND dateTime >= ? AND dateTime <= ?
-GROUP BY day;
+WHERE userId = :userId AND (:accountId IS NULL OR accountId = :accountId) AND dateTime >= :start AND dateTime <= :end
+GROUP BY day
+ORDER BY day ASC;
 
 getCategoryTotals:
 SELECT
     C.name AS catName,
-    SUM(CAST(T.amount AS REAL)) AS totalSum
+    C.id AS catId,
+    SUM(CAST(T.amount AS REAL)) AS totalSum,
+    COUNT(*) AS txCount
 FROM TransactionEntity T
 JOIN CategoryEntity C ON T.categoryId = C.id
-WHERE T.userId = ? AND T.isIncome = 1 AND T.dateTime >= ? AND T.dateTime <= ?
-GROUP BY catName;
+WHERE T.userId = :userId AND (:accountId IS NULL OR accountId = :accountId) AND T.isIncome = :isIncome AND T.dateTime >= :start AND T.dateTime <= :end
+GROUP BY catId
+ORDER BY totalSum DESC;
 
 getHighlights:
 SELECT
@@ -161,6 +165,27 @@ SELECT
     SUM(CAST(transactionCost AS REAL)) AS feesTotal
 FROM TransactionEntity
 WHERE (:accountId IS NULL OR accountId = :accountId) AND (userId = :userId);
+
+selectDistinctMonths:
+SELECT DISTINCT strftime('%Y-%m', dateTime / 1000, 'unixepoch') AS month
+FROM TransactionEntity
+WHERE userId = ? AND (:accountId IS NULL OR accountId = :accountId)
+ORDER BY month DESC;
+
+selectDistinctYears:
+SELECT DISTINCT strftime('%Y', dateTime / 1000, 'unixepoch') AS year
+FROM TransactionEntity
+WHERE userId = ? AND (:accountId IS NULL OR accountId = :accountId)
+ORDER BY year DESC;
+
+selectDistinctWeeks:
+SELECT DISTINCT strftime('%Y-W%W', dateTime / 1000, 'unixepoch') AS week
+FROM TransactionEntity
+WHERE userId = ? AND (:accountId IS NULL OR accountId = :accountId)
+ORDER BY week DESC;
+
+getNetWorth:
+SELECT SUM(CAST(balance AS REAL)) AS netWorth FROM AccountEntity WHERE userId = ?;
 
 -- Budget Queries
 insertBudget:
