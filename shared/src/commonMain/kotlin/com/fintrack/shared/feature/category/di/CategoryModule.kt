@@ -19,7 +19,10 @@ val categoryModule = module {
     singleOf(::LocalCategoryDataSource)
     
     single<CategoryRepository> {
-        CategoryRepositoryOfflineImpl(database = get())
+        CategoryRepositoryOfflineImpl(
+            database = get(),
+            logger = get()
+        )
     }
     
     singleOf(::SyncCategoriesUseCase)

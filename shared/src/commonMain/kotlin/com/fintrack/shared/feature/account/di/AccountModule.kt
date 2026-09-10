@@ -16,7 +16,10 @@ val accountModule = module {
     singleOf(::AccountsApi)
     
     single<AccountRepository> {
-        AccountRepositoryOfflineImpl(database = get())
+        AccountRepositoryOfflineImpl(
+            database = get(),
+            logger = get()
+        )
     }
     factoryOf(::GetAccountsUseCase)
     viewModelOf(::AccountsViewModel)

@@ -11,7 +11,7 @@ import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val budgetModule = module {
-    single<BudgetRepository> { BudgetRepositoryOfflineImpl(database = get()) }
+    single<BudgetRepository> { BudgetRepositoryOfflineImpl(database = get(), logger = get()) }
     singleOf(::BudgetValidationUseCase)
     singleOf(::CheckBudgetThresholdsUseCase)
     viewModelOf(::BudgetViewModel)

@@ -14,7 +14,7 @@ val summaryModule = module {
     singleOf(::SummaryApi)
     
     single<SummaryRepository> {
-        SummaryRepositoryOfflineImpl(database = get())
+        SummaryRepositoryOfflineImpl(database = get(), logger = get())
     }
 
     viewModelOf(::StatisticsViewModel)

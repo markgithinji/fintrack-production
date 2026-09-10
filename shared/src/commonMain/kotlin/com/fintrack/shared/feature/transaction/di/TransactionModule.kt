@@ -19,7 +19,10 @@ val transactionModule = module {
     singleOf(::TransactionApi)
     
     single<TransactionRepository> {
-        TransactionRepositoryOfflineImpl(database = get())
+        TransactionRepositoryOfflineImpl(
+            database = get(),
+            logger = get()
+        )
     }
 
     singleOf(::ValidateTransactionUseCase)
