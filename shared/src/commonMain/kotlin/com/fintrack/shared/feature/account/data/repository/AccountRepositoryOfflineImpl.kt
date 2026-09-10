@@ -10,19 +10,23 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import com.fintrack.shared.feature.core.util.DateTimeHelper
+import com.fintrack.shared.feature.core.logger.KMPLogger
 
 class AccountRepositoryOfflineImpl(
-    private val database: FintrackDatabase
+    private val database: FintrackDatabase,
+    private val logger: KMPLogger
 ) : AccountRepository {
 
     private val queries = database.fintrackDatabaseQueries
     private val offlineUserId = "offline_user"
+    private val TAG = "AccountRepo"
 
     override suspend fun getAccounts(): Result<List<Account>> = withContext(Dispatchers.IO) {
         try {
             val accounts = queries.selectAllAccounts(offlineUserId).executeAsList().map { it.toDomain() }
             Result.Success(accounts)
         } catch (e: Exception) {
+            logger.error(TAG, "Error fetching accounts", e)
             Result.Error(e)
         }
     }
@@ -32,6 +36,7 @@ class AccountRepositoryOfflineImpl(
             val account = queries.selectAccountById(id).executeAsOneOrNull()?.toDomain()
             if (account != null) Result.Success(account) else Result.Error(Exception("Account not found"))
         } catch (e: Exception) {
+            logger.error(TAG, "Error fetching account $id", e)
             Result.Error(e)
         }
     }
@@ -50,6 +55,7 @@ class AccountRepositoryOfflineImpl(
             )
             Result.Success(account)
         } catch (e: Exception) {
+            logger.error(TAG, "Error saving account ${account.name}", e)
             Result.Error(e)
         }
     }
@@ -59,6 +65,7 @@ class AccountRepositoryOfflineImpl(
             queries.deleteAccount(id)
             Result.Success(Unit)
         } catch (e: Exception) {
+            logger.error(TAG, "Error deleting account $id", e)
             Result.Error(e)
         }
     }

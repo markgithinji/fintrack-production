@@ -8,22 +8,26 @@ import com.fintrack.shared.feature.category.domain.repository.CategoryRepository
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.core.util.randomUUID
 import com.fintrack.shared.feature.core.util.DateTimeHelper
+import com.fintrack.shared.feature.core.logger.KMPLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
 class CategoryRepositoryOfflineImpl(
-    private val database: FintrackDatabase
+    private val database: FintrackDatabase,
+    private val logger: KMPLogger
 ) : CategoryRepository {
 
     private val queries = database.fintrackDatabaseQueries
     private val offlineUserId = "offline_user"
+    private val TAG = "CategoryRepo"
 
     override suspend fun getCategories(): Result<List<Category>> = withContext(Dispatchers.IO) {
         try {
             val categories = queries.selectAllCategories(offlineUserId).executeAsList().map { it.toDomain() }
             Result.Success(categories)
         } catch (e: Exception) {
+            logger.error(TAG, "Error fetching categories", e)
             Result.Error(e)
         }
     }
@@ -50,6 +54,7 @@ class CategoryRepositoryOfflineImpl(
             )
             Result.Success(category)
         } catch (e: Exception) {
+            logger.error(TAG, "Error adding category $name", e)
             Result.Error(e)
         }
     }
@@ -59,6 +64,7 @@ class CategoryRepositoryOfflineImpl(
             queries.deleteCategory(id)
             Result.Success(Unit)
         } catch (e: Exception) {
+            logger.error(TAG, "Error deleting category $id", e)
             Result.Error(e)
         }
     }

@@ -17,13 +17,17 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import com.fintrack.shared.feature.core.util.DateTimeHelper
+import com.fintrack.shared.feature.core.logger.KMPLogger
+import com.fintrack.shared.feature.core.util.randomUUID
 
 class TransactionRepositoryOfflineImpl(
-    private val database: FintrackDatabase
+    private val database: FintrackDatabase,
+    private val logger: KMPLogger
 ) : TransactionRepository {
 
     private val queries = database.fintrackDatabaseQueries
     private val offlineUserId = "offline_user"
+    private val TAG = "TransactionRepo"
 
     override suspend fun getTransactions(
         limit: Int,
@@ -40,6 +44,7 @@ class TransactionRepositoryOfflineImpl(
     ): Result<Pair<List<Transaction>, String?>> = withContext(Dispatchers.IO) {
         try {
             val transactions = queries.selectAllTransactions(offlineUserId).executeAsList()
+                .take(limit)
                 .map { row ->
                     Transaction(
                         id = row.id,
@@ -57,6 +62,7 @@ class TransactionRepositoryOfflineImpl(
                 }
             Result.Success(transactions to null)
         } catch (e: Exception) {
+            logger.error(TAG, "Error fetching transactions", e)
             Result.Error(e)
         }
     }
@@ -64,7 +70,7 @@ class TransactionRepositoryOfflineImpl(
     override suspend fun addTransaction(transaction: Transaction): Result<Transaction> = withContext(Dispatchers.IO) {
         try {
             queries.insertTransaction(
-                id = transaction.id ?: com.fintrack.shared.feature.core.util.randomUUID(),
+                id = transaction.id ?: randomUUID(),
                 userId = offlineUserId,
                 accountId = transaction.accountId,
                 categoryId = transaction.categoryId,
@@ -80,6 +86,7 @@ class TransactionRepositoryOfflineImpl(
             )
             Result.Success(transaction)
         } catch (e: Exception) {
+            logger.error(TAG, "Error adding transaction", e)
             Result.Error(e)
         }
     }
@@ -89,7 +96,7 @@ class TransactionRepositoryOfflineImpl(
             queries.transaction {
                 transactions.forEach { transaction ->
                     queries.insertTransaction(
-                        id = transaction.id ?: com.fintrack.shared.feature.core.util.randomUUID(),
+                        id = transaction.id ?: randomUUID(),
                         userId = offlineUserId,
                         accountId = transaction.accountId,
                         categoryId = transaction.categoryId,
@@ -107,6 +114,7 @@ class TransactionRepositoryOfflineImpl(
             }
             Result.Success(Unit)
         } catch (e: Exception) {
+            logger.error(TAG, "Error adding multiple transactions", e)
             Result.Error(e)
         }
     }
@@ -138,6 +146,7 @@ class TransactionRepositoryOfflineImpl(
                 Result.Error(Exception("Transaction not found"))
             }
         } catch (e: Exception) {
+            logger.error(TAG, "Error fetching transaction $id", e)
             Result.Error(e)
         }
     }
@@ -166,6 +175,7 @@ class TransactionRepositoryOfflineImpl(
                 }
             Result.Success(transactions)
         } catch (e: Exception) {
+            logger.error(TAG, "Error fetching all transactions", e)
             Result.Error(e)
         }
     }
@@ -177,6 +187,7 @@ class TransactionRepositoryOfflineImpl(
             queries.deleteTransaction(id)
             Result.Success(Unit)
         } catch (e: Exception) {
+            logger.error(TAG, "Error deleting transaction $id", e)
             Result.Error(e)
         }
     }
@@ -189,6 +200,7 @@ class TransactionRepositoryOfflineImpl(
             }
             Result.Success(Unit)
         } catch (e: Exception) {
+            logger.error(TAG, "Error deleting transactions for accounts $accountIds", e)
             Result.Error(e)
         }
     }

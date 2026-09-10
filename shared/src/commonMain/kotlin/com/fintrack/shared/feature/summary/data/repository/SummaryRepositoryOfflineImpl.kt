@@ -4,53 +4,39 @@ import com.fintrack.shared.db.FintrackDatabase
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.summary.domain.model.*
 import com.fintrack.shared.feature.summary.domain.repository.SummaryRepository
+import com.fintrack.shared.feature.core.logger.KMPLogger
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
 class SummaryRepositoryOfflineImpl(
-    private val database: FintrackDatabase
+    private val database: FintrackDatabase,
+    private val logger: KMPLogger
 ) : SummaryRepository {
 
     private val queries = database.fintrackDatabaseQueries
     private val offlineUserId = "offline_user"
+    private val TAG = "SummaryRepo"
 
     override suspend fun getHighlightsSummary(
         accountId: String?,
         period: String?
     ): Result<StatisticsSummary> = withContext(Dispatchers.IO) {
         try {
-            val transactions = if (accountId != null) {
-                queries.selectTransactionsByAccount(accountId).executeAsList()
-            } else {
-                queries.selectAllTransactions(offlineUserId).executeAsList()
-            }
+            val result = queries.getHighlights(accountId = accountId, userId = offlineUserId).executeAsOne()
             
-            var income = BigDecimal.ZERO
-            var expense = BigDecimal.ZERO
-            var fees = BigDecimal.ZERO
-
-            transactions.forEach { row ->
-                val amount = BigDecimal.parseString(row.amount)
-                if (row.isIncome != 0L) {
-                    income += amount
-                } else {
-                    expense += amount
-                }
-                fees += BigDecimal.parseString(row.transactionCost)
-            }
-
             Result.Success(
                 StatisticsSummary(
                     period = period ?: "All Time",
-                    income = income,
-                    expense = expense,
-                    balance = income - expense,
-                    totalTransactionCost = fees
+                    income = BigDecimal.fromDouble(result.incomeTotal ?: 0.0),
+                    expense = BigDecimal.fromDouble(result.expenseTotal ?: 0.0),
+                    balance = BigDecimal.fromDouble((result.incomeTotal ?: 0.0) - (result.expenseTotal ?: 0.0)),
+                    totalTransactionCost = BigDecimal.fromDouble(result.feesTotal ?: 0.0)
                 )
             )
         } catch (e: Exception) {
+            logger.error(TAG, "Error calculating highlights", e)
             Result.Error(e)
         }
     }
@@ -129,6 +115,7 @@ class SummaryRepositoryOfflineImpl(
                 )
             )
         } catch (e: Exception) {
+            logger.error(TAG, "Error fetching transaction counts", e)
             Result.Error(e)
         }
     }

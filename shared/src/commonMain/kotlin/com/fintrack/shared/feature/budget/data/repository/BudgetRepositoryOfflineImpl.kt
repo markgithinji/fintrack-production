@@ -10,6 +10,7 @@ import com.fintrack.shared.feature.category.domain.model.allCategories
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.core.util.randomUUID
 import com.fintrack.shared.feature.core.util.DateTimeHelper
+import com.fintrack.shared.feature.core.logger.KMPLogger
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -17,11 +18,13 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 
 class BudgetRepositoryOfflineImpl(
-    private val database: FintrackDatabase
+    private val database: FintrackDatabase,
+    private val logger: KMPLogger
 ) : BudgetRepository {
 
     private val queries = database.fintrackDatabaseQueries
     private val offlineUserId = "offline_user"
+    private val TAG = "BudgetRepo"
 
     override suspend fun getBudgets(
         accountId: String?
@@ -51,6 +54,7 @@ class BudgetRepositoryOfflineImpl(
             }
             Result.Success(budgets)
         } catch (e: Exception) {
+            logger.error(TAG, "Error fetching budgets", e)
             Result.Error(e)
         }
     }
@@ -85,6 +89,7 @@ class BudgetRepositoryOfflineImpl(
                 Result.Error(Exception("Budget not found"))
             }
         } catch (e: Exception) {
+            logger.error(TAG, "Error fetching budget $id", e)
             Result.Error(e)
         }
     }
@@ -106,6 +111,7 @@ class BudgetRepositoryOfflineImpl(
             )
             Result.Success(budget.copy(id = id))
         } catch (e: Exception) {
+            logger.error(TAG, "Error saving budget ${budget.name}", e)
             Result.Error(e)
         }
     }
@@ -115,6 +121,7 @@ class BudgetRepositoryOfflineImpl(
             queries.deleteBudget(id)
             Result.Success(Unit)
         } catch (e: Exception) {
+            logger.error(TAG, "Error deleting budget $id", e)
             Result.Error(e)
         }
     }
@@ -124,6 +131,7 @@ class BudgetRepositoryOfflineImpl(
             queries.deleteAllBudgets(offlineUserId)
             Result.Success(Unit)
         } catch (e: Exception) {
+            logger.error(TAG, "Error deleting all budgets", e)
             Result.Error(e)
         }
     }
