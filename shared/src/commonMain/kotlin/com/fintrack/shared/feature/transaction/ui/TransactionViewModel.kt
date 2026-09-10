@@ -20,6 +20,7 @@ import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepo
 import com.fintrack.shared.feature.transaction.domain.service.TransactionImporter
 import com.fintrack.shared.feature.transaction.domain.usecase.CreateTransactionUseCase
 import com.fintrack.shared.feature.transaction.domain.usecase.ValidateTransactionUseCase
+import com.fintrack.shared.feature.core.util.DateTimeHelper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -179,7 +180,12 @@ class TransactionViewModel(
 
     fun loadRecentTransactions(accountId: String, limit: Int = 6, force: Boolean = false) {
         val paramsChanged = accountId != lastLoadedRecentAccountId
-        if (!force && !paramsChanged && _recentTransactions.value is Result.Success) return
+        println("[DEBUG_ANR] TransactionViewModel.loadRecentTransactions(accountId=$accountId, force=$force)")
+        
+        if (!force && !paramsChanged && _recentTransactions.value is Result.Success) {
+            println("[DEBUG_ANR] Skipping loadRecentTransactions - already success")
+            return
+        }
         
         lastLoadedRecentAccountId = accountId
         recentTransactionsJob?.cancel()
@@ -188,12 +194,16 @@ class TransactionViewModel(
         _recentTransactions.value = Result.Loading
         
         recentTransactionsJob = viewModelScope.launch {
+            val start = DateTimeHelper.now()
+            println("[DEBUG_ANR] Start fetching recent transactions")
             val result = repo.getTransactions(limit = limit, sortBy = "dateTime", order = "desc", accountId = accountId)
             _recentTransactions.value = when (result) {
                 is Result.Success -> Result.Success(result.data.first)
                 is Result.Error -> Result.Error(result.exception)
                 is Result.Loading -> Result.Loading
             }
+            val end = DateTimeHelper.now()
+            println("[DEBUG_ANR] Finished fetching recent transactions in ${end.toEpochMilliseconds() - start.toEpochMilliseconds()}ms")
         }
     }
 

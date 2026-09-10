@@ -73,6 +73,8 @@ fun HomeScreen(
     onEditTransaction: (String) -> Unit,
     onCardClick: (accountId: String, isIncome: Boolean?) -> Unit
 ) {
+    SideEffect { println("[DEBUG_ANR] HomeScreen Recomposing") }
+
     val accountsResult by accountsViewModel.accounts.collectAsStateWithLifecycle()
     val selectedAccountResult by accountsViewModel.selectedAccount.collectAsStateWithLifecycle()
     val transactionsResult by transactionsViewModel.recentTransactions.collectAsStateWithLifecycle()
@@ -244,8 +246,10 @@ fun HomeScreen(
 
     LaunchedEffect(refreshTrigger, enrichedSelectedAccount) {
         val accountId = (enrichedSelectedAccount as? Result.Success)?.data?.id
+        println("[DEBUG_ANR] LaunchedEffect(refreshTrigger=$refreshTrigger, accountId=$accountId)")
         if (accountId != null && refreshTrigger > lastProcessedRefreshTrigger) {
-            accountsViewModel.reloadAccounts(showLoading = false)
+            println("[DEBUG_ANR] Refreshing transaction data for account $accountId")
+            // Decoupled account list reload to break potential loops
             transactionsViewModel.loadRecentTransactions(accountId, force = true)
             statsViewModel.loadOverview(accountId, force = true)
             statsViewModel.loadCategoryComparisons(accountId, force = true)
@@ -256,6 +260,7 @@ fun HomeScreen(
     }
 
     LaunchedEffect(Unit) {
+        println("[DEBUG_ANR] LaunchedEffect(Unit)")
         transactionsViewModel.refreshCategories()
         if (accountsResult !is Result.Success || (accountsResult as Result.Success).data.isEmpty()) {
             accountsViewModel.reloadAccounts()
@@ -264,6 +269,7 @@ fun HomeScreen(
 
     LaunchedEffect(enrichedSelectedAccount) {
         val account = (enrichedSelectedAccount as? Result.Success)?.data
+        println("[DEBUG_ANR] LaunchedEffect(enrichedSelectedAccount=${account?.id})")
         account?.let { acc ->
             transactionsViewModel.loadRecentTransactions(acc.id)
             statsViewModel.loadOverview(acc.id)
@@ -271,7 +277,8 @@ fun HomeScreen(
 
             // Trigger auto-sync only if the account has linked sources
             if (acc.linkedSources.contains("mpesa") || acc.linkedSources.contains("equity")) {
-                transactionsViewModel.autoSyncTransactions(acc.id)
+                println("[DEBUG_ANR] Triggering auto-sync for ${acc.id}")
+                transactionsViewModel.autoSyncTransactions(acc.id, acc.lastSyncedAt)
             }
         }
     }

@@ -13,6 +13,7 @@ import com.fintrack.shared.feature.summary.domain.model.TabType
 import com.fintrack.shared.feature.summary.domain.model.TransactionCountSummary
 import com.fintrack.shared.feature.summary.domain.model.TransactionType
 import com.fintrack.shared.feature.summary.domain.repository.SummaryRepository
+import com.fintrack.shared.feature.core.util.DateTimeHelper
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
@@ -324,9 +325,17 @@ class StatisticsViewModel(
         val paramsChanged = lastOverviewAccountId != accountId
         val current = _overview.value
         
+        println("[DEBUG_ANR] StatisticsViewModel.loadOverview(accountId=$accountId, force=$force)")
+        
         if (!force && !paramsChanged) {
-            if (current is Result.Success) return
-            if (overviewJob?.isActive == true) return
+            if (current is Result.Success) {
+                println("[DEBUG_ANR] Skipping loadOverview - already success")
+                return
+            }
+            if (overviewJob?.isActive == true) {
+                println("[DEBUG_ANR] Skipping loadOverview - job active")
+                return
+            }
         }
         
         overviewJob?.cancel()
@@ -337,8 +346,12 @@ class StatisticsViewModel(
         }
 
         overviewJob = viewModelScope.launch {
+            val start = DateTimeHelper.now()
+            println("[DEBUG_ANR] Start fetching overview summary")
             lastOverviewAccountId = accountId
             _overview.value = summaryRepository.getOverviewSummary(accountId)
+            val end = DateTimeHelper.now()
+            println("[DEBUG_ANR] Finished fetching overview summary in ${end.toEpochMilliseconds() - start.toEpochMilliseconds()}ms")
         }
     }
 
@@ -352,9 +365,17 @@ class StatisticsViewModel(
         val paramsChanged = lastCategoryComparisonAccountId != accountId || lastCategoryComparisonPeriod != period
         val current = _categoryComparisons.value
         
+        println("[DEBUG_ANR] StatisticsViewModel.loadCategoryComparisons(accountId=$accountId, period=$period, force=$force)")
+
         if (!force && !paramsChanged) {
-            if (current is Result.Success) return
-            if (categoryComparisonsJob?.isActive == true) return
+            if (current is Result.Success) {
+                println("[DEBUG_ANR] Skipping loadCategoryComparisons - already success")
+                return
+            }
+            if (categoryComparisonsJob?.isActive == true) {
+                println("[DEBUG_ANR] Skipping loadCategoryComparisons - job active")
+                return
+            }
         }
 
         categoryComparisonsJob?.cancel()
@@ -365,6 +386,8 @@ class StatisticsViewModel(
         }
 
         categoryComparisonsJob = viewModelScope.launch {
+            val start = DateTimeHelper.now()
+            println("[DEBUG_ANR] Start fetching category comparisons")
             lastCategoryComparisonAccountId = accountId
             lastCategoryComparisonPeriod = period
 
@@ -384,6 +407,8 @@ class StatisticsViewModel(
             }
 
             _categoryComparisons.value = summaryRepository.getCategoryComparisons(accountId, targetPeriod)
+            val end = DateTimeHelper.now()
+            println("[DEBUG_ANR] Finished fetching category comparisons in ${end.toEpochMilliseconds() - start.toEpochMilliseconds()}ms")
         }
     }
 
