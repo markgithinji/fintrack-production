@@ -1,6 +1,7 @@
 package com.fintrack.shared.feature.summary.data.repository
 
 import com.fintrack.shared.db.FintrackDatabase
+import com.fintrack.shared.db.GetDailyTotals
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.summary.domain.model.*
 import com.fintrack.shared.feature.summary.domain.repository.SummaryRepository
@@ -12,8 +13,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.*
 import kotlin.time.Clock
+import kotlin.time.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.atTime
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.DatePeriod
 
 class SummaryRepositoryOfflineImpl(
     private val database: FintrackDatabase,
@@ -25,6 +35,10 @@ class SummaryRepositoryOfflineImpl(
     private val offlineUserId = "offline_user"
     private val TAG = "SummaryRepo"
 
+    // Default fallback category IDs (Salary and Food)
+    private val DEFAULT_INCOME_ID = "aaaaaaaa-aaaa-4aaa-baaa-000000000001"
+    private val DEFAULT_EXPENSE_ID = "00000000-0000-4000-a000-000000000001"
+
     override suspend fun getHighlightsSummary(
         accountId: String?,
         period: String?
@@ -34,14 +48,17 @@ class SummaryRepositoryOfflineImpl(
             
             val income = BigDecimal.fromDouble(result.incomeTotal ?: 0.0)
             val expense = BigDecimal.fromDouble(result.expenseTotal ?: 0.0)
+            val fees = BigDecimal.fromDouble(result.feesTotal ?: 0.0)
+
+            val totalExpense = expense + fees
 
             Result.Success(
                 StatisticsSummary(
                     period = period ?: "All Time",
                     income = income,
-                    expense = expense,
-                    balance = income - expense,
-                    totalTransactionCost = BigDecimal.fromDouble(result.feesTotal ?: 0.0)
+                    expense = totalExpense,
+                    balance = income - totalExpense,
+                    totalTransactionCost = fees
                 )
             )
         } catch (e: Exception) {
@@ -58,30 +75,72 @@ class SummaryRepositoryOfflineImpl(
         accountId: String?
     ): Result<DistributionSummary> = withContext(Dispatchers.IO) {
         try {
-            val isIncome = type?.lowercase() == "income"
+            val isIncomeValue = if (type?.lowercase() == "income") 1L else if (type?.lowercase() == "expense") 0L else null
             
             val startInstant = start?.let { Instant.parse(it) } ?: Instant.fromEpochSeconds(0)
-            val endInstant = end?.let { Instant.parse(it) } ?: (Clock.System.now() as Instant)
+            val endInstant = end?.let { Instant.parse(it) } ?: Clock.System.now()
 
             val categoryTotals = queries.getCategoryTotals(
                 userId = offlineUserId,
                 accountId = accountId,
-                isIncome = if (isIncome) 1L else 0L,
+                isIncome = isIncomeValue,
                 start = startInstant,
                 end = endInstant
             ).executeAsList()
 
+            // Calculate Momentum
+            val currentMonthStart = if (weekOrMonthCode.length == 7) { 
+                 try { LocalDate.parse("$weekOrMonthCode-01") } catch(e: Exception) { null }
+            } else null
+            
+            val momentumData = if (currentMonthStart != null) {
+                val m1Start = currentMonthStart.minus(DatePeriod(months = 1))
+                val m1End = currentMonthStart.minus(DatePeriod(days = 1))
+                val m2Start = currentMonthStart.minus(DatePeriod(months = 2))
+                val m2End = m1Start.minus(DatePeriod(days = 1))
+
+                val m1Totals = queries.getCategoryTotals(
+                    userId = offlineUserId,
+                    accountId = accountId,
+                    isIncome = isIncomeValue,
+                    start = m1Start.atStartOfDayIn(TimeZone.currentSystemDefault()),
+                    end = m1End.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+                ).executeAsList()
+
+                val m2Totals = queries.getCategoryTotals(
+                    userId = offlineUserId,
+                    accountId = accountId,
+                    isIncome = isIncomeValue,
+                    start = m2Start.atStartOfDayIn(TimeZone.currentSystemDefault()),
+                    end = m2End.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+                ).executeAsList()
+                
+                m1Totals to m2Totals
+            } else null
+
             val totalAmount = categoryTotals.fold(0.0) { acc, it -> acc + (it.totalSum ?: 0.0) }
             
-            val categorySummaries = categoryTotals.map { 
-                val amount = it.totalSum ?: 0.0
+            val categorySummaries = categoryTotals.map { current ->
+                val amount = current.totalSum ?: 0.0
                 val percentage = if (totalAmount > 0) (amount / totalAmount) * 100 else 0.0
+                
+                val momentum = if (momentumData != null) {
+                    val prev1 = momentumData.first.find { it.catId == current.catId }?.totalSum ?: 0.0
+                    val prev2 = momentumData.second.find { it.catId == current.catId }?.totalSum ?: 0.0
+                    when {
+                        amount > prev1 && prev1 > prev2 -> "UP"
+                        amount < prev1 && prev1 < prev2 -> "DOWN"
+                        else -> "STABLE"
+                    }
+                } else null
+
                 CategorySummary(
-                    category = it.catName,
-                    categoryId = it.catId,
+                    category = current.catName,
+                    categoryId = current.catId,
                     total = BigDecimal.fromDouble(amount),
                     percentage = BigDecimal.fromDouble(percentage),
-                    transactionCount = it.txCount.toInt()
+                    transactionCount = current.txCount.toInt(),
+                    momentumTrend = momentum
                 )
             }
 
@@ -89,8 +148,8 @@ class SummaryRepositoryOfflineImpl(
                 DistributionSummary(
                     period = weekOrMonthCode,
                     totalTransactionCost = BigDecimal.ZERO,
-                    incomeCategories = if (isIncome) categorySummaries else emptyList(),
-                    expenseCategories = if (!isIncome) categorySummaries else emptyList(),
+                    incomeCategories = if (isIncomeValue == 1L) categorySummaries else emptyList(),
+                    expenseCategories = if (isIncomeValue == 0L) categorySummaries else emptyList(),
                     othersInsightSummary = null
                 )
             )
@@ -129,42 +188,58 @@ class SummaryRepositoryOfflineImpl(
 
     override suspend fun getOverviewSummary(accountId: String?): Result<OverviewSummary> = withContext(Dispatchers.IO) {
         try {
-            val now = Clock.System.now() as Instant
-            val weekAgo = now.minus(7, DateTimeUnit.DAY, TimeZone.currentSystemDefault())
-            val monthAgo = now.minus(30, DateTimeUnit.DAY, TimeZone.currentSystemDefault())
+            val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+            val availableMonths = queries.selectDistinctMonths(offlineUserId, accountId).executeAsList()
+            
+            val currentMonthCode = "${now.year}-${now.monthNumber.toString().padStart(2, '0')}"
+            val targetMonthCode = availableMonths.firstOrNull() ?: currentMonthCode
+            
+            val isCurrent = targetMonthCode == currentMonthCode
+            
+            val monthStart = try { LocalDate.parse("$targetMonthCode-01") } catch(e: Exception) { now }
+            val monthEnd = monthStart.plus(DatePeriod(months = 1)).minus(DatePeriod(days = 1))
+
+            val trendEnd = if (isCurrent) now else monthEnd
+            val weeklyStart = trendEnd.minus(DatePeriod(days = 6))
+            val monthlyStart = trendEnd.minus(DatePeriod(days = 29))
 
             val weeklyData = queries.getDailyTotals(
                 userId = offlineUserId,
                 accountId = accountId,
-                start = weekAgo,
-                end = now
-            ).executeAsList().map {
-                DaySummary(
-                    date = it.day,
-                    income = BigDecimal.fromDouble(it.incomeTotal ?: 0.0),
-                    expense = BigDecimal.fromDouble(it.expenseTotal ?: 0.0)
-                )
-            }
+                start = weeklyStart.atStartOfDayIn(TimeZone.currentSystemDefault()),
+                end = trendEnd.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+            ).executeAsList()
 
             val monthlyData = queries.getDailyTotals(
                 userId = offlineUserId,
                 accountId = accountId,
-                start = monthAgo,
-                end = now
-            ).executeAsList().map {
-                DaySummary(
-                    date = it.day,
-                    income = BigDecimal.fromDouble(it.incomeTotal ?: 0.0),
-                    expense = BigDecimal.fromDouble(it.expenseTotal ?: 0.0)
-                )
+                start = monthlyStart.atStartOfDayIn(TimeZone.currentSystemDefault()),
+                end = trendEnd.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+            ).executeAsList()
+
+            fun fillDates(start: LocalDate, end: LocalDate, data: List<GetDailyTotals>): List<DaySummary> {
+                val dataMap = data.associateBy { it.day }
+                val results = mutableListOf<DaySummary>()
+                var current = start
+                while (current <= end) {
+                    val dateStr = current.toString()
+                    val row = dataMap[dateStr]
+                    results.add(DaySummary(
+                        date = dateStr,
+                        income = BigDecimal.fromDouble(row?.incomeTotal ?: 0.0),
+                        expense = BigDecimal.fromDouble(row?.expenseTotal ?: 0.0)
+                    ))
+                    current = current.plus(DatePeriod(days = 1))
+                }
+                return results
             }
 
             Result.Success(
                 OverviewSummary(
-                    period = "Last 30 Days",
-                    isCurrent = true,
-                    weeklyOverview = weeklyData,
-                    monthlyOverview = monthlyData
+                    period = targetMonthCode,
+                    isCurrent = isCurrent,
+                    weeklyOverview = fillDates(weeklyStart, trendEnd, weeklyData),
+                    monthlyOverview = fillDates(monthlyStart, trendEnd, monthlyData)
                 )
             )
         } catch (e: Exception) {
@@ -178,62 +253,115 @@ class SummaryRepositoryOfflineImpl(
         period: String?
     ): Result<CategoryComparisonSummary> = withContext(Dispatchers.IO) {
         try {
-            val dateRange = if (period != null) DateTimeUtils.getMonthRange(period) else null
-            
+            val availableMonths = queries.selectDistinctMonths(offlineUserId, accountId).executeAsList()
+            val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+            val currentMonthCode = "${now.year}-${now.monthNumber.toString().padStart(2, '0')}"
+
+            val targetPeriodString = period ?: availableMonths.firstOrNull() ?: currentMonthCode
+            val isCurrent = targetPeriodString == currentMonthCode
+
+            val dateRange = DateTimeUtils.getMonthRange(targetPeriodString)
             if (dateRange == null) {
-                return@withContext Result.Success(CategoryComparisonSummary(period ?: "All Time", true, emptyList()))
+                return@withContext Result.Success(CategoryComparisonSummary(targetPeriodString, true, emptyList()))
             }
 
-            // Get tracked categories from user settings
+            val (currentMonthStart, currentMonthEnd) = dateRange
+
             val user = userRepository.getUserProfile().first()
             val trackedIds = user?.trackedCategoryIds ?: emptyList()
 
-            // Current Period Category Totals
-            val currentTotals = queries.getCategoryTotals(
+            val currentMonthTotals = queries.getCategoryTotals(
                 userId = offlineUserId,
                 accountId = accountId,
-                isIncome = 0L,
-                start = dateRange.first.atStartOfDayIn(TimeZone.currentSystemDefault()),
-                end = dateRange.second.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+                isIncome = null,
+                start = currentMonthStart.atStartOfDayIn(TimeZone.currentSystemDefault()),
+                end = currentMonthEnd.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
             ).executeAsList()
 
-            // Previous Period
-            val prevMonthStart = dateRange.first.minus(1, DateTimeUnit.MONTH)
-            val prevMonthEnd = dateRange.first.minus(1, DateTimeUnit.DAY)
+            val previousMonthStart = currentMonthStart.minus(DatePeriod(months = 1))
+            val previousMonthEnd = currentMonthStart.minus(DatePeriod(days = 1))
             
-            val previousTotals = queries.getCategoryTotals(
+            val previousMonthTotals = queries.getCategoryTotals(
                 userId = offlineUserId,
                 accountId = accountId,
-                isIncome = 0L,
-                start = prevMonthStart.atStartOfDayIn(TimeZone.currentSystemDefault()),
-                end = prevMonthEnd.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+                isIncome = null,
+                start = previousMonthStart.atStartOfDayIn(TimeZone.currentSystemDefault()),
+                end = previousMonthEnd.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
             ).executeAsList()
 
-            val comparisons = currentTotals
-                .filter { row -> 
-                    // Filter based on user settings OR just take top ones if none selected
-                    trackedIds.isEmpty() || trackedIds.contains(row.catId) 
+            val thisWeekEnd = if (isCurrent) now else currentMonthEnd
+            val thisWeekStart = thisWeekEnd.minus(DatePeriod(days = 6))
+            val lastWeekEnd = thisWeekStart.minus(DatePeriod(days = 1))
+            val lastWeekStart = lastWeekEnd.minus(DatePeriod(days = 6))
+
+            val thisWeekTotals = queries.getCategoryTotals(
+                userId = offlineUserId,
+                accountId = accountId,
+                isIncome = null,
+                start = thisWeekStart.atStartOfDayIn(TimeZone.currentSystemDefault()),
+                end = thisWeekEnd.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+            ).executeAsList()
+
+            val lastWeekTotals = queries.getCategoryTotals(
+                userId = offlineUserId,
+                accountId = accountId,
+                isIncome = null,
+                start = lastWeekStart.atStartOfDayIn(TimeZone.currentSystemDefault()),
+                end = lastWeekEnd.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+            ).executeAsList()
+
+            val finalTargetIds = mutableListOf<String>()
+            if (trackedIds.isNotEmpty()) {
+                finalTargetIds.addAll(trackedIds.take(2))
+                if (finalTargetIds.size < 2) {
+                    val firstId = finalTargetIds.first()
+                    val firstIsIncome = queries.selectCategoryById(firstId).executeAsOneOrNull()?.isExpense == 0L
+                    val padId = if (firstIsIncome) DEFAULT_EXPENSE_ID else DEFAULT_INCOME_ID
+                    finalTargetIds.add(padId)
                 }
-                .map { current ->
-                    val prev = previousTotals.find { it.catId == current.catId }
-                    val currentVal = current.totalSum ?: 0.0
-                    val prevVal = prev?.totalSum ?: 0.0
-                    
-                    val change = if (prevVal > 0) ((currentVal - prevVal) / prevVal) * 100 else 0.0
-                    
-                    CategoryComparison(
-                        category = current.catName,
-                        currentTotal = BigDecimal.fromDouble(currentVal),
-                        previousTotal = BigDecimal.fromDouble(prevVal),
-                        changePercentage = BigDecimal.fromDouble(change)
-                    )
-                }
-                .take(2) // Limit to 2 as per backend behavior
+            } else {
+                val topIncome = currentMonthTotals
+                    .filter { queries.selectCategoryById(it.catId).executeAsOneOrNull()?.isExpense == 0L }
+                    .maxByOrNull { it.totalSum ?: 0.0 }
+                
+                val topExpense = currentMonthTotals
+                    .filter { queries.selectCategoryById(it.catId).executeAsOneOrNull()?.isExpense != 0L }
+                    .filter { it.catName != "Transaction Fees" && it.catName != "Transaction Cost" }
+                    .maxByOrNull { it.totalSum ?: 0.0 }
+
+                finalTargetIds.add(topIncome?.catId ?: DEFAULT_INCOME_ID)
+                finalTargetIds.add(topExpense?.catId ?: DEFAULT_EXPENSE_ID)
+            }
+
+            val comparisons = finalTargetIds.map { id ->
+                val current = currentMonthTotals.find { it.catId == id }
+                val prev = previousMonthTotals.find { it.catId == id }
+                val weekCur = thisWeekTotals.find { it.catId == id }
+                val weekPrev = lastWeekTotals.find { it.catId == id }
+
+                val curVal = current?.totalSum ?: 0.0
+                val prevVal = prev?.totalSum ?: 0.0
+                val wCurVal = weekCur?.totalSum ?: 0.0
+                val wPrevVal = weekPrev?.totalSum ?: 0.0
+
+                val categoryName = current?.catName ?: queries.selectCategoryById(id).executeAsOneOrNull()?.name ?: "Unknown"
+
+                CategoryComparison(
+                    category = categoryName,
+                    currentTotal = BigDecimal.fromDouble(curVal),
+                    previousTotal = BigDecimal.fromDouble(prevVal),
+                    changePercentage = calculatePercentageChange(curVal, prevVal),
+                    isIncome = queries.selectCategoryById(id).executeAsOneOrNull()?.isExpense == 0L,
+                    period = targetPeriodString,
+                    weeklyCurrentTotal = BigDecimal.fromDouble(wCurVal),
+                    weeklyChangePercentage = calculatePercentageChange(wCurVal, wPrevVal)
+                )
+            }
 
             Result.Success(
                 CategoryComparisonSummary(
-                    period = period ?: "",
-                    isCurrent = true,
+                    period = targetPeriodString,
+                    isCurrent = isCurrent,
                     data = comparisons
                 )
             )
@@ -241,6 +369,13 @@ class SummaryRepositoryOfflineImpl(
             logger.error(TAG, "Error calculating category comparisons", e)
             Result.Error(e)
         }
+    }
+
+    private fun calculatePercentageChange(current: Double, previous: Double): BigDecimal {
+        if (previous == 0.0) {
+            return if (current > 0) BigDecimal.fromInt(100) else BigDecimal.ZERO
+        }
+        return BigDecimal.fromDouble(((current - previous) / previous) * 100)
     }
 
     override suspend fun getTransactionCounts(

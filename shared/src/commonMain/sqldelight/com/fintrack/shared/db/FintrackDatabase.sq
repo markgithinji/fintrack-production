@@ -154,7 +154,7 @@ SELECT
     COUNT(*) AS txCount
 FROM TransactionEntity T
 JOIN CategoryEntity C ON T.categoryId = C.id
-WHERE T.userId = :userId AND (:accountId IS NULL OR accountId = :accountId) AND T.isIncome = :isIncome AND T.dateTime >= :start AND T.dateTime <= :end
+WHERE T.userId = :userId AND (:accountId IS NULL OR accountId = :accountId) AND (:isIncome IS NULL OR T.isIncome = :isIncome) AND T.dateTime >= :start AND T.dateTime <= :end
 GROUP BY catId
 ORDER BY totalSum DESC;
 

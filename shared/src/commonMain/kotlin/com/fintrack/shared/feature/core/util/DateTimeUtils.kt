@@ -1,17 +1,15 @@
 package com.fintrack.shared.feature.core.util
 
+import kotlin.time.Clock
+import kotlin.time.Instant
+import kotlin.time.Duration
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.isoDayNumber
-import kotlinx.datetime.number
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
-import kotlin.time.Clock
-import kotlin.time.Duration.Companion.days
-import kotlin.time.Duration.Companion.hours
-import kotlin.time.Duration.Companion.minutes
-import kotlinx.datetime.Instant
+import kotlinx.datetime.minus
 
 object DateTimeUtils {
     /**
@@ -20,17 +18,17 @@ object DateTimeUtils {
     fun toRelativeDateTimeString(instant: Instant?): String {
         if (instant == null) return "Never synced"
 
-        val now = Clock.System.now() as Instant
-        val duration = now - instant
+        val now = Clock.System.now()
+        val duration: Duration = now - instant
 
         return when {
-            duration < 1.minutes -> "Just now"
-            duration < 60.minutes -> "${duration.inWholeMinutes} mins ago"
-            duration < 24.hours -> "${duration.inWholeHours} hours ago"
-            duration < 2.days -> "Yesterday"
+            duration.inWholeSeconds < 60 -> "Just now"
+            duration.inWholeMinutes < 60 -> "${duration.inWholeMinutes} mins ago"
+            duration.inWholeHours < 24 -> "${duration.inWholeHours} hours ago"
+            duration.inWholeDays < 2 -> "Yesterday"
             else -> {
                 val dateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-                "${dateTime.day}/${dateTime.month.number}/${dateTime.year}"
+                "${dateTime.dayOfMonth}/${dateTime.monthNumber}/${dateTime.year}"
             }
         }
     }
@@ -75,11 +73,8 @@ object DateTimeUtils {
             val year = parts[0].toIntOrNull() ?: return null
             val month = parts[1].toIntOrNull() ?: return null
             val start = LocalDate(year, month, 1)
-            val end = if (month == 12) {
-                LocalDate(year + 1, 1, 1).plus(DatePeriod(days = -1))
-            } else {
-                LocalDate(year, month + 1, 1).plus(DatePeriod(days = -1))
-            }
+            val nextMonth = if (month == 12) LocalDate(year + 1, 1, 1) else LocalDate(year, month + 1, 1)
+            val end = nextMonth.minus(DatePeriod(days = 1))
             start to end
         } catch (_: Exception) {
             null
