@@ -37,7 +37,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import com.fintrack.shared.feature.core.ui.AnimatedShimmerBox
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -71,15 +70,16 @@ import com.fintrack.shared.feature.account.domain.model.Account
 import com.fintrack.shared.feature.account.domain.model.AccountType
 import com.fintrack.shared.feature.core.data.model.ApiException
 import com.fintrack.shared.feature.core.data.model.getUserFriendlyMessage
+import com.fintrack.shared.feature.core.ui.AccountIcon
+import com.fintrack.shared.feature.core.ui.AnimatedShimmerBox
 import com.fintrack.shared.feature.core.ui.CommonErrorState
 import com.fintrack.shared.feature.core.ui.ConfirmationDialog
+import com.fintrack.shared.feature.core.ui.biometric.BiometricResult
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.core.util.toRelativeString
 import com.fintrack.shared.feature.navigation.ui.LocalBiometricAuthenticator
 import com.fintrack.shared.feature.navigation.ui.toCurrencyString
-import com.fintrack.shared.feature.core.ui.biometric.BiometricResult
 import com.fintrack.shared.feature.settings.ui.SettingsViewModel
-import com.fintrack.shared.feature.core.ui.AccountIcon
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
@@ -89,6 +89,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun AccountsScreen(
     refreshTrigger: Int,
     onGlobalRefresh: () -> Unit,
+    onSmsPermissionRequired: (forceRationale: Boolean) -> Unit = {},
     onShowToast: (String, Boolean) -> Unit,
     paddingValues: PaddingValues = PaddingValues(0.dp),
     accountsViewModel: AccountsViewModel = koinViewModel(),
@@ -119,8 +120,6 @@ fun AccountsScreen(
     }
 
     var pendingDefaultAccountId by remember { mutableStateOf<String?>(null) }
-    var pendingMpesaLinked by remember { mutableStateOf(false) }
-    var pendingEquityLinked by remember { mutableStateOf(false) }
 
     LaunchedEffect(saveResult) {
         val result = saveResult
@@ -129,22 +128,10 @@ fun AccountsScreen(
 
             val accountId = result.data.id
 
-            // Handle pending local settings for new accounts
+            // Handle pending default account setting
             if (pendingDefaultAccountId == "NEW_ACCOUNT_PENDING") {
                 settingsViewModel.setDefaultAccountId(accountId)
                 pendingDefaultAccountId = null
-            }
-
-            if (pendingMpesaLinked) {
-                val currentIds = settingsViewModel.mpesaLinkedAccountIds.value
-                settingsViewModel.setMpesaLinkedAccountIds(currentIds + accountId)
-                pendingMpesaLinked = false
-            }
-
-            if (pendingEquityLinked) {
-                val currentIds = settingsViewModel.equityLinkedAccountIds.value
-                settingsViewModel.setEquityLinkedAccountIds(currentIds + accountId)
-                pendingEquityLinked = false
             }
         }
     }
@@ -173,30 +160,16 @@ fun AccountsScreen(
 
                 is Result.Success -> {
                     val defaultAccountId by settingsViewModel.defaultAccountId.collectAsStateWithLifecycle()
-                    val mpesaLinkedAccountIds by settingsViewModel.mpesaLinkedAccountIds.collectAsStateWithLifecycle()
-                    val equityLinkedAccountIds by settingsViewModel.equityLinkedAccountIds.collectAsStateWithLifecycle()
 
                     val effectiveDefaultAccountId =
                         defaultAccountId ?: state.data.find { it.type == AccountType.MPESA }?.id
 
-                    val enrichedAccounts = remember(
-                        state.data,
-                        effectiveDefaultAccountId,
-                        mpesaLinkedAccountIds,
-                        equityLinkedAccountIds
-                    ) {
-                        state.data.map { account ->
-                            val sources = mutableListOf<String>()
-                            if (mpesaLinkedAccountIds.contains(account.id)) sources.add("mpesa")
-                            if (equityLinkedAccountIds.contains(account.id)) sources.add("equity")
-                            account.copy(
-                                linkedSources = sources
-                            )
-                        }.sortedBy { it.createdAt }
+                    val sortedAccounts = remember(state.data) {
+                        state.data.sortedBy { it.createdAt }
                     }
 
                     AccountList(
-                        accounts = enrichedAccounts,
+                        accounts = sortedAccounts,
                         defaultAccountId = effectiveDefaultAccountId,
                         topPadding = paddingValues.calculateTopPadding() + 12.dp,
                         bottomPadding = paddingValues.calculateBottomPadding() + 32.dp,
@@ -231,23 +204,13 @@ fun AccountsScreen(
 
     showAccountDialog?.let { account ->
         val defaultAccountId by settingsViewModel.defaultAccountId.collectAsStateWithLifecycle()
-        val mpesaLinkedAccountIds by settingsViewModel.mpesaLinkedAccountIds.collectAsStateWithLifecycle()
-        val equityLinkedAccountIds by settingsViewModel.equityLinkedAccountIds.collectAsStateWithLifecycle()
 
         val accounts = (accountsState as? Result.Success)?.data ?: emptyList()
         val isOnlyAccount =
             accounts.size <= 1 || (accounts.size == 1 && accounts.first().id == account.id)
 
-        // Enrich the dialog account with local settings
-        val enrichedAccount = remember(account, mpesaLinkedAccountIds, equityLinkedAccountIds) {
-            val sources = mutableListOf<String>()
-            if (mpesaLinkedAccountIds.contains(account.id)) sources.add("mpesa")
-            if (equityLinkedAccountIds.contains(account.id)) sources.add("equity")
-            account.copy(linkedSources = sources)
-        }
-
         AccountDialog(
-            account = enrichedAccount,
+            account = account,
             isEditing = isEditing,
             isLoading = saveResult is Result.Loading ||
                     deleteResult is Result.Loading ||
@@ -271,10 +234,7 @@ fun AccountsScreen(
                         subtitle = "Confirm your identity to delete this account"
                     )
                     if (authResult is BiometricResult.Success || authResult is BiometricResult.NotAvailable) {
-                        // Also clear local settings on delete
                         val accountId = account.id
-                        settingsViewModel.setMpesaLinkedAccountIds(settingsViewModel.mpesaLinkedAccountIds.value - accountId)
-                        settingsViewModel.setEquityLinkedAccountIds(settingsViewModel.equityLinkedAccountIds.value - accountId)
                         if (defaultAccountId == accountId) {
                             settingsViewModel.setDefaultAccountId(null)
                         }
@@ -296,7 +256,6 @@ fun AccountsScreen(
             onClearResults = { accountsViewModel.clearResults() },
             onConfirm = { name, type, sources, isDefault ->
                 if (account.id.isNotEmpty()) {
-                    // Update local settings for existing account
                     val accountId = account.id
 
                     // Default Account
@@ -305,35 +264,18 @@ fun AccountsScreen(
                     } else if (accountId == defaultAccountId) {
                         settingsViewModel.setDefaultAccountId(null)
                     }
-
-                    // Sync Links
-                    val mpesaIds = settingsViewModel.mpesaLinkedAccountIds.value
-                    if (sources.contains("mpesa")) {
-                        settingsViewModel.setMpesaLinkedAccountIds(mpesaIds + accountId)
-                    } else {
-                        settingsViewModel.setMpesaLinkedAccountIds(mpesaIds - accountId)
-                    }
-
-                    val equityIds = settingsViewModel.equityLinkedAccountIds.value
-                    if (sources.contains("equity")) {
-                        settingsViewModel.setEquityLinkedAccountIds(equityIds + accountId)
-                    } else {
-                        settingsViewModel.setEquityLinkedAccountIds(equityIds - accountId)
-                    }
                 } else {
                     // For new accounts, set pending flags
                     if (isDefault) pendingDefaultAccountId = "NEW_ACCOUNT_PENDING"
-                    if (sources.contains("mpesa")) pendingMpesaLinked = true
-                    if (sources.contains("equity")) pendingEquityLinked = true
                 }
 
-                // Save to backend WITHOUT local preferences
+                // Save account with linked sources preserved in the database
                 accountsViewModel.saveAccount(
                     account.copy(
                         name = name,
                         type = type,
-                        isDefault = account.isDefault, // Preserve original isDefault status
-                        linkedSources = emptyList() // Backend doesn't need to know
+                        isDefault = account.isDefault,
+                        linkedSources = sources
                     )
                 )
             }

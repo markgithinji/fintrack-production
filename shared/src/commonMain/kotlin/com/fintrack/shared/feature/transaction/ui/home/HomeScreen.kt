@@ -1,6 +1,7 @@
 package com.fintrack.shared.feature.transaction.ui.home
 
 import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -16,9 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,11 +32,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fintrack.shared.feature.account.ui.AccountsViewModel
-import com.fintrack.shared.feature.core.ui.CommonErrorState
 import com.fintrack.shared.feature.core.ui.util.rememberThrottleClick
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.navigation.ui.SmsSyncSignal
@@ -84,52 +80,10 @@ fun HomeScreen(
     val defaultAccountId by settingsViewModel.defaultAccountId.collectAsStateWithLifecycle()
     val isMpesaListenerEnabled by settingsViewModel.isMpesaListenerEnabled.collectAsStateWithLifecycle()
     val isEquityListenerEnabled by settingsViewModel.isEquityListenerEnabled.collectAsStateWithLifecycle()
-    val mpesaLinkedAccountIds by settingsViewModel.mpesaLinkedAccountIds.collectAsStateWithLifecycle()
-    val equityLinkedAccountIds by settingsViewModel.equityLinkedAccountIds.collectAsStateWithLifecycle()
     val importStateMap by transactionsViewModel.importState.collectAsStateWithLifecycle()
     val importProgressMap by transactionsViewModel.importProgress.collectAsStateWithLifecycle()
 
-    val enrichedSelectedAccount = remember(
-        selectedAccountResult,
-        mpesaLinkedAccountIds,
-        equityLinkedAccountIds,
-        defaultAccountId
-    ) {
-        if (selectedAccountResult is Result.Success) {
-            val account = (selectedAccountResult as Result.Success).data
-            val sources = mutableListOf<String>()
-            if (mpesaLinkedAccountIds.contains(account.id)) sources.add("mpesa")
-            if (equityLinkedAccountIds.contains(account.id)) sources.add("equity")
-            Result.Success(
-                account.copy(
-                    isDefault = account.id == defaultAccountId,
-                    linkedSources = sources
-                )
-            )
-        } else {
-            selectedAccountResult
-        }
-    }
-
-    val enrichedAccountsResult =
-        remember(accountsResult, mpesaLinkedAccountIds, equityLinkedAccountIds, defaultAccountId) {
-            if (accountsResult is Result.Success) {
-                val accounts = (accountsResult as Result.Success).data
-                Result.Success(accounts.map { account ->
-                    val sources = mutableListOf<String>()
-                    if (mpesaLinkedAccountIds.contains(account.id)) sources.add("mpesa")
-                    if (equityLinkedAccountIds.contains(account.id)) sources.add("equity")
-                    account.copy(
-                        isDefault = account.id == defaultAccountId,
-                        linkedSources = sources
-                    )
-                })
-            } else {
-                accountsResult
-            }
-        }
-
-    val accountId = (enrichedSelectedAccount as? Result.Success)?.data?.id
+    val accountId = (selectedAccountResult as? Result.Success)?.data?.id
     val importState = importStateMap[accountId]
     val importProgress = importProgressMap[accountId] ?: 0f
 
@@ -151,7 +105,7 @@ fun HomeScreen(
 
                 is ImportEvent.Error -> {
                     if (event.accountId == accountId) {
-                        val account = (enrichedSelectedAccount as? Result.Success)?.data
+                        val account = (selectedAccountResult as? Result.Success)?.data
                         val isLinked =
                             account?.linkedSources?.let { it.contains("mpesa") || it.contains("equity") }
                                 ?: false
@@ -178,6 +132,7 @@ fun HomeScreen(
             transactionsViewModel.resetImportState(accountId)
         }
     }
+
     val throttledOnEditTransaction = rememberThrottleClick(onClick = onEditTransaction)
     val throttledOnCardClick = rememberThrottleClick<Pair<String, Boolean?>> { (accId, isInc) ->
         onCardClick(accId, isInc)
@@ -186,52 +141,6 @@ fun HomeScreen(
     LaunchedEffect(selectedAccountId) {
         selectedAccountId?.let { accountsViewModel.selectAccount(it) }
     }
-
-    if (selectedAccountId == null && (accountsResult is Result.Success && (accountsResult as Result.Success).data.isEmpty() || accountsResult is Result.Error)) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (accountsResult is Result.Error) {
-                CommonErrorState(
-                    title = "Failed to load accounts",
-                    error = (accountsResult as Result.Error).exception,
-                    onRetry = { accountsViewModel.reloadAccounts() }
-                )
-            } else {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AccountBalanceWallet,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "No account found",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "Create your first account to start tracking your finances.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = { onAccountSelected("") },
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Add First Account")
-                    }
-                }
-            }
-        }
-        return
-    }
-
 
     LaunchedEffect(smsSyncSignal) {
         if (smsSyncSignal != null) {
@@ -244,8 +153,8 @@ fun HomeScreen(
     // We use rememberSaveable to ensure it persists across navigation
     var lastProcessedRefreshTrigger by rememberSaveable { mutableIntStateOf(refreshTrigger) }
 
-    LaunchedEffect(refreshTrigger, enrichedSelectedAccount) {
-        val accountId = (enrichedSelectedAccount as? Result.Success)?.data?.id
+    LaunchedEffect(refreshTrigger, selectedAccountResult) {
+        val accountId = (selectedAccountResult as? Result.Success)?.data?.id
         println("[DEBUG_ANR] LaunchedEffect(refreshTrigger=$refreshTrigger, accountId=$accountId)")
         if (accountId != null && refreshTrigger > lastProcessedRefreshTrigger) {
             println("[DEBUG_ANR] Refreshing transaction data for account $accountId")
@@ -267,9 +176,9 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(enrichedSelectedAccount) {
-        val account = (enrichedSelectedAccount as? Result.Success)?.data
-        println("[DEBUG_ANR] LaunchedEffect(enrichedSelectedAccount=${account?.id})")
+    LaunchedEffect(selectedAccountResult) {
+        val account = (selectedAccountResult as? Result.Success)?.data
+        println("[DEBUG_ANR] LaunchedEffect(selectedAccount=${account?.id})")
         account?.let { acc ->
             transactionsViewModel.loadRecentTransactions(acc.id)
             statsViewModel.loadOverview(acc.id)
@@ -293,8 +202,8 @@ fun HomeScreen(
 
     val transition = animatedVisibilityScope.transition
     val isTransitionRunning = transition.isRunning
-    val isExiting = transition.targetState == androidx.compose.animation.EnterExitState.PostExit ||
-            transition.targetState == androidx.compose.animation.EnterExitState.PreEnter
+    val isExiting = transition.targetState == EnterExitState.PostExit ||
+            transition.targetState == EnterExitState.PreEnter
 
     val stableBottomPadding =
         if (isTransitionRunning || isExiting || (bottomPadding == 0.dp && lastBottomPadding > 0.dp)) {
@@ -322,8 +231,8 @@ fun HomeScreen(
         ) {
             item {
                 CurrentBalanceCardWrapper(
-                    accountsResult = enrichedAccountsResult,
-                    selectedAccountResult = enrichedSelectedAccount,
+                    accountsResult = accountsResult,
+                    selectedAccountResult = selectedAccountResult,
                     defaultAccountId = defaultAccountId,
                     isBalanceHidden = isBalanceHidden,
                     isMpesaAutoSyncEnabled = isMpesaListenerEnabled,
@@ -332,12 +241,11 @@ fun HomeScreen(
                     syncProgress = importProgress,
                     onAccountSelected = { accountId ->
                         onAccountSelected(accountId)
-                        // No longer canceling sync here to allow background sync to continue
                     },
                     onToggleBalanceVisibility = { settingsViewModel.setBalanceHidden(it) },
                     onManualSync = {
                         isManualSyncInProgress = true
-                        val accountId = (enrichedSelectedAccount as? Result.Success)?.data?.id
+                        val accountId = (selectedAccountResult as? Result.Success)?.data?.id
                         transactionsViewModel.importTransactions(accountId)
                     },
                     onSyncErrorClick = { message ->
@@ -352,10 +260,10 @@ fun HomeScreen(
 
             item {
                 IncomeExpenseCards(
-                    accountResult = enrichedSelectedAccount,
+                    accountResult = selectedAccountResult,
                     animatedVisibilityScope = animatedVisibilityScope,
                     onCardClick = { isIncome ->
-                        val accountId = (enrichedSelectedAccount as? Result.Success)?.data?.id
+                        val accountId = (selectedAccountResult as? Result.Success)?.data?.id
                         accountId?.let { throttledOnCardClick(it to isIncome) }
                     }
                 )
@@ -383,16 +291,16 @@ fun HomeScreen(
                 TransactionsListCard(
                     transactionsResult = transactionsResult,
                     animatedVisibilityScope = animatedVisibilityScope,
-                    accountId = (enrichedSelectedAccount as? Result.Success)?.data?.id,
+                    accountId = (selectedAccountResult as? Result.Success)?.data?.id,
                     onViewAllClick = {
-                        val accountId = (enrichedSelectedAccount as? Result.Success)?.data?.id
+                        val accountId = (selectedAccountResult as? Result.Success)?.data?.id
                         accountId?.let { throttledOnCardClick(it to null) }
                     },
                     onTransactionClick = { transaction ->
                         transaction.id?.let { id -> throttledOnEditTransaction(id) }
                     },
                     onRetry = {
-                        val accountId = (enrichedSelectedAccount as? Result.Success)?.data?.id
+                        val accountId = (selectedAccountResult as? Result.Success)?.data?.id
                         accountId?.let {
                             transactionsViewModel.loadRecentTransactions(
                                 it,

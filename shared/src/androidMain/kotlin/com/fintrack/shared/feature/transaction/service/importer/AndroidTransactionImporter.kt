@@ -7,7 +7,6 @@ import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepo
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.settings.domain.datasource.SettingsDataSource
 import com.fintrack.shared.feature.transaction.domain.service.TransactionImporter
-import kotlinx.coroutines.flow.first
 
 class AndroidTransactionImporter(
     private val context: Context,
@@ -31,12 +30,10 @@ class AndroidTransactionImporter(
         val mpesaImporter = MpesaImporter(context, transactionRepository, accountRepository, categoryRepository)
         val equityImporter = EquityImporter(context, transactionRepository, accountRepository, categoryRepository)
 
-        val mpesaLinkedAccountIds = settingsDataSource.mpesaLinkedAccountIds.first()
-        val equityLinkedAccountIds = settingsDataSource.equityLinkedAccountIds.first()
-
         if (targetAccountId != null) {
-            val hasMpesa = mpesaLinkedAccountIds.contains(targetAccountId)
-            val hasEquity = equityLinkedAccountIds.contains(targetAccountId)
+            val account = accounts.find { it.id == targetAccountId }
+            val hasMpesa = account?.linkedSources?.contains("mpesa") == true
+            val hasEquity = account?.linkedSources?.contains("equity") == true
             
             when {
                 isPortfolioSeed -> {
@@ -67,9 +64,9 @@ class AndroidTransactionImporter(
             return
         }
 
-        // Global sync
-        val mpesaAccounts = accounts.filter { mpesaLinkedAccountIds.contains(it.id) }
-        val equityAccounts = accounts.filter { equityLinkedAccountIds.contains(it.id) }
+        // Global sync based on account-level linking
+        val mpesaAccounts = accounts.filter { it.linkedSources.contains("mpesa") }
+        val equityAccounts = accounts.filter { it.linkedSources.contains("equity") }
 
         if (mpesaAccounts.isEmpty() && equityAccounts.isEmpty()) {
             if (isPortfolioSeed) {
