@@ -61,7 +61,20 @@ class MainViewModel(
         viewModelScope.launch {
             settingsDataSource.defaultAccountId.collectLatest { defaultId ->
                 if (defaultId != null) {
-                    _selectedAccountId.value = defaultId
+                    // Verify if the account still exists before selecting it
+                    when (val result = getAccountsUseCase()) {
+                        is Result.Success -> {
+                            if (result.data.any { it.id == defaultId }) {
+                                _selectedAccountId.value = defaultId
+                            } else {
+                                // Default account no longer exists, fall back
+                                fetchAndSelectFirstAccount()
+                            }
+                        }
+                        else -> {
+                            _selectedAccountId.value = defaultId
+                        }
+                    }
                 } else if (_selectedAccountId.value == null) {
                     fetchAndSelectFirstAccount()
                 }
