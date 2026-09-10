@@ -11,7 +11,7 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Instant
+import kotlinx.datetime.Instant
 
 object DateTimeUtils {
     /**
@@ -20,7 +20,7 @@ object DateTimeUtils {
     fun toRelativeDateTimeString(instant: Instant?): String {
         if (instant == null) return "Never synced"
 
-        val now = Clock.System.now()
+        val now = Clock.System.now() as Instant
         val duration = now - instant
 
         return when {

@@ -6,16 +6,19 @@ import com.fintrack.shared.feature.summary.domain.model.*
 import com.fintrack.shared.feature.summary.domain.repository.SummaryRepository
 import com.fintrack.shared.feature.core.logger.KMPLogger
 import com.fintrack.shared.feature.core.util.DateTimeUtils
+import com.fintrack.shared.feature.user.domain.repository.UserRepository
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.*
 import kotlin.time.Clock
 
 class SummaryRepositoryOfflineImpl(
     private val database: FintrackDatabase,
-    private val logger: KMPLogger
+    private val logger: KMPLogger,
+    private val userRepository: UserRepository
 ) : SummaryRepository {
 
     private val queries = database.fintrackDatabaseQueries
@@ -58,7 +61,7 @@ class SummaryRepositoryOfflineImpl(
             val isIncome = type?.lowercase() == "income"
             
             val startInstant = start?.let { Instant.parse(it) } ?: Instant.fromEpochSeconds(0)
-            val endInstant = end?.let { Instant.parse(it) } ?: Clock.System.now()
+            val endInstant = end?.let { Instant.parse(it) } ?: (Clock.System.now() as Instant)
 
             val categoryTotals = queries.getCategoryTotals(
                 userId = offlineUserId,
@@ -126,7 +129,7 @@ class SummaryRepositoryOfflineImpl(
 
     override suspend fun getOverviewSummary(accountId: String?): Result<OverviewSummary> = withContext(Dispatchers.IO) {
         try {
-            val now = Clock.System.now()
+            val now = Clock.System.now() as Instant
             val weekAgo = now.minus(7, DateTimeUnit.DAY, TimeZone.currentSystemDefault())
             val monthAgo = now.minus(30, DateTimeUnit.DAY, TimeZone.currentSystemDefault())
 
@@ -181,6 +184,11 @@ class SummaryRepositoryOfflineImpl(
                 return@withContext Result.Success(CategoryComparisonSummary(period ?: "All Time", true, emptyList()))
             }
 
+            // Get tracked categories from user settings
+            val user = userRepository.getUserProfile().first()
+            val trackedIds = user?.trackedCategoryIds ?: emptyList()
+
+            // Current Period Category Totals
             val currentTotals = queries.getCategoryTotals(
                 userId = offlineUserId,
                 accountId = accountId,
@@ -189,6 +197,7 @@ class SummaryRepositoryOfflineImpl(
                 end = dateRange.second.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
             ).executeAsList()
 
+            // Previous Period
             val prevMonthStart = dateRange.first.minus(1, DateTimeUnit.MONTH)
             val prevMonthEnd = dateRange.first.minus(1, DateTimeUnit.DAY)
             
@@ -200,20 +209,26 @@ class SummaryRepositoryOfflineImpl(
                 end = prevMonthEnd.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
             ).executeAsList()
 
-            val comparisons = currentTotals.map { current ->
-                val prev = previousTotals.find { it.catId == current.catId }
-                val currentVal = current.totalSum ?: 0.0
-                val prevVal = prev?.totalSum ?: 0.0
-                
-                val change = if (prevVal > 0) ((currentVal - prevVal) / prevVal) * 100 else 0.0
-                
-                CategoryComparison(
-                    category = current.catName,
-                    currentTotal = BigDecimal.fromDouble(currentVal),
-                    previousTotal = BigDecimal.fromDouble(prevVal),
-                    changePercentage = BigDecimal.fromDouble(change)
-                )
-            }
+            val comparisons = currentTotals
+                .filter { row -> 
+                    // Filter based on user settings OR just take top ones if none selected
+                    trackedIds.isEmpty() || trackedIds.contains(row.catId) 
+                }
+                .map { current ->
+                    val prev = previousTotals.find { it.catId == current.catId }
+                    val currentVal = current.totalSum ?: 0.0
+                    val prevVal = prev?.totalSum ?: 0.0
+                    
+                    val change = if (prevVal > 0) ((currentVal - prevVal) / prevVal) * 100 else 0.0
+                    
+                    CategoryComparison(
+                        category = current.catName,
+                        currentTotal = BigDecimal.fromDouble(currentVal),
+                        previousTotal = BigDecimal.fromDouble(prevVal),
+                        changePercentage = BigDecimal.fromDouble(change)
+                    )
+                }
+                .take(2) // Limit to 2 as per backend behavior
 
             Result.Success(
                 CategoryComparisonSummary(
@@ -256,7 +271,7 @@ class SummaryRepositoryOfflineImpl(
     override suspend fun getProfileMetrics(): Result<ProfileMetrics> = withContext(Dispatchers.IO) {
         try {
             val netWorthResult = queries.getNetWorth(offlineUserId).executeAsOne()
-            val netWorthDouble = netWorthResult.netWorth ?: 0.0
+            val netWorthDouble = (netWorthResult.netWorth as? Number)?.toDouble() ?: 0.0
             
             val highlights = queries.getHighlights(accountId = null, userId = offlineUserId).executeAsOne()
             val income = highlights.incomeTotal ?: 0.0
