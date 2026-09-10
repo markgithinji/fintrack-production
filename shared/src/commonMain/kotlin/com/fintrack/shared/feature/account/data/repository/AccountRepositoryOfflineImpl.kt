@@ -50,6 +50,7 @@ class AccountRepositoryOfflineImpl(
                 isDefault = if (account.isDefault) 1L else 0L,
                 type = account.type.name,
                 balance = (account.balance ?: BigDecimal.ZERO).toPlainString(),
+                linkedSources = account.linkedSources,
                 createdAt = account.createdAt ?: DateTimeHelper.now(),
                 lastSyncedAt = account.lastSyncedAt
             )

@@ -19,7 +19,7 @@ class DatabaseSeeder(private val database: FintrackDatabase) {
         val accounts = queries.selectAllAccounts(offlineUserId).executeAsList()
         if (accounts.isEmpty()) {
             val defaultAccounts = listOf(
-                AccountData("Mpesa", "MPESA", "2024-01-01T00:00:00Z"),
+                AccountData("Mpesa", "MPESA", "2024-01-01T00:00:00Z", listOf("mpesa")),
                 AccountData("Bank", "BANK", "2024-01-01T00:00:01Z"),
                 AccountData("Wallet", "WALLET", "2024-01-01T00:00:02Z"),
                 AccountData("Savings", "SAVINGS", "2024-01-01T00:00:03Z"),
@@ -34,6 +34,7 @@ class DatabaseSeeder(private val database: FintrackDatabase) {
                     isDefault = 1L,
                     type = account.type,
                     balance = "0",
+                    linkedSources = account.linkedSources,
                     createdAt = Instant.parse(account.createdAt),
                     lastSyncedAt = null
                 )
@@ -61,6 +62,7 @@ class DatabaseSeeder(private val database: FintrackDatabase) {
     private data class AccountData(
         val name: String,
         val type: String,
-        val createdAt: String
+        val createdAt: String,
+        val linkedSources: List<String> = emptyList()
     )
 }

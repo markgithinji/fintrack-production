@@ -1,3 +1,5 @@
+import kotlin.String;
+import kotlin.collections.List;
 import kotlinx.datetime.Instant;
 
 CREATE TABLE AccountEntity (
@@ -7,6 +9,7 @@ CREATE TABLE AccountEntity (
     isDefault INTEGER NOT NULL DEFAULT 0,
     type TEXT NOT NULL,
     balance TEXT NOT NULL DEFAULT '0',
+    linkedSources TEXT AS List<String> NOT NULL,
     createdAt INTEGER AS Instant NOT NULL,
     lastSyncedAt INTEGER AS Instant
 );
@@ -60,8 +63,8 @@ CREATE INDEX budget_user ON BudgetEntity(userId);
 
 -- Queries
 insertAccount:
-INSERT OR REPLACE INTO AccountEntity(id, userId, name, isDefault, type, balance, createdAt, lastSyncedAt)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO AccountEntity(id, userId, name, isDefault, type, balance, linkedSources, createdAt, lastSyncedAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 selectAllAccounts:
 SELECT * FROM AccountEntity WHERE userId = ?;

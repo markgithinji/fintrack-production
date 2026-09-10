@@ -12,6 +12,7 @@ fun AccountEntity.toDomain(): Account {
         balance = BigDecimal.parseString(balance),
         isDefault = isDefault != 0L,
         type = try { AccountType.valueOf(type) } catch(e: Exception) { AccountType.OTHER },
+        linkedSources = linkedSources,
         createdAt = createdAt,
         lastSyncedAt = lastSyncedAt
     )

@@ -9,6 +9,7 @@ val databaseModule = module {
         val database = FintrackDatabase(
             driver = driverFactory.createDriver(),
             AccountEntityAdapter = AccountEntity.Adapter(
+                linkedSourcesAdapter = stringListAdapter,
                 createdAtAdapter = instantAdapter,
                 lastSyncedAtAdapter = instantAdapter
             ),
@@ -27,4 +28,5 @@ val databaseModule = module {
         DatabaseSeeder(database).seedIfEmpty()
         database
     }
+    single { DatabaseSeeder(get()) }
 }
