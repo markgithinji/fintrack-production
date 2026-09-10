@@ -74,22 +74,6 @@ fun LineChart(
     data: List<DaySummary>,
     modifier: Modifier = Modifier,
 ) {
-    if (data.isEmpty()) {
-        Box(
-            modifier = modifier
-                .fillMaxWidth()
-                .height(200.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                "No data for this period",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
-        }
-        return
-    }
-
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(
         color = Color.Gray,

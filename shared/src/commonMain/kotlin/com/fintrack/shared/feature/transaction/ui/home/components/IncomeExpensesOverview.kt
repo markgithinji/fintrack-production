@@ -193,6 +193,8 @@ private fun OverviewSuccessState(
     selectedPeriod: OverviewPeriod,
     onPeriodSelected: (OverviewPeriod) -> Unit
 ) {
+    val currentData = if (selectedPeriod == OverviewPeriod.Weekly) overview.weeklyOverview else overview.monthlyOverview
+    
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -203,7 +205,7 @@ private fun OverviewSuccessState(
             onPeriodSelected = onPeriodSelected,
             periodName = overview.period,
             isCurrent = overview.isCurrent,
-            data = if (selectedPeriod == OverviewPeriod.Weekly) overview.weeklyOverview else overview.monthlyOverview
+            data = currentData
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -214,30 +216,42 @@ private fun OverviewSuccessState(
                 .height(240.dp)
         ) {
             AnimatedContent(
-                targetState = selectedPeriod,
+                targetState = selectedPeriod to currentData.isEmpty(),
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
                 transitionSpec = {
                     (fadeIn(animationSpec = tween(500)) + scaleIn(initialScale = 0.92f)) togetherWith
                             fadeOut(animationSpec = tween(500))
                 }
-            ) { period ->
-                when (period) {
-                    OverviewPeriod.Weekly -> {
-                        BarChart(
-                            data = overview.weeklyOverview,
-                            modifier = Modifier
-                                .fillMaxHeight()
+            ) { (period, isEmpty) ->
+                if (isEmpty) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "No data for this period",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
                         )
                     }
+                } else {
+                    when (period) {
+                        OverviewPeriod.Weekly -> {
+                            BarChart(
+                                data = overview.weeklyOverview,
+                                modifier = Modifier.fillMaxHeight()
+                            )
+                        }
 
-                    OverviewPeriod.Monthly -> {
-                        LineChart(
-                            data = overview.monthlyOverview,
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .padding(bottom = 16.dp)
-                        )
+                        OverviewPeriod.Monthly -> {
+                            LineChart(
+                                data = overview.monthlyOverview,
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .padding(bottom = 16.dp)
+                            )
+                        }
                     }
                 }
             }
