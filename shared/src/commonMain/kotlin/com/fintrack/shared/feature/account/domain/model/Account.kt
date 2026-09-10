@@ -1,7 +1,7 @@
 package com.fintrack.shared.feature.account.domain.model
 
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
-import kotlin.time.Instant
+import kotlinx.datetime.Instant
 
 data class Account(
     val id: String,
