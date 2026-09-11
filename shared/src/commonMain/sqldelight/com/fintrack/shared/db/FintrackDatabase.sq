@@ -125,13 +125,26 @@ selectTransactionById:
 SELECT id, accountId, categoryId, isIncome, amount, transactionCost, dateTime, description, externalId, balance FROM TransactionEntity WHERE id = ?;
 
 countTransactions:
-SELECT COUNT(*) FROM TransactionEntity WHERE userId = ?;
+SELECT COUNT(*) FROM TransactionEntity
+WHERE userId = :userId
+AND (:accountId IS NULL OR accountId = :accountId)
+AND (:isIncome IS NULL OR isIncome = :isIncome)
+AND (:categoryId IS NULL OR categoryId = :categoryId)
+AND (:start IS NULL OR dateTime >= :start)
+AND (:end IS NULL OR dateTime <= :end)
+AND (:hasTransactionCost IS NULL OR (CAST(transactionCost AS REAL) > 0) = :hasTransactionCost);
 
 selectTransactionsPaged:
 SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
-WHERE T.userId = ?
+WHERE T.userId = :userId
+AND (:accountId IS NULL OR T.accountId = :accountId)
+AND (:isIncome IS NULL OR T.isIncome = :isIncome)
+AND (:categoryId IS NULL OR T.categoryId = :categoryId)
+AND (:start IS NULL OR T.dateTime >= :start)
+AND (:end IS NULL OR T.dateTime <= :end)
+AND (:hasTransactionCost IS NULL OR (CAST(T.transactionCost AS REAL) > 0) = :hasTransactionCost)
 ORDER BY T.dateTime DESC
 LIMIT :limit OFFSET :offset;
 
@@ -194,6 +207,22 @@ SELECT DISTINCT strftime('%Y-W%W', dateTime / 1000, 'unixepoch') AS week
 FROM TransactionEntity
 WHERE userId = ? AND (:accountId IS NULL OR accountId = :accountId)
 ORDER BY week DESC;
+
+getTransactionCountSummary:
+SELECT
+    COUNT(CASE WHEN isIncome = 1 THEN 1 END) AS incomeCount,
+    COUNT(CASE WHEN isIncome = 0 THEN 1 END) AS expenseCount,
+    COUNT(*) AS totalCount,
+    SUM(CAST(transactionCost AS REAL)) AS totalTransactionCost,
+    SUM(CASE WHEN isIncome = 1 THEN CAST(amount AS REAL) - CAST(transactionCost AS REAL) ELSE CAST(amount AS REAL) + CAST(transactionCost AS REAL) END) AS totalAmount
+FROM TransactionEntity
+WHERE userId = :userId
+AND (:accountId IS NULL OR accountId = :accountId)
+AND (:isIncome IS NULL OR isIncome = :isIncome)
+AND (:categoryId IS NULL OR categoryId = :categoryId)
+AND (:start IS NULL OR dateTime >= :start)
+AND (:end IS NULL OR dateTime <= :end)
+AND (:hasTransactionCost IS NULL OR (CAST(transactionCost AS REAL) > 0) = :hasTransactionCost);
 
 getNetWorth:
 SELECT SUM(CAST(balance AS REAL)) AS netWorth FROM AccountEntity WHERE userId = ?;

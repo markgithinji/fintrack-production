@@ -258,10 +258,35 @@ class SummaryRepositoryOfflineImpl(
         try {
             val isIncomeValue = if (type?.lowercase() == "income") 1L else if (type?.lowercase() == "expense") 0L else null
             
-            val startInstant = start?.let { Instant.parse(it) } ?: Instant.fromEpochSeconds(0)
-            val endInstant = end?.let { Instant.parse(it) } ?: Clock.System.now()
+            // 1. Determine Date Range
+            val range = if (weekOrMonthCode.contains("-W")) {
+                DateTimeUtils.getIsoWeekRange(weekOrMonthCode)
+            } else if (weekOrMonthCode.length == 7) {
+                DateTimeUtils.getMonthRange(weekOrMonthCode)
+            } else if (weekOrMonthCode.length == 4) {
+                val year = weekOrMonthCode.toIntOrNull() ?: Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
+                LocalDate(year, 1, 1) to LocalDate(year, 12, 31)
+            } else null
 
-            val categoryTotals = queries.getCategoryTotals(
+            val startInstant = start?.let { Instant.parse(it) } 
+                ?: range?.first?.atStartOfDayIn(TimeZone.currentSystemDefault()) 
+                ?: Instant.fromEpochSeconds(0)
+                
+            val endInstant = end?.let { Instant.parse(it) } 
+                ?: range?.second?.atTime(23, 59, 59)?.toInstant(TimeZone.currentSystemDefault()) 
+                ?: Clock.System.now()
+
+            // 2. Get Top-Level Fees for the period (Backend Parity)
+            val highlights = queries.getHighlightsByRange(
+                userId = offlineUserId,
+                accountId = accountId,
+                start = startInstant,
+                end = endInstant
+            ).executeAsOne()
+            val totalFees = BigDecimal.fromDouble(highlights.feesTotal ?: 0.0)
+
+            // 3. Get Category Totals
+            val categoryTotalsRaw = queries.getCategoryTotals(
                 userId = offlineUserId,
                 accountId = accountId,
                 isIncome = isIncomeValue,
@@ -269,7 +294,21 @@ class SummaryRepositoryOfflineImpl(
                 end = endInstant
             ).executeAsList()
 
-            // Calculate Momentum
+            // 4. Calculate Refined Total for Percentages
+            val feeCategoryNames = setOf("Transaction Fees", "Transaction Cost")
+            val feeCategoryTotal = categoryTotalsRaw
+                .find { feeCategoryNames.any { name -> it.catName.trim().equals(name, ignoreCase = true) } }
+                ?.totalSum ?: 0.0
+
+            val rawSum = categoryTotalsRaw.sumOf { it.totalSum ?: 0.0 }
+            val refinedTotal = if (isIncomeValue == 0L) {
+                // Expense logic: Total = Sum - Fee Category + Actual Fees
+                BigDecimal.fromDouble(rawSum - feeCategoryTotal) + totalFees
+            } else {
+                BigDecimal.fromDouble(rawSum)
+            }
+
+            // 5. Calculate Momentum (Backend Logic)
             val currentMonthStart = if (weekOrMonthCode.length == 7) { 
                  try { LocalDate.parse("$weekOrMonthCode-01") } catch(_: Exception) { null }
             } else null
@@ -299,36 +338,40 @@ class SummaryRepositoryOfflineImpl(
                 m1Totals to m2Totals
             } else null
 
-            val totalAmount = categoryTotals.fold(0.0) { acc, it -> acc + (it.totalSum ?: 0.0) }
-            
-            val categorySummaries = categoryTotals.map { current ->
-                val amount = current.totalSum ?: 0.0
-                val percentage = if (totalAmount > 0) (amount / totalAmount) * 100 else 0.0
-                
-                val momentum = if (momentumData != null) {
-                    val prev1 = momentumData.first.find { it.catId == current.catId }?.totalSum ?: 0.0
-                    val prev2 = momentumData.second.find { it.catId == current.catId }?.totalSum ?: 0.0
-                    when {
-                        amount > prev1 && prev1 > prev2 -> "UP"
-                        amount < prev1 && prev1 < prev2 -> "DOWN"
-                        else -> "STABLE"
-                    }
-                } else null
+            // 6. Map to Domain Models (Filtering out Fee category from the list)
+            val categorySummaries = categoryTotalsRaw
+                .filterNot { feeCategoryNames.any { name -> it.catName.trim().equals(name, ignoreCase = true) } }
+                .map { current ->
+                    val amount = BigDecimal.fromDouble(current.totalSum ?: 0.0)
+                    val percentage = if (refinedTotal > BigDecimal.ZERO) {
+                        amount.divide(refinedTotal, ratioMode).multiply(BigDecimal.fromInt(100))
+                    } else BigDecimal.ZERO
+                    
+                    val momentum = if (momentumData != null) {
+                        val prev1 = momentumData.first.find { it.catId == current.catId }?.totalSum ?: 0.0
+                        val prev2 = momentumData.second.find { it.catId == current.catId }?.totalSum ?: 0.0
+                        val curVal = current.totalSum ?: 0.0
+                        when {
+                            curVal > prev1 && prev1 > prev2 -> "UP"
+                            curVal < prev1 && prev1 < prev2 -> "DOWN"
+                            else -> "STABLE"
+                        }
+                    } else null
 
-                CategorySummary(
-                    category = current.catName,
-                    categoryId = current.catId,
-                    total = BigDecimal.fromDouble(amount),
-                    percentage = BigDecimal.fromDouble(percentage),
-                    transactionCount = current.txCount.toInt(),
-                    momentumTrend = momentum
-                )
-            }
+                    CategorySummary(
+                        category = current.catName,
+                        categoryId = current.catId,
+                        total = amount,
+                        percentage = percentage,
+                        transactionCount = current.txCount.toInt(),
+                        momentumTrend = momentum
+                    )
+                }
 
             Result.Success(
                 DistributionSummary(
                     period = weekOrMonthCode,
-                    totalTransactionCost = BigDecimal.ZERO,
+                    totalTransactionCost = totalFees,
                     incomeCategories = if (isIncomeValue == 1L) categorySummaries else emptyList(),
                     expenseCategories = if (isIncomeValue == 0L) categorySummaries else emptyList(),
                     othersInsightSummary = null
@@ -567,42 +610,32 @@ class SummaryRepositoryOfflineImpl(
         hasTransactionCost: Boolean?
     ): Result<TransactionCountSummary> = withContext(Dispatchers.IO) {
         try {
-            val startInstant = start?.let { try { Instant.parse(it) } catch(_: Exception) { null } }
-            val endInstant = end?.let { try { Instant.parse(it) } catch(_: Exception) { null } }
-
-            val allTransactions = queries.selectAllTransactions(offlineUserId).executeAsList()
-            
-            val filtered = allTransactions.filter { tx ->
-                val matchesAccount = tx.accountId == accountId
-                val matchesCategory = categoryId == null || tx.categoryId == categoryId
-                val matchesIncome = isIncome == null || (tx.isIncome != 0L) == isIncome
-                val matchesStart = startInstant == null || tx.dateTime >= startInstant
-                val matchesEnd = endInstant == null || tx.dateTime <= endInstant
-                val matchesCost = hasTransactionCost == null || (BigDecimal.parseString(tx.transactionCost) > BigDecimal.ZERO) == hasTransactionCost
-                
-                matchesAccount && matchesCategory && matchesIncome && matchesStart && matchesEnd && matchesCost
+            val timeZone = TimeZone.currentSystemDefault()
+            val startInstant = start?.let { 
+                try { LocalDate.parse(it).atStartOfDayIn(timeZone) } catch (e: Exception) { null } 
             }
-
-            val incomeTxs = filtered.filter { it.isIncome != 0L }
-            val expenseTxs = filtered.filter { it.isIncome == 0L }
-
-            val totalAmount = filtered.fold(BigDecimal.ZERO) { acc, tx ->
-                val amount = BigDecimal.parseString(tx.amount)
-                val cost = BigDecimal.parseString(tx.transactionCost)
-                acc + if (tx.isIncome != 0L) (amount - cost) else (amount + cost)
+            val endInstant = end?.let { 
+                try { LocalDate.parse(it).atTime(23, 59, 59).toInstant(timeZone) } catch (e: Exception) { null } 
             }
+            val isIncomeLong = isIncome?.let { if (it) 1L else 0L }
 
-            val totalCost = filtered.fold(BigDecimal.ZERO) { acc, tx ->
-                acc + BigDecimal.parseString(tx.transactionCost)
-            }
+            val row = queries.getTransactionCountSummary(
+                userId = offlineUserId,
+                accountId = accountId,
+                isIncome = isIncomeLong,
+                categoryId = categoryId,
+                start = startInstant,
+                end = endInstant,
+                hasTransactionCost = hasTransactionCost
+            ).executeAsOne()
 
             Result.Success(
                 TransactionCountSummary(
-                    totalIncomeTransactions = incomeTxs.size,
-                    totalExpenseTransactions = expenseTxs.size,
-                    totalTransactions = filtered.size,
-                    totalAmount = totalAmount,
-                    totalTransactionCost = totalCost
+                    totalIncomeTransactions = row.incomeCount.toInt(),
+                    totalExpenseTransactions = row.expenseCount.toInt(),
+                    totalTransactions = row.totalCount.toInt(),
+                    totalAmount = BigDecimal.fromDouble(row.totalAmount ?: 0.0),
+                    totalTransactionCost = BigDecimal.fromDouble(row.totalTransactionCost ?: 0.0)
                 )
             )
         } catch (e: Exception) {

@@ -15,6 +15,12 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toInstant
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import com.fintrack.shared.feature.core.util.DateTimeHelper
 import com.fintrack.shared.feature.core.logger.KMPLogger
@@ -248,15 +254,42 @@ class TransactionRepositoryOfflineImpl(
         endDate: String?,
         hasTransactionCost: Boolean?
     ): Flow<PagingData<Transaction>> {
+        val timeZone = TimeZone.currentSystemDefault()
+        val start = startDate?.let { 
+            try { LocalDate.parse(it).atStartOfDayIn(timeZone) } catch (e: Exception) { null } 
+        }
+        val end = endDate?.let { 
+            try { LocalDate.parse(it).atTime(23, 59, 59).toInstant(timeZone) } catch (e: Exception) { null } 
+        }
+        val isIncomeLong = isIncome?.let { if (it) 1L else 0L }
+
         return Pager(
             config = PagingConfig(pageSize = 20),
             pagingSourceFactory = {
                 QueryPagingSource(
-                    countQuery = queries.countTransactions(offlineUserId),
+                    countQuery = queries.countTransactions(
+                        userId = offlineUserId,
+                        accountId = accountId,
+                        isIncome = isIncomeLong,
+                        categoryId = categoryId,
+                        start = start,
+                        end = end,
+                        hasTransactionCost = hasTransactionCost
+                    ),
                     transacter = queries,
                     context = Dispatchers.IO,
                     queryProvider = { limit, offset ->
-                        queries.selectTransactionsPaged(offlineUserId, limit, offset)
+                        queries.selectTransactionsPaged(
+                            userId = offlineUserId,
+                            accountId = accountId,
+                            isIncome = isIncomeLong,
+                            categoryId = categoryId,
+                            start = start,
+                            end = end,
+                            hasTransactionCost = hasTransactionCost,
+                            limit = limit,
+                            offset = offset
+                        )
                     }
                 )
             }
