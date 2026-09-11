@@ -1,6 +1,7 @@
 package com.fintrack.shared.feature.summary.data.repository
 
 import com.fintrack.shared.db.FintrackDatabase
+import com.fintrack.shared.db.GetCategoryTotals
 import com.fintrack.shared.db.GetDailyTotals
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.summary.domain.model.*
@@ -10,6 +11,8 @@ import com.fintrack.shared.feature.core.util.DateTimeUtils
 import com.fintrack.shared.feature.core.util.DateTimeHelper
 import com.fintrack.shared.feature.user.domain.repository.UserRepository
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
+import com.ionspin.kotlin.bignum.decimal.DecimalMode
+import com.ionspin.kotlin.bignum.decimal.RoundingMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.first
@@ -36,9 +39,18 @@ class SummaryRepositoryOfflineImpl(
     private val offlineUserId = "offline_user"
     private val tag = "SummaryRepo"
 
+    /**
+     * Set of category names considered "Essential" for financial health benchmarks (Needs vs Wants).
+     */
+    private val essentialCategories = setOf(
+        "Rent", "Groceries", "Transport", "Bills", "Health", "Education", "Utilities", "Insurance"
+    )
+
     // Default fallback category IDs (Salary and Food)
     private val defaultIncomeId = "aaaaaaaa-aaaa-4aaa-baaa-000000000001"
     private val defaultExpenseId = "00000000-0000-4000-a000-000000000001"
+
+    private val ratioMode = DecimalMode(decimalPrecision = 20, roundingMode = RoundingMode.ROUND_HALF_AWAY_FROM_ZERO)
 
     override suspend fun getHighlightsSummary(
         accountId: String?,
@@ -46,10 +58,7 @@ class SummaryRepositoryOfflineImpl(
     ): Result<StatisticsSummary> = withContext(Dispatchers.IO) {
         try {
             val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
-            val targetPeriod = period ?: run {
-                val availableMonths = queries.selectDistinctMonths(offlineUserId, accountId).executeAsList()
-                availableMonths.firstOrNull() ?: DateTimeHelper.currentMonthCode()
-            }
+            val targetPeriod = period ?: DateTimeHelper.currentMonthCode()
             
             val range = if (targetPeriod.contains("-W")) {
                 DateTimeUtils.getIsoWeekRange(targetPeriod)
@@ -60,22 +69,103 @@ class SummaryRepositoryOfflineImpl(
                 LocalDate(year, 1, 1) to LocalDate(year, 12, 31)
             } else null
 
-            val (incomeTotal, expenseTotal, feesTotal) = if (range != null) {
-                val r = queries.getHighlightsByRange(
-                    accountId = accountId,
-                    userId = offlineUserId,
-                    start = range.first.atStartOfDayIn(TimeZone.currentSystemDefault()),
-                    end = range.second.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
-                ).executeAsOne()
-                Triple(r.incomeTotal, r.expenseTotal, r.feesTotal)
-            } else {
-                val r = queries.getHighlights(accountId = accountId, userId = offlineUserId).executeAsOne()
-                Triple(r.incomeTotal, r.expenseTotal, r.feesTotal)
-            }
+            val startInstant = range?.first?.atStartOfDayIn(TimeZone.currentSystemDefault()) ?: Instant.fromEpochSeconds(0)
+            val endInstant = range?.second?.atTime(23, 59, 59)?.toInstant(TimeZone.currentSystemDefault()) ?: Clock.System.now()
+
+            val highlightsResult = queries.getHighlightsByRange(
+                accountId = accountId,
+                userId = offlineUserId,
+                start = startInstant,
+                end = endInstant
+            ).executeAsOne()
             
-            val income = BigDecimal.fromDouble(incomeTotal ?: 0.0)
-            val totalExpense = BigDecimal.fromDouble(expenseTotal ?: 0.0)
-            val fees = BigDecimal.fromDouble(feesTotal ?: 0.0)
+            val income = BigDecimal.fromDouble(highlightsResult.incomeTotal ?: 0.0)
+            val totalExpense = BigDecimal.fromDouble(highlightsResult.expenseTotal ?: 0.0)
+            val fees = BigDecimal.fromDouble(highlightsResult.feesTotal ?: 0.0)
+
+            // Get data for peaks
+            val dailyData = queries.getDailyTotals(
+                userId = offlineUserId,
+                accountId = accountId,
+                start = startInstant,
+                end = endInstant
+            ).executeAsList()
+
+            val incomeCategoryTotals = queries.getCategoryTotals(
+                userId = offlineUserId,
+                accountId = accountId,
+                isIncome = 1L,
+                start = startInstant,
+                end = endInstant
+            ).executeAsList()
+
+            val expenseCategoryTotals = queries.getCategoryTotals(
+                userId = offlineUserId,
+                accountId = accountId,
+                isIncome = 0L,
+                start = startInstant,
+                end = endInstant
+            ).executeAsList()
+
+            // Calculate ratios
+            val savingsRate = if (income > BigDecimal.ZERO) {
+                (income - totalExpense).divide(income, ratioMode).doubleValue(false)
+            } else null
+
+            val essentialSpend = expenseCategoryTotals
+                .filter { cat -> essentialCategories.any { it.equals(cat.catName.trim(), ignoreCase = true) } }
+                .sumOf { it.totalSum ?: 0.0 }
+            
+            val essentialSpendRatio = if (totalExpense > BigDecimal.ZERO) {
+                BigDecimal.fromDouble(essentialSpend).divide(totalExpense, ratioMode).doubleValue(false)
+            } else null
+
+            fun calculateAveragePerDay(data: List<GetDailyTotals>, isIncome: Boolean): BigDecimal {
+                val days = data.size.coerceAtLeast(1)
+                val total = data.fold(0.0) { acc, d -> acc + (if (isIncome) (d.incomeTotal ?: 0.0) else (d.expenseTotal ?: 0.0)) }
+                return BigDecimal.fromDouble(total / days)
+            }
+
+            fun calculateHighestDay(data: List<GetDailyTotals>, isIncome: Boolean): Highlight? {
+                return data.maxByOrNull { if (isIncome) (it.incomeTotal ?: 0.0) else (it.expenseTotal ?: 0.0) }
+                    ?.let {
+                        Highlight(
+                            label = it.day,
+                            value = it.day,
+                            amount = BigDecimal.fromDouble(if (isIncome) (it.incomeTotal ?: 0.0) else (it.expenseTotal ?: 0.0))
+                        )
+                    }
+            }
+
+            fun calculateHighestCategory(data: List<GetCategoryTotals>): Highlight? {
+                return data.maxByOrNull { it.totalSum ?: 0.0 }
+                    ?.let {
+                        Highlight(
+                            label = it.catName,
+                            value = it.catName,
+                            amount = BigDecimal.fromDouble(it.totalSum ?: 0.0)
+                        )
+                    }
+            }
+
+            fun calculateHighestMonth(data: List<GetDailyTotals>, isIncome: Boolean): Highlight? {
+                return data.groupBy { it.day.substring(0, 7) }
+                    .mapValues { (_, entries) ->
+                        entries.fold(0.0) { acc, entry ->
+                            acc + (if (isIncome) (entry.incomeTotal ?: 0.0) else (entry.expenseTotal ?: 0.0))
+                        }
+                    }
+                    .maxByOrNull { it.value }
+                    ?.let { (month, amount) ->
+                        Highlight(
+                            label = month,
+                            value = month,
+                            amount = BigDecimal.fromDouble(amount)
+                        )
+                    }
+            }
+
+            val isYearMode = targetPeriod.length == 4
 
             Result.Success(
                 StatisticsSummary(
@@ -83,7 +173,21 @@ class SummaryRepositoryOfflineImpl(
                     income = income,
                     expense = totalExpense,
                     balance = income - totalExpense,
-                    totalTransactionCost = fees
+                    totalTransactionCost = fees,
+                    incomeHighlights = Highlights(
+                        highestMonth = if (isYearMode) calculateHighestMonth(dailyData, true) else null,
+                        highestCategory = calculateHighestCategory(incomeCategoryTotals),
+                        highestDay = calculateHighestDay(dailyData, true),
+                        averagePerDay = calculateAveragePerDay(dailyData, true),
+                        savingsRate = savingsRate?.let { BigDecimal.fromDouble(it) }
+                    ),
+                    expenseHighlights = Highlights(
+                        highestMonth = if (isYearMode) calculateHighestMonth(dailyData, false) else null,
+                        highestCategory = calculateHighestCategory(expenseCategoryTotals),
+                        highestDay = calculateHighestDay(dailyData, false),
+                        averagePerDay = calculateAveragePerDay(dailyData, false),
+                        essentialSpendRatio = essentialSpendRatio?.let { BigDecimal.fromDouble(it) }
+                    )
                 )
             )
         } catch (e: Exception) {
