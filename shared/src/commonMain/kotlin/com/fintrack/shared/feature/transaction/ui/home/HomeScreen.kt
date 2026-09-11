@@ -159,6 +159,7 @@ fun HomeScreen(
         if (accountId != null && refreshTrigger > lastProcessedRefreshTrigger) {
             println("[DEBUG_ANR] Refreshing transaction data for account $accountId")
             // Decoupled account list reload to break potential loops
+            accountsViewModel.reloadAccounts(showLoading = false)
             transactionsViewModel.loadRecentTransactions(accountId, force = true)
             statsViewModel.loadOverview(accountId, force = true)
             statsViewModel.loadCategoryComparisons(accountId, force = true)

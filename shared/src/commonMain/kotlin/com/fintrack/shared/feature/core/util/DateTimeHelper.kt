@@ -13,4 +13,10 @@ object DateTimeHelper {
     fun today(): String {
         return now().toLocalDateTime(TimeZone.currentSystemDefault()).date.toString()
     }
+
+    fun currentMonthCode(): String {
+        val now = now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+        @Suppress("DEPRECATION")
+        return "${now.year}-${now.monthNumber.toString().padStart(2, '0')}"
+    }
 }

@@ -14,6 +14,8 @@ import com.fintrack.shared.feature.summary.domain.model.TransactionCountSummary
 import com.fintrack.shared.feature.summary.domain.model.TransactionType
 import com.fintrack.shared.feature.summary.domain.repository.SummaryRepository
 import com.fintrack.shared.feature.core.util.DateTimeHelper
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
@@ -143,12 +145,9 @@ class StatisticsViewModel(
     private var transactionCountsJob: Job? = null
 
     fun loadHighlights(accountId: String? = null, period: String? = null, force: Boolean = false) {
-        if (period == null) {
-            _highlights.value = Result.Success(createEmptyStatisticsSummary())
-            return
-        }
+        val currentPeriod = period ?: DateTimeHelper.currentMonthCode()
 
-        val paramsChanged = lastHighlightsAccountId != accountId || lastHighlightsPeriod != period
+        val paramsChanged = lastHighlightsAccountId != accountId || lastHighlightsPeriod != currentPeriod
         val current = _highlights.value
         
         if (!force && !paramsChanged) {
@@ -165,8 +164,8 @@ class StatisticsViewModel(
 
         highlightsJob = viewModelScope.launch {
             lastHighlightsAccountId = accountId
-            lastHighlightsPeriod = period
-            _highlights.value = summaryRepository.getHighlightsSummary(accountId, period)
+            lastHighlightsPeriod = currentPeriod
+            _highlights.value = summaryRepository.getHighlightsSummary(accountId, currentPeriod)
         }
     }
 

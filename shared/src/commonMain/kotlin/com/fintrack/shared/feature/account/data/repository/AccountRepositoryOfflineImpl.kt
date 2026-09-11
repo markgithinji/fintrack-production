@@ -4,39 +4,75 @@ import com.fintrack.shared.db.FintrackDatabase
 import com.fintrack.shared.feature.account.data.model.toDomain
 import com.fintrack.shared.feature.account.domain.model.Account
 import com.fintrack.shared.feature.account.domain.repository.AccountRepository
+import com.fintrack.shared.feature.core.logger.KMPLogger
+import com.fintrack.shared.feature.core.util.DateTimeHelper
+import com.fintrack.shared.feature.core.util.DateTimeUtils
 import com.fintrack.shared.feature.core.util.Result
+import com.ionspin.kotlin.bignum.decimal.BigDecimal
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
-import com.ionspin.kotlin.bignum.decimal.BigDecimal
-import com.fintrack.shared.feature.core.util.DateTimeHelper
-import com.fintrack.shared.feature.core.logger.KMPLogger
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toInstant
 
 class AccountRepositoryOfflineImpl(
-    private val database: FintrackDatabase,
+    database: FintrackDatabase,
     private val logger: KMPLogger
 ) : AccountRepository {
 
     private val queries = database.fintrackDatabaseQueries
     private val offlineUserId = "offline_user"
-    private val TAG = "AccountRepo"
+    private val tag = "AccountRepo"
 
     override suspend fun getAccounts(): Result<List<Account>> = withContext(Dispatchers.IO) {
         try {
-            val accounts = queries.selectAllAccounts(offlineUserId).executeAsList().map { it.toDomain() }
+            val accounts = queries.selectAllAccounts(offlineUserId).executeAsList().map { entity ->
+                val highlights = try {
+                    queries.getHighlights(
+                        accountId = entity.id,
+                        userId = offlineUserId
+                    ).executeAsOne()
+                } catch (_: Exception) {
+                    null
+                }
+                
+                entity.toDomain().copy(
+                    income = BigDecimal.fromDouble(highlights?.incomeTotal ?: 0.0),
+                    expense = BigDecimal.fromDouble(highlights?.expenseTotal ?: 0.0)
+                )
+            }
             Result.Success(accounts)
         } catch (e: Exception) {
-            logger.error(TAG, "Error fetching accounts", e)
+            logger.error(tag, "Error fetching accounts", e)
             Result.Error(e)
         }
     }
 
     override suspend fun getAccountById(id: String): Result<Account> = withContext(Dispatchers.IO) {
         try {
-            val account = queries.selectAccountById(id).executeAsOneOrNull()?.toDomain()
-            if (account != null) Result.Success(account) else Result.Error(Exception("Account not found"))
+            val entity = queries.selectAccountById(id).executeAsOneOrNull()
+            if (entity == null) return@withContext Result.Error(Exception("Account not found"))
+
+            val highlights = try {
+                queries.getHighlights(
+                    accountId = id,
+                    userId = offlineUserId
+                ).executeAsOne()
+            } catch (_: Exception) {
+                null
+            }
+
+            val account = entity.toDomain().copy(
+                income = BigDecimal.fromDouble(highlights?.incomeTotal ?: 0.0),
+                expense = BigDecimal.fromDouble(highlights?.expenseTotal ?: 0.0)
+            )
+            Result.Success(account)
         } catch (e: Exception) {
-            logger.error(TAG, "Error fetching account $id", e)
+            logger.error(tag, "Error fetching account $id", e)
             Result.Error(e)
         }
     }
@@ -56,7 +92,7 @@ class AccountRepositoryOfflineImpl(
             )
             Result.Success(account)
         } catch (e: Exception) {
-            logger.error(TAG, "Error saving account ${account.name}", e)
+            logger.error(tag, "Error saving account ${account.name}", e)
             Result.Error(e)
         }
     }
@@ -66,7 +102,7 @@ class AccountRepositoryOfflineImpl(
             queries.deleteAccount(id)
             Result.Success(Unit)
         } catch (e: Exception) {
-            logger.error(TAG, "Error deleting account $id", e)
+            logger.error(tag, "Error deleting account $id", e)
             Result.Error(e)
         }
     }
