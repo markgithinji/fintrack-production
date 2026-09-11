@@ -788,27 +788,42 @@ class SummaryRepositoryOfflineImpl(
             }
 
             val comparisons = finalTargetIds.map { id ->
+                val categoryName = queries.selectCategoryById(id).executeAsOneOrNull()?.name ?: "Unknown"
+                
+                // Backend specialized comparison for Transaction Fees
+                if (categoryName in feeCategoryNames) {
+                    return@map calculateTransactionCostComparison(
+                        accountId,
+                        currentMonthStart,
+                        currentMonthEnd,
+                        previousMonthStart,
+                        previousMonthEnd,
+                        thisWeekStart,
+                        thisWeekEnd,
+                        lastWeekStart,
+                        lastWeekEnd
+                    )
+                }
+
                 val current = currentMonthTotals.find { it.catId == id }
                 val prev = previousMonthTotals.find { it.catId == id }
                 val weekCur = thisWeekTotals.find { it.catId == id }
                 val weekPrev = lastWeekTotals.find { it.catId == id }
 
-                val curVal = current?.totalSum ?: 0.0
-                val prevVal = prev?.totalSum ?: 0.0
-                val wCurVal = weekCur?.totalSum ?: 0.0
-                val wPrevVal = weekPrev?.totalSum ?: 0.0
-
-                val categoryName = current?.catName ?: queries.selectCategoryById(id).executeAsOneOrNull()?.name ?: "Unknown"
+                val curVal = BigDecimal.fromDouble(current?.totalSum ?: 0.0)
+                val prevVal = BigDecimal.fromDouble(prev?.totalSum ?: 0.0)
+                val wCurVal = BigDecimal.fromDouble(weekCur?.totalSum ?: 0.0)
+                val wPrevVal = BigDecimal.fromDouble(weekPrev?.totalSum ?: 0.0)
 
                 CategoryComparison(
                     category = categoryName,
-                    currentTotal = BigDecimal.fromDouble(curVal),
-                    previousTotal = BigDecimal.fromDouble(prevVal),
-                    changePercentage = calculatePercentageChange(curVal, prevVal),
+                    currentTotal = curVal,
+                    previousTotal = prevVal,
+                    changePercentage = if (prevVal > BigDecimal.ZERO) (curVal - prevVal).divide(prevVal, ratioMode).multiply(BigDecimal.fromInt(100)) else BigDecimal.ZERO,
                     isIncome = queries.selectCategoryById(id).executeAsOneOrNull()?.isExpense == 0L,
                     period = targetPeriodString,
-                    weeklyCurrentTotal = BigDecimal.fromDouble(wCurVal),
-                    weeklyChangePercentage = calculatePercentageChange(wCurVal, wPrevVal)
+                    weeklyCurrentTotal = wCurVal,
+                    weeklyChangePercentage = if (wPrevVal > BigDecimal.ZERO) (wCurVal - wPrevVal).divide(wPrevVal, ratioMode).multiply(BigDecimal.fromInt(100)) else BigDecimal.ZERO
                 )
             }
 
@@ -825,11 +840,72 @@ class SummaryRepositoryOfflineImpl(
         }
     }
 
-    private fun calculatePercentageChange(current: Double, previous: Double): BigDecimal {
-        if (previous == 0.0) {
-            return if (current > 0) BigDecimal.fromInt(100) else BigDecimal.ZERO
+    private suspend fun calculateTransactionCostComparison(
+        accountId: String?,
+        currentMonthStart: LocalDate,
+        currentMonthEnd: LocalDate,
+        previousMonthStart: LocalDate,
+        previousMonthEnd: LocalDate,
+        thisWeekStart: LocalDate? = null,
+        thisWeekEnd: LocalDate? = null,
+        lastWeekStart: LocalDate? = null,
+        lastWeekEnd: LocalDate? = null
+    ): CategoryComparison = withContext(Dispatchers.IO) {
+        val curStart = currentMonthStart.atStartOfDayIn(TimeZone.currentSystemDefault())
+        val curEnd = currentMonthEnd.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+        val prevStart = previousMonthStart.atStartOfDayIn(TimeZone.currentSystemDefault())
+        val prevEnd = previousMonthEnd.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+
+        val curCounts = queries.getTransactionCountSummary(
+            userId = offlineUserId,
+            accountId = accountId,
+            isIncome = null,
+            useCategoryFilter = 0L,
+            categoryIds = emptyList(),
+            start = curStart,
+            end = curEnd,
+            hasTransactionCost = null
+        ).executeAsOne()
+
+        val prevCounts = queries.getTransactionCountSummary(
+            userId = offlineUserId,
+            accountId = accountId,
+            isIncome = null,
+            useCategoryFilter = 0L,
+            categoryIds = emptyList(),
+            start = prevStart,
+            end = prevEnd,
+            hasTransactionCost = null
+        ).executeAsOne()
+
+        val curCost = BigDecimal.fromDouble(curCounts.totalTransactionCost ?: 0.0)
+        val prevCost = BigDecimal.fromDouble(prevCounts.totalTransactionCost ?: 0.0)
+
+        var weekCurCost = BigDecimal.ZERO
+        var weekPrevCost = BigDecimal.ZERO
+        if (thisWeekStart != null && thisWeekEnd != null && lastWeekStart != null && lastWeekEnd != null) {
+            val twStart = thisWeekStart.atStartOfDayIn(TimeZone.currentSystemDefault())
+            val twEnd = thisWeekEnd.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+            val lwStart = lastWeekStart.atStartOfDayIn(TimeZone.currentSystemDefault())
+            val lwEnd = lastWeekEnd.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+
+            val twCounts = queries.getTransactionCountSummary(offlineUserId, accountId, null, 0L, emptyList(), twStart, twEnd, null).executeAsOne()
+            val lwCounts = queries.getTransactionCountSummary(offlineUserId, accountId, null, 0L, emptyList(), lwStart, lwEnd, null).executeAsOne()
+
+            weekCurCost = BigDecimal.fromDouble(twCounts.totalTransactionCost ?: 0.0)
+            weekPrevCost = BigDecimal.fromDouble(lwCounts.totalTransactionCost ?: 0.0)
         }
-        return BigDecimal.fromDouble(((current - previous) / previous) * 100)
+
+        CategoryComparison(
+            category = "Transaction Fees",
+            currentTotal = curCost,
+            previousTotal = prevCost,
+            changePercentage = if (prevCost > BigDecimal.ZERO) (curCost - prevCost).divide(prevCost, ratioMode).multiply(BigDecimal.fromInt(100)) else BigDecimal.ZERO,
+            isIncome = false,
+            period = currentMonthStart.toString().substring(0, 7),
+            weeklyCurrentTotal = weekCurCost,
+            weeklyChangePercentage = if (weekPrevCost > BigDecimal.ZERO) (weekCurCost - weekPrevCost).divide(weekPrevCost, ratioMode).multiply(BigDecimal.fromInt(100)) else BigDecimal.ZERO
+        )
     }
 
     override suspend fun getTransactionCounts(
@@ -897,7 +973,7 @@ class SummaryRepositoryOfflineImpl(
             ).executeAsList()
 
             val feeCategoryTotal = allExpenseCategoryTotals
-                .find { it.catName.trim().equals("Transaction Fees", ignoreCase = true) || it.catName.trim().equals("Transaction Cost", ignoreCase = true) }
+                .find { it.catName.trim() in feeCategoryNames }
                 ?.totalSum ?: 0.0
 
             val refinedExpense = BigDecimal.fromDouble(allExpenseCategoryTotals.sumOf { it.totalSum ?: 0.0 } - feeCategoryTotal) + fees

@@ -92,8 +92,13 @@ deleteCategory:
 DELETE FROM CategoryEntity WHERE id = ?;
 
 insertTransaction:
-INSERT OR IGNORE INTO TransactionEntity(id, userId, accountId, categoryId, isIncome, amount, transactionCost, dateTime, description, externalId, balance, createdAt, updatedAt)
+INSERT OR REPLACE INTO TransactionEntity(id, userId, accountId, categoryId, isIncome, amount, transactionCost, dateTime, description, externalId, balance, createdAt, updatedAt)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateTransaction:
+UPDATE TransactionEntity
+SET accountId = ?, categoryId = ?, isIncome = ?, amount = ?, transactionCost = ?, dateTime = ?, description = ?, balance = ?, updatedAt = ?
+WHERE id = ?;
 
 selectAllTransactionsWithCategory:
 SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, C.name AS categoryName

@@ -12,10 +12,16 @@ import com.fintrack.shared.feature.core.util.randomUUID
 import com.fintrack.shared.feature.core.util.DateTimeHelper
 import com.fintrack.shared.feature.core.logger.KMPLogger
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
+import com.ionspin.kotlin.bignum.decimal.DecimalMode
+import com.ionspin.kotlin.bignum.decimal.RoundingMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toInstant
 
 class BudgetRepositoryOfflineImpl(
     private val database: FintrackDatabase,
@@ -25,6 +31,7 @@ class BudgetRepositoryOfflineImpl(
     private val queries = database.fintrackDatabaseQueries
     private val offlineUserId = "offline_user"
     private val TAG = "BudgetRepo"
+    private val ratioMode = DecimalMode(decimalPrecision = 20, roundingMode = RoundingMode.ROUND_HALF_AWAY_FROM_ZERO)
 
     override suspend fun getBudgets(
         accountId: String?
@@ -42,15 +49,8 @@ class BudgetRepositoryOfflineImpl(
                     categories = categoryIds.mapNotNull { id -> Category.allCategories.find { it.id == id } },
                     accountIds = row.accountIds.split(",").filter { it.isNotEmpty() }
                 )
-                BudgetWithStatus(
-                    budget = budget,
-                    status = BudgetStatus(
-                        spent = BigDecimal.ZERO,
-                        remaining = budget.limit,
-                        percentageUsed = BigDecimal.ZERO,
-                        isExceeded = false
-                    )
-                )
+
+                calculateBudgetStatus(budget)
             }
             Result.Success(budgets)
         } catch (e: Exception) {
@@ -74,17 +74,7 @@ class BudgetRepositoryOfflineImpl(
                     categories = categoryIds.mapNotNull { catId -> Category.allCategories.find { it.id == catId } },
                     accountIds = row.accountIds.split(",").filter { it.isNotEmpty() }
                 )
-                Result.Success(
-                    BudgetWithStatus(
-                        budget = budget,
-                        status = BudgetStatus(
-                            spent = BigDecimal.ZERO,
-                            remaining = budget.limit,
-                            percentageUsed = BigDecimal.ZERO,
-                            isExceeded = false
-                        )
-                    )
-                )
+                Result.Success(calculateBudgetStatus(budget))
             } else {
                 Result.Error(Exception("Budget not found"))
             }
@@ -92,6 +82,42 @@ class BudgetRepositoryOfflineImpl(
             logger.error(TAG, "Error fetching budget $id", e)
             Result.Error(e)
         }
+    }
+
+    private fun calculateBudgetStatus(budget: Budget): BudgetWithStatus {
+        val start = budget.startDate.atStartOfDayIn(TimeZone.currentSystemDefault())
+        val end = budget.endDate.atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+
+        val transactions = queries.selectAllTransactions(offlineUserId).executeAsList().filter { tx ->
+            val inRange = tx.dateTime >= start && tx.dateTime <= end
+            val inCategories = budget.categories.isEmpty() || budget.categories.any { it.id == tx.categoryId }
+            val inAccounts = budget.accountIds.isEmpty() || budget.accountIds.contains(tx.accountId)
+            val correctType = if (budget.isExpense) tx.isIncome == 0L else tx.isIncome != 0L
+            
+            inRange && inCategories && inAccounts && correctType
+        }
+
+        val spent = transactions.fold(BigDecimal.ZERO) { acc, tx ->
+            val amount = BigDecimal.parseString(tx.amount)
+            val cost = BigDecimal.parseString(tx.transactionCost)
+            // Backend Parity: Use Net Impact (Amount + Cost for expenses, Amount - Cost for income)
+            val netImpact = if (tx.isIncome != 0L) (amount - cost) else (amount + cost)
+            acc + netImpact
+        }
+
+        val percentage = if (budget.limit > BigDecimal.ZERO) {
+            spent.divide(budget.limit, ratioMode).multiply(BigDecimal.fromInt(100))
+        } else BigDecimal.ZERO
+
+        return BudgetWithStatus(
+            budget = budget,
+            status = BudgetStatus(
+                spent = spent,
+                remaining = budget.limit - spent,
+                percentageUsed = percentage,
+                isExceeded = spent > budget.limit
+            )
+        )
     }
 
     override suspend fun addOrUpdateBudget(budget: Budget): Result<Budget> = withContext(Dispatchers.IO) {

@@ -249,7 +249,7 @@ class TransactionRepositoryOfflineImpl(
             queries.transaction {
                 val oldRow = queries.selectTransactionById(id).executeAsOneOrNull()
                 if (oldRow != null) {
-                    // Undo old transaction effect
+                    // Undo old balance effect
                     updateAccountBalance(
                         accountId = oldRow.accountId,
                         isIncome = oldRow.isIncome != 0L,
@@ -259,9 +259,8 @@ class TransactionRepositoryOfflineImpl(
                     )
                 }
 
-                queries.insertTransaction(
-                    id = id,
-                    userId = offlineUserId,
+                // Database Update
+                queries.updateTransaction(
                     accountId = transaction.accountId,
                     categoryId = transaction.categoryId,
                     isIncome = if (transaction.isIncome) 1L else 0L,
@@ -269,13 +268,12 @@ class TransactionRepositoryOfflineImpl(
                     transactionCost = transaction.transactionCost.toPlainString(),
                     dateTime = transaction.dateTime,
                     description = transaction.description,
-                    externalId = transaction.externalId,
                     balance = transaction.balance?.toPlainString(),
-                    createdAt = DateTimeHelper.now(),
-                    updatedAt = DateTimeHelper.now()
+                    updatedAt = DateTimeHelper.now(),
+                    id = id
                 )
 
-                // Apply new transaction effect
+                // Apply new balance effect
                 updateAccountBalance(
                     accountId = transaction.accountId,
                     isIncome = transaction.isIncome,
