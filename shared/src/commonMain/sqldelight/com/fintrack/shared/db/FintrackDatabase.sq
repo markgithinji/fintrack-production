@@ -118,6 +118,9 @@ SELECT id, accountId, categoryId, isIncome, amount, transactionCost, dateTime, d
 selectRecentTransactionsByAccount:
 SELECT id, accountId, categoryId, isIncome, amount, transactionCost, dateTime, description, externalId, balance FROM TransactionEntity WHERE accountId = :accountId ORDER BY dateTime DESC LIMIT :limit;
 
+getLatestTransactionBalance:
+SELECT balance FROM TransactionEntity WHERE accountId = ? ORDER BY dateTime DESC LIMIT 1;
+
 deleteTransaction:
 DELETE FROM TransactionEntity WHERE id = ?;
 

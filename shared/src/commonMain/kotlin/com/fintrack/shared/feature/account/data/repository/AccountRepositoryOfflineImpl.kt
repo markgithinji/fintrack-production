@@ -39,10 +39,27 @@ class AccountRepositoryOfflineImpl(
                 } catch (_: Exception) {
                     null
                 }
+
+                val latestTxBalance = queries.getLatestTransactionBalance(entity.id).executeAsOneOrNull()?.balance
+                val income = BigDecimal.fromDouble(highlights?.incomeTotal ?: 0.0)
+                val expense = BigDecimal.fromDouble(highlights?.expenseTotal ?: 0.0)
+                val manualBalance = BigDecimal.parseString(entity.balance)
+                
+                // Backend Balance Derivation Logic
+                val derivedBalance = if (latestTxBalance != null) {
+                    BigDecimal.parseString(latestTxBalance)
+                } else if (manualBalance != BigDecimal.ZERO || entity.lastSyncedAt != null) {
+                    manualBalance
+                } else if (income != BigDecimal.ZERO || expense != BigDecimal.ZERO) {
+                    income - expense
+                } else {
+                    manualBalance
+                }
                 
                 entity.toDomain().copy(
-                    income = BigDecimal.fromDouble(highlights?.incomeTotal ?: 0.0),
-                    expense = BigDecimal.fromDouble(highlights?.expenseTotal ?: 0.0)
+                    income = income,
+                    expense = expense,
+                    balance = derivedBalance
                 )
             }
             Result.Success(accounts)
@@ -66,9 +83,26 @@ class AccountRepositoryOfflineImpl(
                 null
             }
 
+            val latestTxBalance = queries.getLatestTransactionBalance(id).executeAsOneOrNull()?.balance
+            val income = BigDecimal.fromDouble(highlights?.incomeTotal ?: 0.0)
+            val expense = BigDecimal.fromDouble(highlights?.expenseTotal ?: 0.0)
+            val manualBalance = BigDecimal.parseString(entity.balance)
+            
+            // Backend Balance Derivation Logic
+            val derivedBalance = if (latestTxBalance != null) {
+                BigDecimal.parseString(latestTxBalance)
+            } else if (manualBalance != BigDecimal.ZERO || entity.lastSyncedAt != null) {
+                manualBalance
+            } else if (income != BigDecimal.ZERO || expense != BigDecimal.ZERO) {
+                income - expense
+            } else {
+                manualBalance
+            }
+
             val account = entity.toDomain().copy(
-                income = BigDecimal.fromDouble(highlights?.incomeTotal ?: 0.0),
-                expense = BigDecimal.fromDouble(highlights?.expenseTotal ?: 0.0)
+                income = income,
+                expense = expense,
+                balance = derivedBalance
             )
             Result.Success(account)
         } catch (e: Exception) {

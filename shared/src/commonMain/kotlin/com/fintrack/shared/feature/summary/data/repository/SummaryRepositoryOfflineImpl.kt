@@ -53,6 +53,8 @@ class SummaryRepositoryOfflineImpl(
     private val defaultIncomeId = "aaaaaaaa-aaaa-4aaa-baaa-000000000001"
     private val defaultExpenseId = "00000000-0000-4000-a000-000000000001"
 
+    private val feeCategoryNames = setOf("Transaction Fees", "Transaction Cost")
+
     private val ratioMode = DecimalMode(decimalPrecision = 20, roundingMode = RoundingMode.ROUND_HALF_AWAY_FROM_ZERO)
 
     override suspend fun getHighlightsSummary(
@@ -141,7 +143,7 @@ class SummaryRepositoryOfflineImpl(
             ).executeAsList()
             
             val ytdFeeAmountFromCategory = ytdExpenseCategoryTotals
-                .find { it.catName.trim().equals("Transaction Fees", ignoreCase = true) || it.catName.trim().equals("Transaction Cost", ignoreCase = true) }
+                .find { it.catName.trim() in feeCategoryNames }
                 ?.totalSum ?: 0.0
                 
             val ytdTotalExpense = BigDecimal.fromDouble(ytdExpenseCategoryTotals.sumOf { it.totalSum ?: 0.0 } - ytdFeeAmountFromCategory) + ytdFees
@@ -155,6 +157,32 @@ class SummaryRepositoryOfflineImpl(
             
             val projectedExpense = if (isCurrentYearView) {
                 ytdTotalExpense.multiply(BigDecimal.fromInt(12)).divide(BigDecimal.fromInt(monthCount), ratioMode)
+            } else null
+
+            // YoY Growth: Calculate totals for the same period last year (Backend Parity)
+            val lastYear = currentYear - 1
+            val lyStart = LocalDate(lastYear, 1, 1).atStartOfDayIn(TimeZone.currentSystemDefault())
+            val lyEnd = if (isCurrentYearView) {
+                @Suppress("DEPRECATION") val currentMonth = now.monthNumber
+                @Suppress("DEPRECATION") val currentDay = now.dayOfMonth
+                val safeDay = if (currentMonth == 2 && currentDay == 29) 28 else currentDay
+                LocalDate(lastYear, currentMonth, safeDay).atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+            } else {
+                LocalDate(lastYear, 12, 31).atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+            }
+
+            val lyHighlights = queries.getHighlightsByRange(accountId, offlineUserId, lyStart, lyEnd).executeAsOne()
+            val lyIncome = BigDecimal.fromDouble(lyHighlights.incomeTotal ?: 0.0)
+            val lyExpenseRaw = queries.getCategoryTotals(offlineUserId, accountId, 0L, lyStart, lyEnd).executeAsList()
+            val lyFeeAmount = lyExpenseRaw.find { it.catName.trim() in feeCategoryNames }?.totalSum ?: 0.0
+            val lyTotalExpense = BigDecimal.fromDouble(lyExpenseRaw.sumOf { it.totalSum ?: 0.0 } - lyFeeAmount) + BigDecimal.fromDouble(lyHighlights.feesTotal ?: 0.0)
+
+            val ytdIncomeChange = if (lyIncome > BigDecimal.ZERO) {
+                (ytdIncome - lyIncome).divide(lyIncome, ratioMode).multiply(BigDecimal.fromInt(100))
+            } else null
+            
+            val ytdExpenseChange = if (lyTotalExpense > BigDecimal.ZERO) {
+                (ytdTotalExpense - lyTotalExpense).divide(lyTotalExpense, ratioMode).multiply(BigDecimal.fromInt(100))
             } else null
 
             // Volatility Tracking: Get data from previous year
@@ -263,6 +291,7 @@ class SummaryRepositoryOfflineImpl(
                         averagePerDay = calculateAveragePerDay(dailyData, true),
                         savingsRate = savingsRate,
                         projectedTotal = projectedIncome,
+                        ytdChangePercentage = ytdIncomeChange,
                         correlations = correlations // Show in both for now or filter if we have type
                     ),
                     expenseHighlights = Highlights(
@@ -273,6 +302,7 @@ class SummaryRepositoryOfflineImpl(
                         essentialSpendRatio = essentialSpendRatio,
                         projectedTotal = projectedExpense,
                         projectedExceedMonth = projectedExceedMonth,
+                        ytdChangePercentage = ytdExpenseChange,
                         correlations = correlations
                     )
                 )
@@ -330,7 +360,6 @@ class SummaryRepositoryOfflineImpl(
             ).executeAsList()
 
             // 4. Calculate Refined Total for Percentages
-            val feeCategoryNames = setOf("Transaction Fees", "Transaction Cost")
             val feeCategoryTotal = categoryTotalsRaw
                 .find { feeCategoryNames.any { name -> it.catName.trim().equals(name, ignoreCase = true) } }
                 ?.totalSum ?: 0.0
@@ -371,7 +400,25 @@ class SummaryRepositoryOfflineImpl(
                         .map { it.key }
                 }
 
-            // 7. Calculate Momentum (Backend Logic)
+            // 7. Others Insight (Backend Parity)
+            val sortedByAmount = categoryTotalsRaw
+                .filterNot { feeCategoryNames.any { name -> it.catName.trim().equals(name, ignoreCase = true) } }
+                .sortedByDescending { it.totalSum ?: 0.0 }
+            
+            val otherCategories = sortedByAmount.drop(4) // Top 4 are shown explicitly, rest are "Others"
+            val othersInsight = if (otherCategories.isNotEmpty()) {
+                otherCategories.flatMap { cat -> 
+                    allTransactionsForPeriod.filter { it.categoryId == cat.catId }
+                }
+                .mapNotNull { it.description }
+                .filter { MerchantInsightUtils.isDescriptionMeaningful(it, "Others") }
+                .map { MerchantInsightUtils.cleanMerchantName(it) }
+                .groupBy { it }
+                .mapValues { it.value.size }
+                .maxByOrNull { it.value }?.key
+            } else null
+
+            // 8. Calculate Momentum (Backend Logic)
             val currentMonthStart = if (weekOrMonthCode.length == 7) { 
                  try { LocalDate.parse("$weekOrMonthCode-01") } catch(_: Exception) { null }
             } else null
@@ -439,7 +486,7 @@ class SummaryRepositoryOfflineImpl(
                     totalTransactionCost = totalFees,
                     incomeCategories = if (isIncomeValue == 1L) categorySummaries else emptyList(),
                     expenseCategories = if (isIncomeValue == 0L) categorySummaries else emptyList(),
-                    othersInsightSummary = null
+                    othersInsightSummary = othersInsight
                 )
             )
         } catch (e: Exception) {
@@ -838,18 +885,44 @@ class SummaryRepositoryOfflineImpl(
             val netWorthDouble = (netWorthResult.netWorth as? Number)?.toDouble() ?: 0.0
             
             val highlights = queries.getHighlights(accountId = null, userId = offlineUserId).executeAsOne()
-            val income = highlights.incomeTotal ?: 0.0
+            val income = BigDecimal.fromDouble(highlights.incomeTotal ?: 0.0)
             val expense = highlights.expenseTotal ?: 0.0
+            val fees = BigDecimal.fromDouble(highlights.feesTotal ?: 0.0)
             
-            val savingsRate = if (income > 0) ((income - expense) / income) * 100 else 0.0
+            // Re-calculate refined total expense for metrics parity
+            val allExpenseCategoryTotals = queries.getCategoryTotals(
+                userId = offlineUserId,
+                accountId = null,
+                isIncome = 0L,
+                start = Instant.fromEpochSeconds(0),
+                end = Clock.System.now()
+            ).executeAsList()
+
+            val feeCategoryTotal = allExpenseCategoryTotals
+                .find { it.catName.trim().equals("Transaction Fees", ignoreCase = true) || it.catName.trim().equals("Transaction Cost", ignoreCase = true) }
+                ?.totalSum ?: 0.0
+
+            val refinedExpense = BigDecimal.fromDouble(allExpenseCategoryTotals.sumOf { it.totalSum ?: 0.0 } - feeCategoryTotal) + fees
+
+            val savingsRate = if (income > BigDecimal.ZERO) {
+                (income - refinedExpense).divide(income, ratioMode).multiply(BigDecimal.fromInt(100))
+            } else BigDecimal.ZERO
+
+            val essentialSpend = allExpenseCategoryTotals
+                .filter { cat -> essentialCategories.any { it.equals(cat.catName.trim(), ignoreCase = true) } }
+                .sumOf { it.totalSum ?: 0.0 }
+            
+            val essentialSpendRatio = if (refinedExpense > BigDecimal.ZERO) {
+                BigDecimal.fromDouble(essentialSpend).divide(refinedExpense, ratioMode).multiply(BigDecimal.fromInt(100))
+            } else BigDecimal.ZERO
 
             Result.Success(
                 ProfileMetrics(
                     name = "Offline User",
                     email = "offline@fintrack.local",
                     netWorth = BigDecimal.fromDouble(netWorthDouble),
-                    savingsRate = BigDecimal.fromDouble(savingsRate),
-                    essentialSpendRatio = null 
+                    savingsRate = savingsRate,
+                    essentialSpendRatio = essentialSpendRatio
                 )
             )
         } catch (e: Exception) {

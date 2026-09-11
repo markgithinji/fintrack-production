@@ -15,16 +15,21 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.atTime
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import com.fintrack.shared.feature.core.util.DateTimeHelper
 import com.fintrack.shared.feature.core.logger.KMPLogger
 import com.fintrack.shared.feature.core.util.randomUUID
+import kotlin.math.abs
 
 class TransactionRepositoryOfflineImpl(
     private val database: FintrackDatabase,
@@ -244,7 +249,72 @@ class TransactionRepositoryOfflineImpl(
         }
     }
 
-    override suspend fun getRecurringBills(): Result<List<RecurringBill>> = Result.Success(emptyList())
+    override suspend fun getRecurringBills(): Result<List<RecurringBill>> = withContext(Dispatchers.IO) {
+        try {
+            // 1. Fetch last 90 days of transactions (Backend Parity)
+            val now = DateTimeHelper.now()
+            val analysisStart = Instant.fromEpochMilliseconds(now.toEpochMilliseconds() - 90 * 24 * 60 * 60 * 1000L)
+            
+            val transactions = queries.selectTransactionsByRange(
+                userId = offlineUserId,
+                start = analysisStart,
+                end = now
+            ).executeAsList()
+
+            // 2. Group by normalized description and category (Ignoring SMS specific Ref IDs)
+            val groups = transactions
+                .filter { it.isIncome == 0L } // Only expenses
+                .groupBy { row ->
+                    val normalizedDesc = row.description?.split("(Ref:")?.get(0)?.trim()?.lowercase() ?: ""
+                    "${row.categoryId}|$normalizedDesc"
+                }
+
+            val recurringBills = mutableListOf<RecurringBill>()
+
+            // 3. Detect regular intervals (~30 days)
+            groups.forEach { (_, txns) ->
+                if (txns.size >= 3) {
+                    val sortedTxns = txns.sortedBy { it.dateTime.toEpochMilliseconds() }
+                    
+                    val intervals = mutableListOf<Long>()
+                    for (i in 0 until (sortedTxns.size - 1)) {
+                        val diffMs = sortedTxns[i + 1].dateTime.toEpochMilliseconds() - sortedTxns[i].dateTime.toEpochMilliseconds()
+                        intervals.add(diffMs / (24 * 60 * 60 * 1000L))
+                    }
+
+                    val avgInterval = if (intervals.isEmpty()) 0.0 else intervals.average()
+                    val isRegular = if (intervals.isEmpty()) false 
+                        else intervals.all { abs(it - avgInterval) <= 3 } && avgInterval in 25.0..35.0
+
+                    if (isRegular) {
+                        val lastTxn = sortedTxns.last()
+                        val avgAmountRaw = sortedTxns.sumOf { BigDecimal.parseString(it.amount).toDouble(false) } / sortedTxns.size
+                        
+                        val name = lastTxn.description?.split("(Ref:")?.get(0)?.trim() ?: "Recurring Bill"
+                        val nextDueDate = lastTxn.dateTime.toLocalDateTime(TimeZone.currentSystemDefault()).date.plus(DatePeriod(days = 30))
+
+                        recurringBills.add(
+                            RecurringBill(
+                                id = randomUUID(),
+                                name = name,
+                                amount = BigDecimal.fromDouble(avgAmountRaw),
+                                category = lastTxn.categoryName ?: "General",
+                                categoryId = lastTxn.categoryId,
+                                frequency = "Monthly",
+                                nextDueDate = nextDueDate.toString(),
+                                isActive = true
+                            )
+                        )
+                    }
+                }
+            }
+
+            Result.Success(recurringBills)
+        } catch (e: Exception) {
+            logger.error(TAG, "Error detecting recurring bills", e)
+            Result.Error(e)
+        }
+    }
 
     override fun getTransactionsPagingFlow(
         accountId: String?,
