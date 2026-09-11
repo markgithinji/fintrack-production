@@ -1,9 +1,9 @@
 package com.fintrack.shared.feature.transaction.data
 
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
-import androidx.paging.PagingData
-import androidx.paging.PagingSource
+import app.cash.paging.Pager
+import app.cash.paging.PagingConfig
+import app.cash.paging.PagingData
+import app.cash.paging.PagingSource
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.core.util.safeApiCall
 import com.fintrack.shared.feature.transaction.data.model.toCreateRequest

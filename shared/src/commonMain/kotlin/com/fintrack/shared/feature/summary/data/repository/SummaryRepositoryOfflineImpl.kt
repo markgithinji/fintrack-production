@@ -287,7 +287,7 @@ class SummaryRepositoryOfflineImpl(
             val targetPeriodString = period ?: availableMonths.firstOrNull() ?: currentMonthCode
             val isCurrent = targetPeriodString == currentMonthCode
 
-            val dateRange = DateTimeUtils.getMonthRange(targetPeriodString) ?: return@withContext Result.Success(CategoryComparisonSummary(targetPeriodString, true, emptyList()))
+            val dateRange = DateTimeUtils.getMonthRange(targetPeriodString) ?: return@withContext Result.Success(CategoryComparisonSummary(period = targetPeriodString, isCurrent = true, data = emptyList()))
 
             val (currentMonthStart, currentMonthEnd) = dateRange
 

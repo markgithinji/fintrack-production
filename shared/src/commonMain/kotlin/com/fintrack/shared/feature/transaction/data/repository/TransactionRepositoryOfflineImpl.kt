@@ -1,9 +1,9 @@
 package com.fintrack.shared.feature.transaction.data.repository
 
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
-import androidx.paging.PagingData
-import androidx.paging.map
+import app.cash.paging.Pager
+import app.cash.paging.PagingConfig
+import app.cash.paging.PagingData
+import app.cash.paging.map
 import app.cash.sqldelight.paging3.QueryPagingSource
 import com.fintrack.shared.db.FintrackDatabase
 import com.fintrack.shared.feature.core.util.Result
@@ -43,9 +43,8 @@ class TransactionRepositoryOfflineImpl(
         hasTransactionCost: Boolean?
     ): Result<Pair<List<Transaction>, String?>> = withContext(Dispatchers.IO) {
         try {
-            val transactions = queries.selectAllTransactions(offlineUserId).executeAsList()
-                .take(limit)
-                .map { row ->
+            val transactions = if (accountId != null) {
+                queries.selectRecentTransactionsByAccount(accountId, limit.toLong()).executeAsList().map { row ->
                     Transaction(
                         id = row.id,
                         accountId = row.accountId,
@@ -60,6 +59,23 @@ class TransactionRepositoryOfflineImpl(
                         balance = row.balance?.let { BigDecimal.parseString(it) }
                     )
                 }
+            } else {
+                queries.selectAllTransactions(offlineUserId).executeAsList().take(limit).map { row ->
+                    Transaction(
+                        id = row.id,
+                        accountId = row.accountId,
+                        isIncome = row.isIncome != 0L,
+                        amount = BigDecimal.parseString(row.amount),
+                        transactionCost = BigDecimal.parseString(row.transactionCost),
+                        category = "Uncategorized",
+                        categoryId = row.categoryId,
+                        dateTime = row.dateTime,
+                        description = row.description,
+                        externalId = row.externalId,
+                        balance = row.balance?.let { BigDecimal.parseString(it) }
+                    )
+                }
+            }
             Result.Success(transactions to null)
         } catch (e: Exception) {
             logger.error(TAG, "Error fetching transactions", e)
@@ -157,8 +173,8 @@ class TransactionRepositoryOfflineImpl(
         accountId: String?
     ): Result<List<Transaction>> = withContext(Dispatchers.IO) {
         try {
-            val transactions = queries.selectAllTransactions(offlineUserId).executeAsList()
-                .map { row ->
+            val transactions = if (accountId != null) {
+                queries.selectTransactionsByAccount(accountId).executeAsList().map { row ->
                     Transaction(
                         id = row.id,
                         accountId = row.accountId,
@@ -173,6 +189,23 @@ class TransactionRepositoryOfflineImpl(
                         balance = row.balance?.let { BigDecimal.parseString(it) }
                     )
                 }
+            } else {
+                queries.selectAllTransactions(offlineUserId).executeAsList().map { row ->
+                    Transaction(
+                        id = row.id,
+                        accountId = row.accountId,
+                        isIncome = row.isIncome != 0L,
+                        amount = BigDecimal.parseString(row.amount),
+                        transactionCost = BigDecimal.parseString(row.transactionCost),
+                        category = "Uncategorized",
+                        categoryId = row.categoryId,
+                        dateTime = row.dateTime,
+                        description = row.description,
+                        externalId = row.externalId,
+                        balance = row.balance?.let { BigDecimal.parseString(it) }
+                    )
+                }
+            }
             Result.Success(transactions)
         } catch (e: Exception) {
             logger.error(TAG, "Error fetching all transactions", e)

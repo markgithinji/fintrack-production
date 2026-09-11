@@ -1,7 +1,7 @@
 package com.fintrack.shared.feature.transaction.domain.repository
 
-import androidx.paging.PagingData
-import androidx.paging.PagingSource
+import app.cash.paging.PagingData
+import app.cash.paging.PagingSource
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.transaction.domain.model.RecurringBill
 import com.fintrack.shared.feature.transaction.domain.model.Transaction

@@ -1,7 +1,11 @@
 package com.fintrack.shared.feature.transaction.data
 
-import androidx.paging.PagingSource
-import androidx.paging.PagingState
+import app.cash.paging.PagingSource
+import app.cash.paging.PagingState
+import app.cash.paging.PagingSourceLoadParams
+import app.cash.paging.PagingSourceLoadResult
+import app.cash.paging.PagingSourceLoadResultPage
+import app.cash.paging.PagingSourceLoadResultError
 import com.fintrack.shared.feature.transaction.data.model.toDomain
 import com.fintrack.shared.feature.transaction.domain.model.Transaction
 
@@ -15,8 +19,8 @@ class TransactionPagingSource(
     private val hasTransactionCost: Boolean? = null
 ) : PagingSource<String, Transaction>() {
 
-    override suspend fun load(params: LoadParams<String>): LoadResult<String, Transaction> {
-        return try {
+    override suspend fun load(params: PagingSourceLoadParams<String>): PagingSourceLoadResult<String, Transaction> {
+        try {
             val cursor = params.key
             val afterDateTime = cursor?.split("|")?.getOrNull(0)
             val afterId = cursor?.split("|")?.getOrNull(1)
@@ -40,13 +44,13 @@ class TransactionPagingSource(
 
             val validNextKey = if (transactions.isEmpty() || nextCursor == cursor) null else nextCursor
 
-            LoadResult.Page(
+            return PagingSourceLoadResultPage<String, Transaction>(
                 data = transactions,
                 prevKey = null,
                 nextKey = validNextKey
             )
         } catch (e: Exception) {
-            LoadResult.Error(e)
+            return PagingSourceLoadResultError<String, Transaction>(e)
         }
     }
 

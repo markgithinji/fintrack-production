@@ -32,7 +32,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -61,11 +60,6 @@ fun IncomeExpenseCards(
     onCardClick: (isIncome: Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var lastAccount by remember { mutableStateOf<Account?>(null) }
-    if (accountResult is Result.Success) {
-        lastAccount = accountResult.data
-    }
-
     AnimatedContent(
         targetState = accountResult,
         transitionSpec = {
@@ -81,17 +75,8 @@ fun IncomeExpenseCards(
         ) {
             when (result) {
                 is Result.Loading -> {
-                    val currentData = lastAccount
-                    if (currentData != null) {
-                        SuccessCards(
-                            account = currentData,
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            onCardClick = onCardClick
-                        )
-                    } else {
-                        LoadingInfoCard(modifier = Modifier.weight(1f))
-                        LoadingInfoCard(modifier = Modifier.weight(1f))
-                    }
+                    LoadingInfoCard(modifier = Modifier.weight(1f))
+                    LoadingInfoCard(modifier = Modifier.weight(1f))
                 }
 
                 is Result.Error -> {
