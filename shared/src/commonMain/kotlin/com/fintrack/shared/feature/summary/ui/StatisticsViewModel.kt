@@ -461,13 +461,9 @@ class StatisticsViewModel(
         val currentPeriod = _selectedPeriod.value
 
         if (currentPeriod != null) {
-            val periodCode = when (currentPeriod) {
-                is Period.Week -> currentPeriod.code
-                is Period.Month -> currentPeriod.code
-                is Period.Year -> currentPeriod.code
-            }
+            val periodCode = currentPeriod.code
 
-            // Load BOTH income and expense data for this period
+            // Load Distribution for the specific period (granular)
             loadDistribution(periodCode, TransactionType.Income, accountId = accountId, force = force)
             loadDistribution(periodCode, TransactionType.Expense, accountId = accountId, force = force)
 
@@ -476,7 +472,12 @@ class StatisticsViewModel(
                 is Period.Month -> currentPeriod.code.substringBefore("-")
                 is Period.Year -> currentPeriod.code
             }
-            loadHighlights(accountId = accountId, period = yearCode, force = force)
+            
+            // Only reload Highlights if the year actually changed, or if it's a Yearly selection, or if explicitly forced
+            val yearChanged = yearCode != lastHighlightsPeriod
+            val shouldForceHighlights = force && (currentPeriod is Period.Year || yearChanged)
+            
+            loadHighlights(accountId = accountId, period = yearCode, force = shouldForceHighlights)
             
             // Also load category comparisons if the period is a month
             if (currentPeriod is Period.Month) {
