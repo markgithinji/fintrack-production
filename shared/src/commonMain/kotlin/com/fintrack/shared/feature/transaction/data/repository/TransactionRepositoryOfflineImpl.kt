@@ -27,6 +27,7 @@ import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import com.fintrack.shared.feature.core.util.DateTimeHelper
+import com.fintrack.shared.feature.core.util.toDouble
 import com.fintrack.shared.feature.core.logger.KMPLogger
 import com.fintrack.shared.feature.core.util.randomUUID
 import kotlin.math.abs
@@ -96,21 +97,32 @@ class TransactionRepositoryOfflineImpl(
 
     override suspend fun addTransaction(transaction: Transaction): Result<Transaction> = withContext(Dispatchers.IO) {
         try {
-            queries.insertTransaction(
-                id = transaction.id ?: randomUUID(),
-                userId = offlineUserId,
-                accountId = transaction.accountId,
-                categoryId = transaction.categoryId,
-                isIncome = if (transaction.isIncome) 1L else 0L,
-                amount = transaction.amount.toPlainString(),
-                transactionCost = transaction.transactionCost.toPlainString(),
-                dateTime = transaction.dateTime,
-                description = transaction.description,
-                externalId = transaction.externalId,
-                balance = transaction.balance?.toPlainString(),
-                createdAt = DateTimeHelper.now(),
-                updatedAt = DateTimeHelper.now()
-            )
+            queries.transaction {
+                queries.insertTransaction(
+                    id = transaction.id ?: randomUUID(),
+                    userId = offlineUserId,
+                    accountId = transaction.accountId,
+                    categoryId = transaction.categoryId,
+                    isIncome = if (transaction.isIncome) 1L else 0L,
+                    amount = transaction.amount.toPlainString(),
+                    transactionCost = transaction.transactionCost.toPlainString(),
+                    dateTime = transaction.dateTime,
+                    description = transaction.description,
+                    externalId = transaction.externalId,
+                    balance = transaction.balance?.toPlainString(),
+                    createdAt = DateTimeHelper.now(),
+                    updatedAt = DateTimeHelper.now()
+                )
+                
+                // Auto-Balance Reconciliation
+                updateAccountBalance(
+                    accountId = transaction.accountId,
+                    isIncome = transaction.isIncome,
+                    amount = transaction.amount,
+                    cost = transaction.transactionCost,
+                    undo = false
+                )
+            }
             Result.Success(transaction)
         } catch (e: Exception) {
             logger.error(TAG, "Error adding transaction", e)
@@ -136,6 +148,14 @@ class TransactionRepositoryOfflineImpl(
                         balance = transaction.balance?.toPlainString(),
                         createdAt = DateTimeHelper.now(),
                         updatedAt = DateTimeHelper.now()
+                    )
+                    
+                    updateAccountBalance(
+                        accountId = transaction.accountId,
+                        isIncome = transaction.isIncome,
+                        amount = transaction.amount,
+                        cost = transaction.transactionCost,
+                        undo = false
                     )
                 }
             }
@@ -224,11 +244,68 @@ class TransactionRepositoryOfflineImpl(
         }
     }
 
-    override suspend fun updateTransaction(id: String, transaction: Transaction): Result<Transaction> = addTransaction(transaction)
+    override suspend fun updateTransaction(id: String, transaction: Transaction): Result<Transaction> = withContext(Dispatchers.IO) {
+        try {
+            queries.transaction {
+                val oldRow = queries.selectTransactionById(id).executeAsOneOrNull()
+                if (oldRow != null) {
+                    // Undo old transaction effect
+                    updateAccountBalance(
+                        accountId = oldRow.accountId,
+                        isIncome = oldRow.isIncome != 0L,
+                        amount = BigDecimal.parseString(oldRow.amount),
+                        cost = BigDecimal.parseString(oldRow.transactionCost),
+                        undo = true
+                    )
+                }
+
+                queries.insertTransaction(
+                    id = id,
+                    userId = offlineUserId,
+                    accountId = transaction.accountId,
+                    categoryId = transaction.categoryId,
+                    isIncome = if (transaction.isIncome) 1L else 0L,
+                    amount = transaction.amount.toPlainString(),
+                    transactionCost = transaction.transactionCost.toPlainString(),
+                    dateTime = transaction.dateTime,
+                    description = transaction.description,
+                    externalId = transaction.externalId,
+                    balance = transaction.balance?.toPlainString(),
+                    createdAt = DateTimeHelper.now(),
+                    updatedAt = DateTimeHelper.now()
+                )
+
+                // Apply new transaction effect
+                updateAccountBalance(
+                    accountId = transaction.accountId,
+                    isIncome = transaction.isIncome,
+                    amount = transaction.amount,
+                    cost = transaction.transactionCost,
+                    undo = false
+                )
+            }
+            Result.Success(transaction)
+        } catch (e: Exception) {
+            logger.error(TAG, "Error updating transaction $id", e)
+            Result.Error(e)
+        }
+    }
 
     override suspend fun deleteTransaction(id: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            queries.deleteTransaction(id)
+            queries.transaction {
+                val oldRow = queries.selectTransactionById(id).executeAsOneOrNull()
+                if (oldRow != null) {
+                    updateAccountBalance(
+                        accountId = oldRow.accountId,
+                        isIncome = oldRow.isIncome != 0L,
+                        amount = BigDecimal.parseString(oldRow.amount),
+                        cost = BigDecimal.parseString(oldRow.transactionCost),
+                        undo = true
+                    )
+                }
+                queries.deleteTransaction(id)
+            }
             Result.Success(Unit)
         } catch (e: Exception) {
             logger.error(TAG, "Error deleting transaction $id", e)
@@ -239,14 +316,62 @@ class TransactionRepositoryOfflineImpl(
     override suspend fun deleteAllTransactions(accountIds: List<String>?): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             queries.transaction {
-                val txs = queries.selectAllTransactions(offlineUserId).executeAsList()
-                txs.forEach { queries.deleteTransaction(it.id) }
+                if (accountIds != null) {
+                    accountIds.forEach { accId ->
+                        queries.selectTransactionsByAccount(accId).executeAsList().forEach { row ->
+                            updateAccountBalance(
+                                accountId = row.accountId,
+                                isIncome = row.isIncome != 0L,
+                                amount = BigDecimal.parseString(row.amount),
+                                cost = BigDecimal.parseString(row.transactionCost),
+                                undo = true
+                            )
+                            queries.deleteTransaction(row.id)
+                        }
+                    }
+                } else {
+                    queries.selectAllTransactions(offlineUserId).executeAsList().forEach { row ->
+                        updateAccountBalance(
+                            accountId = row.accountId,
+                            isIncome = row.isIncome != 0L,
+                            amount = BigDecimal.parseString(row.amount),
+                            cost = BigDecimal.parseString(row.transactionCost),
+                            undo = true
+                        )
+                        queries.deleteTransaction(row.id)
+                    }
+                }
             }
             Result.Success(Unit)
         } catch (e: Exception) {
             logger.error(TAG, "Error deleting transactions for accounts $accountIds", e)
             Result.Error(e)
         }
+    }
+
+    private fun updateAccountBalance(
+        accountId: String,
+        isIncome: Boolean,
+        amount: BigDecimal,
+        cost: BigDecimal,
+        undo: Boolean
+    ) {
+        val account = queries.selectAccountById(accountId).executeAsOneOrNull() ?: return
+        val currentBalance = BigDecimal.parseString(account.balance)
+        
+        // Net Impact logic: Income = Amount - Cost, Expense = Amount + Cost
+        val netImpact = if (isIncome) (amount - cost) else (amount + cost)
+        
+        // If undoing, we reverse the sign. If adding an income, we add net impact. If adding an expense, we subtract it.
+        val multiplier = if (undo) -1 else 1
+        val balanceChange = if (isIncome) {
+            netImpact.multiply(BigDecimal.fromInt(multiplier))
+        } else {
+            netImpact.multiply(BigDecimal.fromInt(-multiplier))
+        }
+        
+        val newBalance = currentBalance + balanceChange
+        queries.updateAccountBalance(newBalance.toPlainString(), accountId)
     }
 
     override suspend fun getRecurringBills(): Result<List<RecurringBill>> = withContext(Dispatchers.IO) {
@@ -256,9 +381,9 @@ class TransactionRepositoryOfflineImpl(
             val analysisStart = Instant.fromEpochMilliseconds(now.toEpochMilliseconds() - 90 * 24 * 60 * 60 * 1000L)
             
             val transactions = queries.selectTransactionsByRange(
-                userId = offlineUserId,
-                start = analysisStart,
-                end = now
+                offlineUserId,
+                analysisStart,
+                now
             ).executeAsList()
 
             // 2. Group by normalized description and category (Ignoring SMS specific Ref IDs)
@@ -288,7 +413,7 @@ class TransactionRepositoryOfflineImpl(
 
                     if (isRegular) {
                         val lastTxn = sortedTxns.last()
-                        val avgAmountRaw = sortedTxns.sumOf { BigDecimal.parseString(it.amount).toDouble(false) } / sortedTxns.size
+                        val avgAmountRaw = sortedTxns.sumOf { BigDecimal.parseString(it.amount).toDouble() } / sortedTxns.size
                         
                         val name = lastTxn.description?.split("(Ref:")?.get(0)?.trim() ?: "Recurring Bill"
                         val nextDueDate = lastTxn.dateTime.toLocalDateTime(TimeZone.currentSystemDefault()).date.plus(DatePeriod(days = 30))
@@ -301,7 +426,7 @@ class TransactionRepositoryOfflineImpl(
                                 category = lastTxn.categoryName ?: "General",
                                 categoryId = lastTxn.categoryId,
                                 frequency = "Monthly",
-                                nextDueDate = nextDueDate.toString(),
+                                nextDueDate = nextDueDate,
                                 isActive = true
                             )
                         )

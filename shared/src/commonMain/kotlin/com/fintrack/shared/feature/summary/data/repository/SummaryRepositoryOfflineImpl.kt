@@ -275,7 +275,6 @@ class SummaryRepositoryOfflineImpl(
 
             // Correlations: Smart Insights
             val correlations = calculateCorrelations(accountId, targetPeriod)
-            val isIncomeType = if (targetPeriod.contains("-W")) null else true // Placeholder or derive from context if possible
 
             Result.Success(
                 StatisticsSummary(
@@ -886,7 +885,6 @@ class SummaryRepositoryOfflineImpl(
             
             val highlights = queries.getHighlights(accountId = null, userId = offlineUserId).executeAsOne()
             val income = BigDecimal.fromDouble(highlights.incomeTotal ?: 0.0)
-            val expense = highlights.expenseTotal ?: 0.0
             val fees = BigDecimal.fromDouble(highlights.feesTotal ?: 0.0)
             
             // Re-calculate refined total expense for metrics parity

@@ -67,7 +67,7 @@ INSERT OR REPLACE INTO AccountEntity(id, userId, name, isDefault, type, balance,
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 selectAllAccounts:
-SELECT * FROM AccountEntity WHERE userId = ?;
+SELECT * FROM AccountEntity WHERE userId = ? ORDER BY createdAt ASC, name COLLATE NOCASE ASC;
 
 selectAccountById:
 SELECT * FROM AccountEntity WHERE id = ?;
