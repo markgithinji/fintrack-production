@@ -17,7 +17,8 @@ val summaryModule = module {
         SummaryRepositoryOfflineImpl(
             database = get(), 
             logger = get(),
-            userRepository = get()
+            userRepository = get(),
+            budgetRepository = get()
         )
     }
 
