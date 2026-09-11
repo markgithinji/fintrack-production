@@ -263,6 +263,9 @@ class TransactionRepositoryOfflineImpl(
         }
         val isIncomeLong = isIncome?.let { if (it) 1L else 0L }
 
+        val categoryIds = categoryId?.split(",")?.filter { it.isNotEmpty() } ?: emptyList()
+        val useCategoryFilter = if (categoryIds.isNotEmpty()) 1L else 0L
+
         return Pager(
             config = PagingConfig(pageSize = 20),
             pagingSourceFactory = {
@@ -271,7 +274,8 @@ class TransactionRepositoryOfflineImpl(
                         userId = offlineUserId,
                         accountId = accountId,
                         isIncome = isIncomeLong,
-                        categoryId = categoryId,
+                        useCategoryFilter = useCategoryFilter,
+                        categoryIds = categoryIds,
                         start = start,
                         end = end,
                         hasTransactionCost = hasTransactionCost
@@ -283,7 +287,8 @@ class TransactionRepositoryOfflineImpl(
                             userId = offlineUserId,
                             accountId = accountId,
                             isIncome = isIncomeLong,
-                            categoryId = categoryId,
+                            useCategoryFilter = useCategoryFilter,
+                            categoryIds = categoryIds,
                             start = start,
                             end = end,
                             hasTransactionCost = hasTransactionCost,

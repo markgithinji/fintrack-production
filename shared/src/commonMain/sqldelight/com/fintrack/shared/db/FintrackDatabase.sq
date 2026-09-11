@@ -129,7 +129,7 @@ SELECT COUNT(*) FROM TransactionEntity
 WHERE userId = :userId
 AND (:accountId IS NULL OR accountId = :accountId)
 AND (:isIncome IS NULL OR isIncome = :isIncome)
-AND (:categoryId IS NULL OR categoryId = :categoryId)
+AND (:useCategoryFilter = 0 OR categoryId IN :categoryIds)
 AND (:start IS NULL OR dateTime >= :start)
 AND (:end IS NULL OR dateTime <= :end)
 AND (:hasTransactionCost IS NULL OR (CAST(transactionCost AS REAL) > 0) = :hasTransactionCost);
@@ -141,7 +141,7 @@ LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.userId = :userId
 AND (:accountId IS NULL OR T.accountId = :accountId)
 AND (:isIncome IS NULL OR T.isIncome = :isIncome)
-AND (:categoryId IS NULL OR T.categoryId = :categoryId)
+AND (:useCategoryFilter = 0 OR T.categoryId IN :categoryIds)
 AND (:start IS NULL OR T.dateTime >= :start)
 AND (:end IS NULL OR T.dateTime <= :end)
 AND (:hasTransactionCost IS NULL OR (CAST(T.transactionCost AS REAL) > 0) = :hasTransactionCost)
@@ -219,7 +219,7 @@ FROM TransactionEntity
 WHERE userId = :userId
 AND (:accountId IS NULL OR accountId = :accountId)
 AND (:isIncome IS NULL OR isIncome = :isIncome)
-AND (:categoryId IS NULL OR categoryId = :categoryId)
+AND (:useCategoryFilter = 0 OR categoryId IN :categoryIds)
 AND (:start IS NULL OR dateTime >= :start)
 AND (:end IS NULL OR dateTime <= :end)
 AND (:hasTransactionCost IS NULL OR (CAST(transactionCost AS REAL) > 0) = :hasTransactionCost);

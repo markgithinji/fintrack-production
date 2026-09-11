@@ -618,12 +618,15 @@ class SummaryRepositoryOfflineImpl(
                 try { LocalDate.parse(it).atTime(23, 59, 59).toInstant(timeZone) } catch (e: Exception) { null } 
             }
             val isIncomeLong = isIncome?.let { if (it) 1L else 0L }
+            val categoryIds = categoryId?.split(",")?.filter { it.isNotEmpty() } ?: emptyList()
+            val useCategoryFilter = if (categoryIds.isNotEmpty()) 1L else 0L
 
             val row = queries.getTransactionCountSummary(
                 userId = offlineUserId,
                 accountId = accountId,
                 isIncome = isIncomeLong,
-                categoryId = categoryId,
+                useCategoryFilter = useCategoryFilter,
+                categoryIds = categoryIds,
                 start = startInstant,
                 end = endInstant,
                 hasTransactionCost = hasTransactionCost
