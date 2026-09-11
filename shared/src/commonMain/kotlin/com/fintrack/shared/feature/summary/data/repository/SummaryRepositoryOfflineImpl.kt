@@ -79,11 +79,82 @@ class SummaryRepositoryOfflineImpl(
                 end = endInstant
             ).executeAsOne()
             
+            // Unified fee handling logic from backend
             val income = BigDecimal.fromDouble(highlightsResult.incomeTotal ?: 0.0)
-            val totalExpense = BigDecimal.fromDouble(highlightsResult.expenseTotal ?: 0.0)
             val fees = BigDecimal.fromDouble(highlightsResult.feesTotal ?: 0.0)
+            
+            val expenseCategoryTotals = queries.getCategoryTotals(
+                userId = offlineUserId,
+                accountId = accountId,
+                isIncome = 0L,
+                start = startInstant,
+                end = endInstant
+            ).executeAsList()
 
-            // Get data for peaks
+            val feeAmountFromCategory = expenseCategoryTotals
+                .find { it.catName.trim().equals("Transaction Fees", ignoreCase = true) || it.catName.trim().equals("Transaction Cost", ignoreCase = true) }
+                ?.totalSum ?: 0.0
+
+            // totalExpense = Sum of all expense categories - Fee category + sum of all fee fields
+            val totalExpenseRaw = expenseCategoryTotals.sumOf { it.totalSum ?: 0.0 }
+            val totalExpense = BigDecimal.fromDouble(totalExpenseRaw - feeAmountFromCategory) + fees
+
+            // Calculate ratios (Multiply by 100 for percentage)
+            val savingsRate = if (income > BigDecimal.ZERO) {
+                (income - totalExpense).divide(income, ratioMode).multiply(BigDecimal.fromInt(100))
+            } else null
+
+            val essentialSpend = expenseCategoryTotals
+                .filter { cat -> essentialCategories.any { it.equals(cat.catName.trim(), ignoreCase = true) } }
+                .sumOf { it.totalSum ?: 0.0 }
+            
+            val essentialSpendRatio = if (totalExpense > BigDecimal.ZERO) {
+                BigDecimal.fromDouble(essentialSpend).divide(totalExpense, ratioMode).multiply(BigDecimal.fromInt(100))
+            } else null
+
+            // Annual Forecast logic from backend
+            val currentYear = now.year
+            val isCurrentYearView = targetPeriod.startsWith(currentYear.toString())
+            
+            val ytdStart = LocalDate(currentYear, 1, 1).atStartOfDayIn(TimeZone.currentSystemDefault())
+            val ytdEnd = Clock.System.now()
+            
+            val ytdHighlights = queries.getHighlightsByRange(
+                accountId = accountId,
+                userId = offlineUserId,
+                start = ytdStart,
+                end = ytdEnd
+            ).executeAsOne()
+            
+            val ytdIncome = BigDecimal.fromDouble(ytdHighlights.incomeTotal ?: 0.0)
+            val ytdFees = BigDecimal.fromDouble(ytdHighlights.feesTotal ?: 0.0)
+            
+            val ytdExpenseCategoryTotals = queries.getCategoryTotals(
+                userId = offlineUserId,
+                accountId = accountId,
+                isIncome = 0L,
+                start = ytdStart,
+                end = ytdEnd
+            ).executeAsList()
+            
+            val ytdFeeAmountFromCategory = ytdExpenseCategoryTotals
+                .find { it.catName.trim().equals("Transaction Fees", ignoreCase = true) || it.catName.trim().equals("Transaction Cost", ignoreCase = true) }
+                ?.totalSum ?: 0.0
+                
+            val ytdTotalExpense = BigDecimal.fromDouble(ytdExpenseCategoryTotals.sumOf { it.totalSum ?: 0.0 } - ytdFeeAmountFromCategory) + ytdFees
+
+            @Suppress("DEPRECATION")
+            val monthCount = now.monthNumber.coerceAtLeast(1)
+            
+            val projectedIncome = if (isCurrentYearView) {
+                ytdIncome.multiply(BigDecimal.fromInt(12)).divide(BigDecimal.fromInt(monthCount), ratioMode)
+            } else null
+            
+            val projectedExpense = if (isCurrentYearView) {
+                ytdTotalExpense.multiply(BigDecimal.fromInt(12)).divide(BigDecimal.fromInt(monthCount), ratioMode)
+            } else null
+
+            // Get daily data for peaks
             val dailyData = queries.getDailyTotals(
                 userId = offlineUserId,
                 accountId = accountId,
@@ -98,27 +169,6 @@ class SummaryRepositoryOfflineImpl(
                 start = startInstant,
                 end = endInstant
             ).executeAsList()
-
-            val expenseCategoryTotals = queries.getCategoryTotals(
-                userId = offlineUserId,
-                accountId = accountId,
-                isIncome = 0L,
-                start = startInstant,
-                end = endInstant
-            ).executeAsList()
-
-            // Calculate ratios
-            val savingsRate = if (income > BigDecimal.ZERO) {
-                (income - totalExpense).divide(income, ratioMode).doubleValue(false)
-            } else null
-
-            val essentialSpend = expenseCategoryTotals
-                .filter { cat -> essentialCategories.any { it.equals(cat.catName.trim(), ignoreCase = true) } }
-                .sumOf { it.totalSum ?: 0.0 }
-            
-            val essentialSpendRatio = if (totalExpense > BigDecimal.ZERO) {
-                BigDecimal.fromDouble(essentialSpend).divide(totalExpense, ratioMode).doubleValue(false)
-            } else null
 
             fun calculateAveragePerDay(data: List<GetDailyTotals>, isIncome: Boolean): BigDecimal {
                 val days = data.size.coerceAtLeast(1)
@@ -179,14 +229,16 @@ class SummaryRepositoryOfflineImpl(
                         highestCategory = calculateHighestCategory(incomeCategoryTotals),
                         highestDay = calculateHighestDay(dailyData, true),
                         averagePerDay = calculateAveragePerDay(dailyData, true),
-                        savingsRate = savingsRate?.let { BigDecimal.fromDouble(it) }
+                        savingsRate = savingsRate,
+                        projectedTotal = projectedIncome
                     ),
                     expenseHighlights = Highlights(
                         highestMonth = if (isYearMode) calculateHighestMonth(dailyData, false) else null,
                         highestCategory = calculateHighestCategory(expenseCategoryTotals),
                         highestDay = calculateHighestDay(dailyData, false),
                         averagePerDay = calculateAveragePerDay(dailyData, false),
-                        essentialSpendRatio = essentialSpendRatio?.let { BigDecimal.fromDouble(it) }
+                        essentialSpendRatio = essentialSpendRatio,
+                        projectedTotal = projectedExpense
                     )
                 )
             )
