@@ -128,7 +128,9 @@ class TransactionRepositoryImpl(
         categoryId: String?,
         startDate: String?,
         endDate: String?,
-        hasTransactionCost: Boolean?
+        hasTransactionCost: Boolean?,
+        sortBy: String,
+        order: String
     ): Flow<PagingData<Transaction>> {
         return createPager {
             TransactionPagingSource(
@@ -138,7 +140,9 @@ class TransactionRepositoryImpl(
                 categoryId = categoryId,
                 startDate = startDate,
                 endDate = endDate,
-                hasTransactionCost = hasTransactionCost
+                hasTransactionCost = hasTransactionCost,
+                sortBy = sortBy,
+                order = order
             )
         }
     }

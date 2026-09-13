@@ -133,7 +133,38 @@ class AccountRepositoryOfflineImpl(
 
     override suspend fun deleteAccount(id: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            queries.deleteAccount(id)
+            queries.transaction {
+                // 1. Delete all transactions for this account (Cascade handled by DB)
+                // 2. Budget Cleanup: Remove this account from any budgets
+                val budgets = queries.selectAllBudgets(offlineUserId).executeAsList()
+                budgets.forEach { row ->
+                    val ids = row.accountIds.split(",").filter { it.isNotEmpty() }.toMutableList()
+                    if (ids.contains(id)) {
+                        ids.remove(id)
+                        if (ids.isEmpty()) {
+                            // If it was the only account, delete the budget (Backend Parity)
+                            queries.deleteBudget(row.id)
+                        } else {
+                            // Update budget with remaining accounts
+                            queries.insertBudget(
+                                id = row.id,
+                                userId = row.userId,
+                                name = row.name,
+                                limitAmount = row.limitAmount,
+                                isExpense = row.isExpense,
+                                startDate = row.startDate,
+                                endDate = row.endDate,
+                                categoryIds = row.categoryIds,
+                                accountIds = ids.joinToString(","),
+                                createdAt = row.createdAt
+                            )
+                        }
+                    }
+                }
+                
+                // 3. Delete the account
+                queries.deleteAccount(id)
+            }
             Result.Success(Unit)
         } catch (e: Exception) {
             logger.error(tag, "Error deleting account $id", e)

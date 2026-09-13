@@ -52,6 +52,8 @@ interface TransactionRepository {
         categoryId: String? = null,
         startDate: String? = null,
         endDate: String? = null,
-        hasTransactionCost: Boolean? = null
+        hasTransactionCost: Boolean? = null,
+        sortBy: String = "date",
+        order: String = "DESC"
     ): Flow<PagingData<Transaction>>
 }

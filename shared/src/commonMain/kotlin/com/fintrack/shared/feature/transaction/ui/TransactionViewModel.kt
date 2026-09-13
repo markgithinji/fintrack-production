@@ -214,12 +214,14 @@ class TransactionViewModel(
         categoryId: String? = null,
         startDate: String? = null,
         endDate: String? = null,
-        hasTransactionCost: Boolean? = null
+        hasTransactionCost: Boolean? = null,
+        sortBy: String = "date",
+        order: String = "DESC"
     ): Flow<PagingData<Transaction>> {
-        val newParams = TransactionPagingParams(accountId, isIncome, categoryId, startDate, endDate, hasTransactionCost)
+        val newParams = TransactionPagingParams(accountId, isIncome, categoryId, startDate, endDate, hasTransactionCost, sortBy, order)
         if (newParams == lastPagingParams && cachedPagingFlow != null) return cachedPagingFlow!!
         lastPagingParams = newParams
-        val flow = repo.getTransactionsPagingFlow(accountId, isIncome, categoryId, startDate, endDate, hasTransactionCost).cachedIn(viewModelScope)
+        val flow = repo.getTransactionsPagingFlow(accountId, isIncome, categoryId, startDate, endDate, hasTransactionCost, sortBy, order).cachedIn(viewModelScope)
         cachedPagingFlow = flow
         return flow
     }
@@ -371,5 +373,7 @@ private data class TransactionPagingParams(
     val categoryId: String?,
     val startDate: String?,
     val endDate: String?,
-    val hasTransactionCost: Boolean?
+    val hasTransactionCost: Boolean?,
+    val sortBy: String = "date",
+    val order: String = "DESC"
 )

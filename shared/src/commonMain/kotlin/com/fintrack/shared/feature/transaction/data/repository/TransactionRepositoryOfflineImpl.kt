@@ -339,6 +339,11 @@ class TransactionRepositoryOfflineImpl(
                         queries.deleteTransaction(row.id)
                     }
                 }
+                
+                // Final safety: If all transactions are gone, ensure balances are exactly zero if applicable
+                if (accountIds != null) {
+                    accountIds.forEach { queries.updateAccountBalance("0", it) }
+                }
             }
             Result.Success(Unit)
         } catch (e: Exception) {
@@ -445,7 +450,9 @@ class TransactionRepositoryOfflineImpl(
         categoryId: String?,
         startDate: String?,
         endDate: String?,
-        hasTransactionCost: Boolean?
+        hasTransactionCost: Boolean?,
+        sortBy: String,
+        order: String
     ): Flow<PagingData<Transaction>> {
         val timeZone = TimeZone.currentSystemDefault()
         val start = startDate?.let { 
@@ -485,6 +492,8 @@ class TransactionRepositoryOfflineImpl(
                             start = start,
                             end = end,
                             hasTransactionCost = hasTransactionCost,
+                            sortBy = sortBy,
+                            order = order,
                             limit = limit,
                             offset = offset
                         )

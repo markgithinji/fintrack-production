@@ -2,8 +2,7 @@ package com.fintrack.shared.feature.transaction.util
 
 import com.fintrack.shared.feature.category.domain.model.Category
 import com.fintrack.shared.feature.category.domain.model.CategoryRule
-import com.fintrack.shared.feature.category.domain.model.fromId
-import com.fintrack.shared.feature.category.domain.model.fromName
+import com.fintrack.shared.feature.category.util.CategoryMatcher
 import com.fintrack.shared.feature.transaction.domain.model.Transaction
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlin.time.Clock
@@ -72,7 +71,8 @@ object EquityParser {
         message: String, 
         accountId: String = "equity", 
         smsTimestamp: Instant? = null,
-        rules: List<CategoryRule> = emptyList()
+        rules: List<CategoryRule> = emptyList(),
+        allCategories: List<Category> = emptyList()
     ): Transaction? {
         // Skip messages that are clearly just M-Pesa relay notifications
         if (message.contains("has sent", ignoreCase = true) && 
@@ -110,7 +110,7 @@ object EquityParser {
             val merchant = it.groupValues[3].trim()
             val dateTime = parseDateTime(it.groupValues[4], smsTimestamp)
             val code = it.groupValues[6]
-            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, inferCategory(merchant, isIncome = false, rules = rules), dateTime, "Card payment at $merchant", accountId, isIncome = false))
+            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, inferCategory(merchant, isIncome = false, rules = rules, allCategories = allCategories), dateTime, "Card payment at $merchant", accountId, isIncome = false, allCategories = allCategories))
         }
 
         // 2. Sent Money (Expense or Income)
@@ -126,7 +126,7 @@ object EquityParser {
             val isIncome = message.contains("to your account", ignoreCase = true)
             
             val description = if (isIncome) "Received Transfer" else "Sent to $recipient"
-            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, if (isIncome) "Other Income" else "Transfer", dateTime, description, accountId, isIncome))
+            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, if (isIncome) "Other Income" else "Transfer", dateTime, description, accountId, isIncome, allCategories = allCategories))
         }
 
         // 3. Drawn / Withdrawal (Expense)
@@ -136,7 +136,7 @@ object EquityParser {
             val code = it.groupValues[6]
             val dateStr = "${it.groupValues[7]} ${it.groupValues[8]}"
             val dateTime = parseDateTime(dateStr, smsTimestamp)
-            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, "Transfer", dateTime, "Withdrawal / Drawn", accountId, false))
+            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, "Transfer", dateTime, "Withdrawal / Drawn", accountId, false, allCategories = allCategories))
         }
 
         // 4. Bill Payment
@@ -147,7 +147,7 @@ object EquityParser {
             val code = it.groupValues[6]
             val dateStr = "${it.groupValues[7]} ${it.groupValues[8]}"
             val dateTime = parseDateTime(dateStr, smsTimestamp)
-            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, inferCategory(merchant, isIncome = false, rules = rules), dateTime, "Bill payment to $merchant", accountId, false))
+            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, inferCategory(merchant, isIncome = false, rules = rules, allCategories = allCategories), dateTime, "Bill payment to $merchant", accountId, false, allCategories = allCategories))
         }
 
         // 5. Loan Approved
@@ -155,7 +155,7 @@ object EquityParser {
             val currency = it.groupValues[3]
             val amount = resolveAmount(currency, parseAmount(it.groupValues[4]))
             val code = it.groupValues[5]
-            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, "Loans", smsTimestamp ?: Clock.System.now(), "Loan Approved", accountId, true))
+            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, "Loans", smsTimestamp ?: Clock.System.now(), "Loan Approved", accountId, true, allCategories = allCategories))
         }
 
         // 6. Deposited
@@ -170,7 +170,7 @@ object EquityParser {
             val isMySelf = recipient.contains("MARK", ignoreCase = true) || recipient.contains("NGOTHI", ignoreCase = true)
             val description = if (isMySelf) "Cash Deposit" else "Paid to $recipient"
             
-            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, if (isMySelf) "Other Income" else inferCategory(recipient, isIncome = false, rules = rules), dateTime, description, accountId, isMySelf))
+            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, if (isMySelf) "Other Income" else inferCategory(recipient, isIncome = false, rules = rules, allCategories = allCategories), dateTime, description, accountId, isMySelf, allCategories = allCategories))
         }
 
         // 6b. Received to Equity Account
@@ -181,7 +181,7 @@ object EquityParser {
             val code = it.groupValues[6]
             val dateStr = "${it.groupValues[7]} ${it.groupValues[8]}"
             val dateTime = parseDateTime(dateStr, smsTimestamp)
-            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, "Other Income", dateTime, "Received from $sender", accountId, true))
+            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, "Other Income", dateTime, "Received from $sender", accountId, true, allCategories = allCategories))
         }
 
         // 7. Generic Equity Transfer (including credited to phone number)
@@ -200,7 +200,7 @@ object EquityParser {
                 "Bank Transaction"
             }
             
-            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, "Transfer", dateTime, description, accountId, isIncome))
+            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, "Transfer", dateTime, description, accountId, isIncome, allCategories = allCategories))
         }
 
         // 8. Successfully Sent
@@ -212,7 +212,7 @@ object EquityParser {
             val code = it.groupValues[4]
             val dateStr = "${it.groupValues[5]} ${it.groupValues[6]}"
             val dateTime = parseDateTime(dateStr, smsTimestamp)
-            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, inferCategory(recipient, isIncome = false, rules = rules), dateTime, "Sent to $recipient", accountId, false))
+            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, inferCategory(recipient, isIncome = false, rules = rules, allCategories = allCategories), dateTime, "Sent to $recipient", accountId, false, allCategories = allCategories))
         }
 
         return null
@@ -244,27 +244,22 @@ object EquityParser {
         return smsTimestamp ?: Clock.System.now()
     }
 
-    private fun inferCategory(description: String, isIncome: Boolean = false, rules: List<CategoryRule> = emptyList()): String {
-        val d = description.lowercase()
+    private fun inferCategory(description: String, isIncome: Boolean = false, rules: List<CategoryRule> = emptyList(), allCategories: List<Category> = emptyList()): String {
+        // Backend Port: Use CategoryMatcher logic for intelligent matching
+        val resolvedId = CategoryMatcher.resolveCategory(
+            inputCategoryId = null,
+            inputCategoryName = null,
+            description = description,
+            isIncome = isIncome,
+            allCategories = allCategories,
+            rules = rules,
+            defaultId = "pending"
+        )
         
-        // 1. Try dynamic rules from backend first
-        rules.forEach { rule ->
-            if (d.contains(rule.keyword.lowercase())) {
-                return Category.fromId(rule.categoryId).name
-            }
-        }
-
-        // 2. Fallback to hardcoded defaults
-        return when {
-            d.contains("netflix") || d.contains("google") || d.contains("youtube") || d.contains("spotify") || d.contains("openai") || d.contains("chatgpt") || d.contains("prime") -> "Subscriptions"
-            d.contains("pharmacy") || d.contains("chemist") || d.contains("hospital") || d.contains("clinic") -> "Health"
-            d.contains("kplc") || d.contains("token") || d.contains("power") || d.contains("water") -> "Utilities"
-            d.contains("supermarket") || d.contains("groceries") || d.contains("naivas") || d.contains("carrefour") || d.contains("quickmart") || d.contains("chandarana") -> "Groceries"
-            d.contains("restaurant") || d.contains("cafe") || d.contains("dining") || d.contains("bar") || d.contains("inn") || d.contains("dishes") || d.contains("pizza") || d.contains("kfc") || d.contains("java") -> "Dining Out"
-            d.contains("zimele") || d.contains("etica") || d.contains("m-shwari") || d.contains("kcb m-pesa") || d.contains("money market") || d.contains("m-pesa saving") -> "Savings"
-            d.contains("loan") || d.contains("kcb loan") || d.contains("m-shwari loan") -> "Loans"
-            d.contains("uber") || d.contains("bolt") || d.contains("fuel") || d.contains("shell") || d.contains("rubis") || d.contains("total") -> "Transport"
-            else -> if (isIncome) "Other Income" else "Transfer"
+        return if (resolvedId == "pending") {
+            if (isIncome) "Other Income" else "Transfer"
+        } else {
+            allCategories.find { it.id == resolvedId }?.name ?: (if (isIncome) "Other Income" else "Transfer")
         }
     }
 
@@ -277,17 +272,21 @@ object EquityParser {
         dateTime: Instant,
         description: String,
         accountId: String,
-        isIncome: Boolean
+        isIncome: Boolean,
+        allCategories: List<Category>
     ): Transaction {
-        val resolvedCategory = Category.fromName(category, !isIncome)
+        // Find existing category or use name-based lookup
+        val matched = allCategories.find { it.name.equals(category, ignoreCase = true) && it.isExpense == !isIncome }
+        val categoryId = matched?.id ?: "custom_$category"
+        val categoryName = matched?.name ?: category
         
         return Transaction(
             accountId = accountId,
             isIncome = isIncome,
             amount = amount,
             transactionCost = cost,
-            category = resolvedCategory.name,
-            categoryId = resolvedCategory.id,
+            category = categoryName,
+            categoryId = categoryId,
             dateTime = dateTime,
             description = "$description (Ref: $code)",
             externalId = code,

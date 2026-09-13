@@ -16,7 +16,9 @@ class TransactionPagingSource(
     private val categoryId: String? = null,
     private val startDate: String? = null,
     private val endDate: String? = null,
-    private val hasTransactionCost: Boolean? = null
+    private val hasTransactionCost: Boolean? = null,
+    private val sortBy: String = "date",
+    private val order: String = "DESC"
 ) : PagingSource<String, Transaction>() {
 
     override suspend fun load(params: PagingSourceLoadParams<String>): PagingSourceLoadResult<String, Transaction> {
@@ -27,8 +29,8 @@ class TransactionPagingSource(
 
             val result = transactionApi.getTransactions(
                 limit = params.loadSize,
-                sortBy = "date",
-                order = "DESC",
+                sortBy = sortBy,
+                order = order,
                 afterDateTime = afterDateTime,
                 afterId = afterId,
                 accountId = accountId,

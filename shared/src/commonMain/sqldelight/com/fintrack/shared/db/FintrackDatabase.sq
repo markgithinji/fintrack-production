@@ -156,7 +156,12 @@ AND (:useCategoryFilter = 0 OR T.categoryId IN :categoryIds)
 AND (:start IS NULL OR T.dateTime >= :start)
 AND (:end IS NULL OR T.dateTime <= :end)
 AND (:hasTransactionCost IS NULL OR (CAST(T.transactionCost AS REAL) > 0) = :hasTransactionCost)
-ORDER BY T.dateTime DESC
+ORDER BY
+  CASE WHEN :sortBy = 'amount' AND :order = 'ASC' THEN CAST(T.amount AS REAL) END ASC,
+  CASE WHEN :sortBy = 'amount' AND :order = 'DESC' THEN CAST(T.amount AS REAL) END DESC,
+  CASE WHEN :sortBy = 'date' AND :order = 'ASC' THEN T.dateTime END ASC,
+  CASE WHEN :sortBy = 'date' AND :order = 'DESC' THEN T.dateTime END DESC,
+  T.dateTime DESC -- Default fallback
 LIMIT :limit OFFSET :offset;
 
 -- Aggregation Queries
@@ -186,7 +191,8 @@ getHighlights:
 SELECT
     SUM(CASE WHEN isIncome = 1 THEN CAST(amount AS REAL) - CAST(transactionCost AS REAL) ELSE 0 END) AS incomeTotal,
     SUM(CASE WHEN isIncome = 0 THEN CAST(amount AS REAL) + CAST(transactionCost AS REAL) ELSE 0 END) AS expenseTotal,
-    SUM(CAST(transactionCost AS REAL)) AS feesTotal
+    SUM(CAST(transactionCost AS REAL)) +
+    SUM(CASE WHEN categoryId = '00000000-0000-4000-a000-000000000028' THEN CAST(amount AS REAL) ELSE 0 END) AS feesTotal
 FROM TransactionEntity
 WHERE (:accountId IS NULL OR accountId = :accountId) AND (userId = :userId);
 
@@ -194,7 +200,8 @@ getHighlightsByRange:
 SELECT
     SUM(CASE WHEN isIncome = 1 THEN CAST(amount AS REAL) - CAST(transactionCost AS REAL) ELSE 0 END) AS incomeTotal,
     SUM(CASE WHEN isIncome = 0 THEN CAST(amount AS REAL) + CAST(transactionCost AS REAL) ELSE 0 END) AS expenseTotal,
-    SUM(CAST(transactionCost AS REAL)) AS feesTotal
+    SUM(CAST(transactionCost AS REAL)) +
+    SUM(CASE WHEN categoryId = '00000000-0000-4000-a000-000000000028' THEN CAST(amount AS REAL) ELSE 0 END) AS feesTotal
 FROM TransactionEntity
 WHERE (:accountId IS NULL OR accountId = :accountId) AND (userId = :userId) AND dateTime >= :start AND dateTime <= :end;
 
@@ -224,7 +231,8 @@ SELECT
     COUNT(CASE WHEN isIncome = 1 THEN 1 END) AS incomeCount,
     COUNT(CASE WHEN isIncome = 0 THEN 1 END) AS expenseCount,
     COUNT(*) AS totalCount,
-    SUM(CAST(transactionCost AS REAL)) AS totalTransactionCost,
+    SUM(CAST(transactionCost AS REAL)) +
+    SUM(CASE WHEN categoryId = '00000000-0000-4000-a000-000000000028' THEN CAST(amount AS REAL) ELSE 0 END) AS totalTransactionCost,
     SUM(CASE WHEN isIncome = 1 THEN CAST(amount AS REAL) - CAST(transactionCost AS REAL) ELSE CAST(amount AS REAL) + CAST(transactionCost AS REAL) END) AS totalAmount
 FROM TransactionEntity
 WHERE userId = :userId

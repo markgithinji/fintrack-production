@@ -25,6 +25,7 @@ class BudgetValidationUseCase {
             categories.isEmpty() -> ValidationResult.Error("At least one category is required")
             startDate == null -> ValidationResult.Error("Start date is required")
             endDate == null -> ValidationResult.Error("End date is required")
+            startDate > endDate -> ValidationResult.Error("Start date cannot be after end date")
             else -> ValidationResult.Success
         }
     }
