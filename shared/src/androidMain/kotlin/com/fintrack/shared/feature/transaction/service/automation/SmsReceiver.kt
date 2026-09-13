@@ -89,10 +89,16 @@ class SmsReceiver : BroadcastReceiver(), KoinComponent {
 
                     if (accountId == null) return@launch
                     
+                    val categoriesResult = categoryRepository.getCategories()
+                    val allCategories = (categoriesResult as? Result.Success)?.data ?: emptyList()
+
+                    val rulesResult = categoryRepository.getCategoryRules()
+                    val rules = (rulesResult as? Result.Success)?.data ?: emptyList()
+
                     var transaction: Transaction? = if (isMpesa) {
-                        MpesaParser.parse(fullMessage, accountId)
+                        MpesaParser.parse(fullMessage, accountId, null, rules, allCategories)
                     } else {
-                        EquityParser.parse(fullMessage, accountId)
+                        EquityParser.parse(fullMessage, accountId, null, rules, allCategories)
                     }
 
                     if (transaction != null) {

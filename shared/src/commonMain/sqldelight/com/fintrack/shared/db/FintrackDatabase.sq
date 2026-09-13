@@ -55,11 +55,21 @@ CREATE TABLE BudgetEntity (
     createdAt INTEGER AS Instant NOT NULL
 );
 
+CREATE TABLE CategoryRuleEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT,
+    keyword TEXT NOT NULL UNIQUE,
+    categoryId TEXT NOT NULL,
+    isExpense INTEGER NOT NULL DEFAULT 1,
+    FOREIGN KEY (categoryId) REFERENCES CategoryEntity(id) ON DELETE CASCADE
+);
+
 -- Indices
 CREATE INDEX transaction_user_date ON TransactionEntity(userId, dateTime);
 CREATE INDEX transaction_account_date ON TransactionEntity(accountId, dateTime);
 CREATE INDEX category_user_name ON CategoryEntity(userId, name);
 CREATE INDEX budget_user ON BudgetEntity(userId);
+CREATE INDEX rule_user ON CategoryRuleEntity(userId);
 
 -- Queries
 insertAccount:
@@ -262,3 +272,14 @@ DELETE FROM BudgetEntity WHERE id = ?;
 
 deleteAllBudgets:
 DELETE FROM BudgetEntity WHERE userId = ?;
+
+-- Category Rule Queries
+insertCategoryRule:
+INSERT OR REPLACE INTO CategoryRuleEntity(id, userId, keyword, categoryId, isExpense)
+VALUES (?, ?, ?, ?, ?);
+
+selectAllCategoryRules:
+SELECT * FROM CategoryRuleEntity WHERE userId = ? OR userId IS NULL;
+
+deleteCategoryRule:
+DELETE FROM CategoryRuleEntity WHERE id = ?;

@@ -387,9 +387,9 @@ object MpesaParser {
         )
         
         return if (resolvedId == "pending") {
-            if (isIncome) "Other Income" else "Misc"
+            if (isIncome) "Other Income" else "Transfer"
         } else {
-            allCategories.find { it.id == resolvedId }?.name ?: (if (isIncome) "Other Income" else "Misc")
+            allCategories.find { it.id == resolvedId }?.name ?: (if (isIncome) "Other Income" else "Transfer")
         }
     }
 }

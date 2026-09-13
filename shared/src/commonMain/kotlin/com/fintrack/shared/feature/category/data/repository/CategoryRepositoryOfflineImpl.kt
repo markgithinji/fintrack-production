@@ -32,7 +32,15 @@ class CategoryRepositoryOfflineImpl(
         }
     }
 
-    override suspend fun getCategoryRules(): Result<List<CategoryRule>> = Result.Success(emptyList())
+    override suspend fun getCategoryRules(): Result<List<CategoryRule>> = withContext(Dispatchers.IO) {
+        try {
+            val rules = queries.selectAllCategoryRules(offlineUserId).executeAsList().map { it.toDomain() }
+            Result.Success(rules)
+        } catch (e: Exception) {
+            logger.error(TAG, "Error fetching category rules", e)
+            Result.Error(e)
+        }
+    }
 
     override suspend fun addCategory(name: String, isExpense: Boolean, iconName: String?): Result<Category> = withContext(Dispatchers.IO) {
         try {
