@@ -142,12 +142,12 @@ fun HomeScreen(
 
     // Keep track of the last processed refresh trigger to avoid redundant refreshes on re-entry
     // We use rememberSaveable to ensure it persists across navigation
-    var lastProcessedRefreshTrigger by rememberSaveable { mutableIntStateOf(refreshTrigger) }
+    var lastProcessedRefreshTrigger by rememberSaveable { mutableIntStateOf(-1) }
 
     LaunchedEffect(refreshTrigger, selectedAccountResult) {
         val accountId = (selectedAccountResult as? Result.Success)?.data?.id
         println("[DEBUG_ANR] LaunchedEffect(refreshTrigger=$refreshTrigger, accountId=$accountId)")
-        if (accountId != null && refreshTrigger > lastProcessedRefreshTrigger) {
+        if (accountId != null && refreshTrigger > lastProcessedRefreshTrigger && lastProcessedRefreshTrigger != -1) {
             println("[DEBUG_ANR] Refreshing transaction data for account $accountId")
             // Decoupled account list reload to break potential loops
             accountsViewModel.reloadAccounts(showLoading = false)
@@ -156,6 +156,8 @@ fun HomeScreen(
             statsViewModel.loadCategoryComparisons(accountId, force = true)
             statsViewModel.loadHighlights(accountId, force = true)
             transactionsViewModel.refreshCategories()
+        }
+        if (accountId != null) {
             lastProcessedRefreshTrigger = refreshTrigger
         }
     }

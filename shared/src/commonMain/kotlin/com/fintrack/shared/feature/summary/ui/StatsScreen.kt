@@ -84,7 +84,7 @@ fun StatisticsScreen(
     }
 
     // Keep track of the last processed refresh trigger to avoid redundant refreshes
-    var lastProcessedRefreshTrigger by rememberSaveable { mutableIntStateOf(refreshTrigger) }
+    var lastProcessedRefreshTrigger by rememberSaveable { mutableIntStateOf(-1) }
 
     val safePeriod = selectedPeriod ?: remember(availableWeeks, availableMonths, availableYears) {
         getDefaultPeriod(availableWeeks, availableMonths, availableYears)
@@ -92,7 +92,7 @@ fun StatisticsScreen(
 
     LaunchedEffect(selectedAccountId, refreshTrigger) {
         if (selectedAccountId != null) {
-            val force = refreshTrigger > lastProcessedRefreshTrigger
+            val force = refreshTrigger > lastProcessedRefreshTrigger && lastProcessedRefreshTrigger != -1
             viewModel.loadAvailablePeriods(selectedAccountId, force = force)
             viewModel.loadOverview(selectedAccountId, force = force)
             lastProcessedRefreshTrigger = refreshTrigger

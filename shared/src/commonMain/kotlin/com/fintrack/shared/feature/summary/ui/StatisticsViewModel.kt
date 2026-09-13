@@ -241,35 +241,21 @@ class StatisticsViewModel(
     fun loadAvailablePeriods(accountId: String? = null, force: Boolean = false) {
         val accountChanged = lastAvailablePeriodsAccountId != accountId
         
-        // If not forced and account hasn't changed, check if we already have data OR if we're currently loading it
+        // If not forced and account hasn't changed, check if we already have data
         if (!force && !accountChanged) {
-            val hasData = _availableWeeks.value.isNotEmpty() || _availableMonths.value.isNotEmpty() || _availableYears.value.isNotEmpty()
-            val isLoading = availablePeriodsJob?.isActive == true
-            
-            if (hasData) {
+            if (_availableWeeks.value.isNotEmpty() || _availableMonths.value.isNotEmpty() || _availableYears.value.isNotEmpty()) {
                 reloadDistributionForCurrentSelection(accountId, force = false)
                 return
             }
-            if (isLoading) {
-                return
-            }
+            if (availablePeriodsJob?.isActive == true) return
         }
 
         availablePeriodsJob?.cancel()
         lastAvailablePeriodsAccountId = accountId
         
-        // Synchronously set loading states
+        // Reset metadata state if account changed or if forced (e.g. pull-to-refresh)
         if (accountChanged || force) {
             _metadataState.value = Result.Loading
-            _availableWeeks.value = emptyList()
-            _availableMonths.value = emptyList()
-            _availableYears.value = emptyList()
-            _selectedPeriod.value = null
-            
-            _incomeDistribution.value = Result.Loading
-            _expenseDistribution.value = Result.Loading
-            _highlights.value = Result.Loading
-            _categoryComparisons.value = Result.Loading
         }
 
         availablePeriodsJob = viewModelScope.launch {
@@ -278,7 +264,6 @@ class StatisticsViewModel(
                 val monthsResult = summaryRepository.getAvailableMonths(accountId)
                 val yearsResult = summaryRepository.getAvailableYears(accountId)
 
-                // Check if any of them failed
                 if (weeksResult is Result.Error || monthsResult is Result.Error || yearsResult is Result.Error) {
                     val error = (weeksResult as? Result.Error ?: monthsResult as? Result.Error ?: yearsResult as? Result.Error)!!.exception
                     _metadataState.value = Result.Error(error)
@@ -293,14 +278,13 @@ class StatisticsViewModel(
                 _availableMonths.value = months
                 _availableYears.value = years
                 
-                // If lists are empty but we are still syncing, stay in loading state
-                if (weeks.isEmpty() && months.isEmpty() && years.isEmpty() && _isSyncing.value) {
-                    _metadataState.value = Result.Loading
+                _metadataState.value = if (weeks.isEmpty() && months.isEmpty() && years.isEmpty() && _isSyncing.value) {
+                    Result.Loading
                 } else {
-                    _metadataState.value = Result.Success(Unit)
+                    Result.Success(Unit)
                 }
 
-                // Reset selection if account changed or if nothing is selected
+                // Initialize selection if nothing is selected or account changed
                 if (accountChanged || _selectedPeriod.value == null) {
                     _selectedPeriod.value = when {
                         weeks.isNotEmpty() -> Period.Week(weeks.first())
@@ -312,9 +296,7 @@ class StatisticsViewModel(
 
                 reloadDistributionForCurrentSelection(accountId, force = force)
             } catch (e: Exception) {
-                if (e !is CancellationException) {
-                    _metadataState.value = Result.Error(e)
-                }
+                if (e !is CancellationException) _metadataState.value = Result.Error(e)
             }
         }
     }

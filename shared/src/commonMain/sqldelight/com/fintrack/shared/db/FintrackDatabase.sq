@@ -179,7 +179,7 @@ getCategoryTotals:
 SELECT
     C.name AS catName,
     C.id AS catId,
-    SUM(CASE WHEN T.isIncome = 1 THEN CAST(T.amount AS REAL) - CAST(T.transactionCost AS REAL) ELSE CAST(T.amount AS REAL) + CAST(T.transactionCost AS REAL) END) AS totalSum,
+    SUM(CAST(T.amount AS REAL)) AS totalSum,
     COUNT(*) AS txCount
 FROM TransactionEntity T
 JOIN CategoryEntity C ON T.categoryId = C.id
@@ -189,8 +189,8 @@ ORDER BY totalSum DESC;
 
 getHighlights:
 SELECT
-    SUM(CASE WHEN isIncome = 1 THEN CAST(amount AS REAL) - CAST(transactionCost AS REAL) ELSE 0 END) AS incomeTotal,
-    SUM(CASE WHEN isIncome = 0 THEN CAST(amount AS REAL) + CAST(transactionCost AS REAL) ELSE 0 END) AS expenseTotal,
+    SUM(CASE WHEN isIncome = 1 THEN CAST(amount AS REAL) ELSE 0 END) AS incomeTotal,
+    SUM(CASE WHEN isIncome = 0 THEN CAST(amount AS REAL) ELSE 0 END) AS expenseTotal,
     SUM(CAST(transactionCost AS REAL)) +
     SUM(CASE WHEN categoryId = '00000000-0000-4000-a000-000000000028' THEN CAST(amount AS REAL) ELSE 0 END) AS feesTotal
 FROM TransactionEntity
@@ -198,8 +198,8 @@ WHERE (:accountId IS NULL OR accountId = :accountId) AND (userId = :userId);
 
 getHighlightsByRange:
 SELECT
-    SUM(CASE WHEN isIncome = 1 THEN CAST(amount AS REAL) - CAST(transactionCost AS REAL) ELSE 0 END) AS incomeTotal,
-    SUM(CASE WHEN isIncome = 0 THEN CAST(amount AS REAL) + CAST(transactionCost AS REAL) ELSE 0 END) AS expenseTotal,
+    SUM(CASE WHEN isIncome = 1 THEN CAST(amount AS REAL) ELSE 0 END) AS incomeTotal,
+    SUM(CASE WHEN isIncome = 0 THEN CAST(amount AS REAL) ELSE 0 END) AS expenseTotal,
     SUM(CAST(transactionCost AS REAL)) +
     SUM(CASE WHEN categoryId = '00000000-0000-4000-a000-000000000028' THEN CAST(amount AS REAL) ELSE 0 END) AS feesTotal
 FROM TransactionEntity
@@ -233,7 +233,7 @@ SELECT
     COUNT(*) AS totalCount,
     SUM(CAST(transactionCost AS REAL)) +
     SUM(CASE WHEN categoryId = '00000000-0000-4000-a000-000000000028' THEN CAST(amount AS REAL) ELSE 0 END) AS totalTransactionCost,
-    SUM(CASE WHEN isIncome = 1 THEN CAST(amount AS REAL) - CAST(transactionCost AS REAL) ELSE CAST(amount AS REAL) + CAST(transactionCost AS REAL) END) AS totalAmount
+    SUM(CAST(amount AS REAL)) AS totalAmount
 FROM TransactionEntity
 WHERE userId = :userId
 AND (:accountId IS NULL OR accountId = :accountId)

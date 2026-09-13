@@ -84,10 +84,16 @@ class SummaryRepositoryOfflineImpl(
                 end = endInstant
             ).executeAsOne()
             
-            // Unified fee handling logic from backend
+            // Database totals are already fee-aware and net-impacted
             val income = BigDecimal.fromDouble(highlightsResult.incomeTotal ?: 0.0)
+            val totalExpense = BigDecimal.fromDouble(highlightsResult.expenseTotal ?: 0.0)
             val fees = BigDecimal.fromDouble(highlightsResult.feesTotal ?: 0.0)
-            
+
+            // Calculate ratios using high-precision math
+            val savingsRate = if (income > BigDecimal.ZERO) {
+                (income - totalExpense).divide(income, ratioMode).multiply(BigDecimal.fromInt(100))
+            } else BigDecimal.ZERO
+
             val expenseCategoryTotals = queries.getCategoryTotals(
                 userId = offlineUserId,
                 accountId = accountId,
@@ -96,26 +102,13 @@ class SummaryRepositoryOfflineImpl(
                 end = endInstant
             ).executeAsList()
 
-            val feeAmountFromCategory = expenseCategoryTotals
-                .find { it.catName.trim().equals("Transaction Fees", ignoreCase = true) || it.catName.trim().equals("Transaction Cost", ignoreCase = true) }
-                ?.totalSum ?: 0.0
-
-            // totalExpense = Sum of all expense categories - Fee category + sum of all fee fields
-            val totalExpenseRaw = expenseCategoryTotals.sumOf { it.totalSum ?: 0.0 }
-            val totalExpense = BigDecimal.fromDouble(totalExpenseRaw - feeAmountFromCategory) + fees
-
-            // Calculate ratios (Multiply by 100 for percentage)
-            val savingsRate = if (income > BigDecimal.ZERO) {
-                (income - totalExpense).divide(income, ratioMode).multiply(BigDecimal.fromInt(100))
-            } else null
-
             val essentialSpend = expenseCategoryTotals
                 .filter { cat -> essentialCategories.any { it.equals(cat.catName.trim(), ignoreCase = true) } }
                 .sumOf { it.totalSum ?: 0.0 }
             
             val essentialSpendRatio = if (totalExpense > BigDecimal.ZERO) {
                 BigDecimal.fromDouble(essentialSpend).divide(totalExpense, ratioMode).multiply(BigDecimal.fromInt(100))
-            } else null
+            } else BigDecimal.ZERO
 
             // Annual Forecast logic from backend
             val currentYear = now.year
@@ -961,9 +954,12 @@ class SummaryRepositoryOfflineImpl(
             
             val highlights = queries.getHighlights(accountId = null, userId = offlineUserId).executeAsOne()
             val income = BigDecimal.fromDouble(highlights.incomeTotal ?: 0.0)
-            val fees = BigDecimal.fromDouble(highlights.feesTotal ?: 0.0)
+            val totalExpense = BigDecimal.fromDouble(highlights.expenseTotal ?: 0.0)
             
-            // Re-calculate refined total expense for metrics parity
+            val savingsRate = if (income > BigDecimal.ZERO) {
+                (income - totalExpense).divide(income, ratioMode).multiply(BigDecimal.fromInt(100))
+            } else BigDecimal.ZERO
+
             val allExpenseCategoryTotals = queries.getCategoryTotals(
                 userId = offlineUserId,
                 accountId = null,
@@ -972,22 +968,12 @@ class SummaryRepositoryOfflineImpl(
                 end = Clock.System.now()
             ).executeAsList()
 
-            val feeCategoryTotal = allExpenseCategoryTotals
-                .find { it.catName.trim() in feeCategoryNames }
-                ?.totalSum ?: 0.0
-
-            val refinedExpense = BigDecimal.fromDouble(allExpenseCategoryTotals.sumOf { it.totalSum ?: 0.0 } - feeCategoryTotal) + fees
-
-            val savingsRate = if (income > BigDecimal.ZERO) {
-                (income - refinedExpense).divide(income, ratioMode).multiply(BigDecimal.fromInt(100))
-            } else BigDecimal.ZERO
-
             val essentialSpend = allExpenseCategoryTotals
                 .filter { cat -> essentialCategories.any { it.equals(cat.catName.trim(), ignoreCase = true) } }
                 .sumOf { it.totalSum ?: 0.0 }
             
-            val essentialSpendRatio = if (refinedExpense > BigDecimal.ZERO) {
-                BigDecimal.fromDouble(essentialSpend).divide(refinedExpense, ratioMode).multiply(BigDecimal.fromInt(100))
+            val essentialSpendRatio = if (totalExpense > BigDecimal.ZERO) {
+                BigDecimal.fromDouble(essentialSpend).divide(totalExpense, ratioMode).multiply(BigDecimal.fromInt(100))
             } else BigDecimal.ZERO
 
             Result.Success(
