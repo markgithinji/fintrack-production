@@ -91,7 +91,7 @@ class DatabaseSeeder(private val database: FintrackDatabase) {
                 }
                 
                 // Dining Out
-                listOf("restaurant", "cafe", "kfc", "java", "lounge", "chicken inn", "pizza inn", "creamy inn", "choma place", "nas n001", "caterers", "dishes").forEach {
+                listOf("restaurant", "cafe", "kfc", "java", "lounge", "chicken inn", "pizza inn", "creamy inn", "choma place", "nas n001", "caterers", "dishes", "glovo", "uber eats", "bolt food", "jumia food", "eat", "delivery").forEach {
                     globalRules.add(it to Category.DiningOut.id)
                 }
                 
@@ -116,7 +116,7 @@ class DatabaseSeeder(private val database: FintrackDatabase) {
                 }
                 
                 // Transport
-                listOf("parking", "kaps", "bolt", "uber", "taxi", "rubis", "totalenergies", "shell").forEach {
+                listOf("parking", "kaps", "bolt", "uber", "taxi", "rubis", "totalenergies", "shell", "little", "wasili", "indriver").forEach {
                     globalRules.add(it to Category.Transport.id)
                 }
                 

@@ -100,7 +100,7 @@ object CategoryMatcher {
             
             r.contains("supermarket") || r.contains("naivas") || r.contains("carrefour") || r.contains("quickmart") || r.contains("butchery") || r.contains("quick mart") || r.contains("friendly 5") || r.contains("slice city") || r.contains("memento butchery") -> "Groceries"
             
-            r.contains("restaurant") || r.contains("cafe") || r.contains("kfc") || r.contains("java") || r.contains("lounge") || r.contains("chicken inn") || r.contains("pizza inn") || r.contains("creamy inn") || r.contains("choma place") || r.contains("nas n001") || r.contains("caterers") || r.contains("dishes") -> "Dining Out"
+            r.contains("restaurant") || r.contains("cafe") || r.contains("kfc") || r.contains("java") || r.contains("lounge") || r.contains("chicken inn") || r.contains("pizza inn") || r.contains("creamy inn") || r.contains("choma place") || r.contains("nas n001") || r.contains("caterers") || r.contains("dishes") || r.contains("glovo") || r.contains("uber eats") || r.contains("bolt food") || r.contains("jumia food") || r.contains("eat") || r.contains("delivery") -> "Dining Out"
             
             r.contains("equity") || r.contains("co-operative") || r.contains("bank") || r.contains("i&m") || r.contains("ncba") || r.contains("boa") || r.contains("family bank") || r.contains("stanbic") || r.contains("loop") || r.contains("sidian") -> "Bank"
             
@@ -117,7 +117,7 @@ object CategoryMatcher {
             
             r.contains("tithe") || r.contains("offering") || r.contains("citam") || r.contains("church") || r.contains("charity") || r.contains("mosque") || r.contains("prayer mountain") -> "Charity"
             
-            r.contains("parking") || r.contains("kaps") || r.contains("bolt") || r.contains("uber") || r.contains("taxi") || r.contains("rubis") || r.contains("totalenergies") || r.contains("shell") -> "Transport"
+            r.contains("parking") || r.contains("kaps") || r.contains("bolt") || r.contains("uber") || r.contains("taxi") || r.contains("rubis") || r.contains("totalenergies") || r.contains("shell") || r.contains("little") || r.contains("wasili") || r.contains("indriver") -> "Transport"
             
             r.contains("chemist") || r.contains("pharmacy") || r.contains("hospital") || r.contains("health") || r.contains("clinic") || r.contains("meds") || r.contains("dental") || r.contains("hopemed") || r.contains("medical") -> "Health"
             
