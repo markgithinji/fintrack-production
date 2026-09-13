@@ -61,7 +61,50 @@ class CategoryRepositoryOfflineImpl(
 
     override suspend fun deleteCategory(id: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            queries.deleteCategory(id)
+            queries.transaction {
+                val category = queries.selectCategoryById(id).executeAsOneOrNull() ?: return@transaction
+                if (category.isDefault != 0L) return@transaction // Safety check
+                
+                // Backend Port: Reassign transactions instead of deleting them (Cascade Safety)
+                val fallbackName = if (category.isExpense != 0L) "Misc" else "Other Income"
+                val fallbackCategory = queries.selectAllCategories(offlineUserId).executeAsList()
+                    .find { it.name.equals(fallbackName, ignoreCase = true) && it.isExpense == category.isExpense }
+                
+                if (fallbackCategory != null) {
+                    queries.reassignTransactions(
+                        newCategoryId = fallbackCategory.id,
+                        oldCategoryId = id,
+                        userId = offlineUserId
+                    )
+                }
+
+                // Handle budgets
+                val budgets = queries.selectAllBudgets(offlineUserId).executeAsList()
+                budgets.forEach { row ->
+                    val ids = row.categoryIds.split(",").filter { it.isNotEmpty() }.toMutableList()
+                    if (ids.contains(id)) {
+                        ids.remove(id)
+                        if (ids.isEmpty()) {
+                            queries.deleteBudget(row.id)
+                        } else {
+                            queries.insertBudget(
+                                id = row.id,
+                                userId = row.userId,
+                                name = row.name,
+                                limitAmount = row.limitAmount,
+                                isExpense = row.isExpense,
+                                startDate = row.startDate,
+                                endDate = row.endDate,
+                                categoryIds = ids.joinToString(","),
+                                accountIds = row.accountIds,
+                                createdAt = row.createdAt
+                            )
+                        }
+                    }
+                }
+
+                queries.deleteCategory(id)
+            }
             Result.Success(Unit)
         } catch (e: Exception) {
             logger.error(TAG, "Error deleting category $id", e)

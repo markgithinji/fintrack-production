@@ -91,6 +91,9 @@ SELECT * FROM CategoryEntity WHERE id = ?;
 deleteCategory:
 DELETE FROM CategoryEntity WHERE id = ?;
 
+reassignTransactions:
+UPDATE TransactionEntity SET categoryId = :newCategoryId WHERE categoryId = :oldCategoryId AND userId = :userId;
+
 insertTransaction:
 INSERT OR REPLACE INTO TransactionEntity(id, userId, accountId, categoryId, isIncome, amount, transactionCost, dateTime, description, externalId, balance, createdAt, updatedAt)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);

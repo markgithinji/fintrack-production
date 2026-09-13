@@ -2,6 +2,7 @@ package com.fintrack.shared.feature.transaction.util
 
 import com.fintrack.shared.feature.category.domain.model.Category
 import com.fintrack.shared.feature.category.domain.model.CategoryRule
+import com.fintrack.shared.feature.category.util.CategoryMatcher
 import com.fintrack.shared.feature.category.domain.model.fromId
 import com.fintrack.shared.feature.category.domain.model.fromName
 import com.fintrack.shared.feature.transaction.domain.model.Transaction
@@ -69,7 +70,8 @@ object MpesaParser {
         message: String, 
         accountId: String = "mpesa", 
         smsTimestamp: Instant? = null,
-        rules: List<CategoryRule> = emptyList()
+        rules: List<CategoryRule> = emptyList(),
+        allCategories: List<Category> = emptyList()
     ): Transaction? {
         if (!message.contains("Confirmed", ignoreCase = true)) return null
 
@@ -159,7 +161,7 @@ object MpesaParser {
                 amount, 
                 cost, 
                 balance, 
-                inferCategory(party, isIncome = true, rules = rules),
+                inferCategory(party, isIncome = true, rules = rules, allCategories = allCategories),
                 parseDateTime(date, time, smsTimestamp), 
                 "Transferred from $party", 
                 accountId,
@@ -178,7 +180,7 @@ object MpesaParser {
                 amount, 
                 cost, 
                 balance, 
-                inferCategory(party, isIncome = false, rules = rules),
+                inferCategory(party, isIncome = false, rules = rules, allCategories = allCategories),
                 parseDateTime(date, time, smsTimestamp), 
                 "Transferred to $party", 
                 accountId,
@@ -209,15 +211,15 @@ object MpesaParser {
         }
 
         // Standard transactions
-        sentRegex.find(message)?.let { return wrap(createFromMatch(it, isIncome = false, "Sent to", null, cost, balance, accountId, smsTimestamp, rules)) }
+        sentRegex.find(message)?.let { return wrap(createFromMatch(it, isIncome = false, "Sent to", null, cost, balance, accountId, smsTimestamp, rules, allCategories)) }
         
-        receivedRegex.find(message)?.let { return wrap(createFromMatch(it, isIncome = true, "Received from", null, cost, balance, accountId, smsTimestamp, rules)) }
-        sentToYouRegex.find(message)?.let { return wrap(createFromMatch(it, isIncome = true, "Sent by", null, cost, balance, accountId, smsTimestamp, rules)) }
+        receivedRegex.find(message)?.let { return wrap(createFromMatch(it, isIncome = true, "Received from", null, cost, balance, accountId, smsTimestamp, rules, allCategories)) }
+        sentToYouRegex.find(message)?.let { return wrap(createFromMatch(it, isIncome = true, "Sent by", null, cost, balance, accountId, smsTimestamp, rules, allCategories)) }
         
-        paidRegex.find(message)?.let { return wrap(createFromMatch(it, isIncome = false, "Paid to", null, cost, balance, accountId, smsTimestamp, rules)) }
+        paidRegex.find(message)?.let { return wrap(createFromMatch(it, isIncome = false, "Paid to", null, cost, balance, accountId, smsTimestamp, rules, allCategories)) }
 
-        depositRegex.find(message)?.let { return wrap(createFromMatch(it, isIncome = true, "Deposit from", null, cost, balance, accountId, smsTimestamp, rules)) }
-        withdrawRegex.find(message)?.let { return wrap(createFromMatch(it, isIncome = false, "Withdrawn from", null, cost, balance, accountId, smsTimestamp, rules)) }
+        depositRegex.find(message)?.let { return wrap(createFromMatch(it, isIncome = true, "Deposit from", null, cost, balance, accountId, smsTimestamp, rules, allCategories)) }
+        withdrawRegex.find(message)?.let { return wrap(createFromMatch(it, isIncome = false, "Withdrawn from", null, cost, balance, accountId, smsTimestamp, rules, allCategories)) }
 
         // Received at Till (Ref at end)
         receivedAtTillRegex.find(message)?.let {
@@ -250,7 +252,8 @@ object MpesaParser {
         balance: BigDecimal?,
         accountId: String,
         smsTimestamp: Instant? = null,
-        rules: List<CategoryRule> = emptyList()
+        rules: List<CategoryRule> = emptyList(),
+        allCategories: List<Category> = emptyList()
     ): Transaction {
         val code = match.groupValues[1]
         val amount = parseAmount(match.groupValues[2])
@@ -259,7 +262,7 @@ object MpesaParser {
         val date = if (match.groupValues.size > 4) match.groupValues[4] else ""
         val time = if (match.groupValues.size > 5) match.groupValues[5] else ""
         
-        return createTransactionModel(code, amount, cost, balance, fixedCategory ?: inferCategory(party, rules = rules), parseDateTime(date, time, smsTimestamp), "$prefix $party", accountId, isIncome)
+        return createTransactionModel(code, amount, cost, balance, fixedCategory ?: inferCategory(party, isIncome, rules, allCategories), parseDateTime(date, time, smsTimestamp), "$prefix $party", accountId, isIncome)
     }
 
     private fun cleanPartyName(name: String): String {
@@ -370,62 +373,23 @@ object MpesaParser {
         }
     }
 
-    private fun inferCategory(recipient: String, isIncome: Boolean = false, rules: List<CategoryRule> = emptyList()): String {
-        val r = recipient.lowercase(Locale.ENGLISH)
-
-        // 1. Try dynamic rules from backend first
-        rules.forEach { rule ->
-            if (r.contains(rule.keyword.lowercase())) {
-                // Find matching category name from our global list to ensure correct display name
-                return Category.fromId(rule.categoryId).name
-            }
-        }
-
-        // 2. Fallback to hardcoded defaults (as safety net)
-        return when {
-            r.contains("kplc") || r.contains("tokens") || r.contains("power") || r.contains("jajemelo") ||
-            r.contains("water") || r.contains("sewerage") || r.contains("ncwsc") || r.contains("kiwasco") ||
-            r.contains("mawasco") || r.contains("nyewasco") || r.contains("eldowas") || r.contains("mowasco") ||
-            r.contains("gas") || r.contains("m-gas") || r.contains("mgas") || r.contains("afrigas") ||
-            r.contains("garbage") || r.contains("waste") || r.contains("trash") ||
-            r.contains("m-kopa") || r.contains("mkopa") || r.contains("d.light") || r.contains("sunking") || r.contains("bboxx") -> "Utilities"
-            r.contains("zuku") || r.contains("safaricom home") || r.contains("poa internet") || r.contains("vilcom") || 
-            r.contains("faiba") || r.contains("jtl") || r.contains("jtlk") || r.contains("wananchi") ||
-            r.contains("mawingu") || r.contains("starlink") || r.contains("konnect") || r.contains("fibre connect") || 
-            r.contains("fiber connect") || r.contains("airtel fibre") || r.contains("telkom home") ||
-            r.contains("liquid home") || r.contains("liquid telecom") ||
-            r.contains("data bundles") || r.contains("data bundle") || r.contains("offers") || r.contains("tunukiwa") ||
-            r.contains("internet") || r.contains("bundles") -> "Internet"
-            r.contains("airtime") || r.contains("tingg") || r.contains("top up") -> "Airtime"
-            r.contains("supermarket") || r.contains("naivas") || r.contains("carrefour") || r.contains("quickmart") || r.contains("butchery") || r.contains("quick mart") || r.contains("friendly 5") || r.contains("slice city") || r.contains("memento butchery") -> "Groceries"
-            r.contains("restaurant") || r.contains("cafe") || r.contains("kfc") || r.contains("java") || Regex("""\bbar\b""").containsMatchIn(r) || r.contains("lounge") || r.contains("chicken inn") || r.contains("pizza inn") || r.contains("creamy inn") || r.contains("choma place") || r.contains("nas n001") || r.contains("caterers") || r.contains("dishes") -> "Dining Out"
-            r.contains("equity") || r.contains("co-operative") || r.contains("bank") || r.contains("i&m") || r.contains("ncba") || r.contains("boa") || r.contains("family bank") || r.contains("stanbic") || r.contains("loop") || r.contains("sidian") -> "Bank"
-            r.contains("loan repayment") || r.contains("loan") || r.contains("fuliza") || r.contains("tala") || r.contains("branch") -> "Loans"
-            r.contains("m-shwari saving") || r.contains("mshwari saving") || r.contains("m-shwari") || r.contains("mshwari") || r.contains("kcb") || r.contains("sacco") || r.contains("chama") || r.contains("orokise") ||
-            r.contains("zimele") || r.contains("etica") || r.contains("gulfcap") || r.contains("cytonn") || r.contains("arvocap") || 
-            r.contains("lofty") || r.contains("kuza") || r.contains("mali") || r.contains("ziidi") || r.contains("kasha") || 
-            r.contains("genghis") || r.contains("hela imara") || r.contains("nabo capital") || 
-            r.contains("stima sacco") || r.contains("police sacco") || r.contains("unaitas") || r.contains("mwalimu") ||
-            r.contains("harambee") || r.contains("kimisitu") || r.contains("hazina sacco") || r.contains("imarisha") ||
-            r.contains("tower sacco") || r.contains("waumini") ||
-            r.contains("dry associates") || r.contains("m-pesa saving") || r.contains("money market") || r.contains("fund") || r.contains("asset") || r.contains("mmf") -> "Savings"
-            r.contains("tithe") || r.contains("offering") || r.contains("citam") || r.contains("church") || r.contains("charity") || r.contains("mosque") || r.contains("prayer mountain") -> "Charity"
-            r.contains("parking") || r.contains("kaps") || r.contains("bolt") || r.contains("uber") || r.contains("taxi") || r.contains("rubis") || r.contains("totalenergies") || r.contains("shell") -> "Transport"
-            r.contains("chemist") || r.contains("pharmacy") || r.contains("hospital") || r.contains("health") || r.contains("clinic") || r.contains("meds") || r.contains("dental") || r.contains("hopemed") || r.contains("medical") -> "Health"
-            r.contains("netflix") || r.contains("spotify") || r.contains("showmax") || r.contains("youtube") -> "Subscriptions"
-            r.contains("jumia") || r.contains("leather") || r.contains("watches") || r.contains("perfume") || r.contains("clothes") || r.contains("fashion") || r.contains("mrp") || r.contains("miniso") || r.contains("woolworths") || r.contains("tushop") || r.contains("m-pesa card") || r.contains("canva") || r.contains("pdfaid") -> "Shopping"
-            r.contains("salon") || r.contains("barber") || r.contains("beauty") || r.contains("nail bar") -> "Personal Care"
-            r.contains("hardware") || r.contains("timber") || r.contains("maintenance") || r.contains("repair") -> "Maintenance"
-            r.contains("e-citizen") || r.contains("kra") || r.contains("county") -> "Government"
-            r.contains("britam") || r.contains("nhif") || r.contains("shif") || r.contains("insurance") || r.contains("apa") || 
-            r.contains("jubilee") || r.contains("sanlam") || r.contains("cic") || r.contains("old mutual") || 
-            r.contains("icea lion") || r.contains("madison") || r.contains("apollo") || r.contains("ga insurance") ||
-            r.contains("heritage") || r.contains("geminia") || r.contains("pioneer") || r.contains("kenindia") || r.contains("uap") -> "Insurance"
-            r.contains("salary") -> "Salary"
-            r.contains("bonus") -> "Bonus"
-            r.contains("interest") -> "Interest"
-            r.contains("commission") || r.contains("income") -> "Other Income"
-            else -> if (isIncome) "Other Income" else "Transfer"
+    private fun inferCategory(recipient: String, isIncome: Boolean = false, rules: List<CategoryRule> = emptyList(), allCategories: List<Category> = emptyList()): String {
+        // Backend Port: Use CategoryMatcher logic for intelligent matching
+        // Note: The parser returns category NAMES for UI mapping, which is why we resolve to name here.
+        val resolvedId = CategoryMatcher.resolveCategory(
+            inputCategoryId = null,
+            inputCategoryName = null,
+            description = recipient,
+            isIncome = isIncome,
+            allCategories = allCategories,
+            rules = rules,
+            defaultId = "pending"
+        )
+        
+        return if (resolvedId == "pending") {
+            if (isIncome) "Other Income" else "Misc"
+        } else {
+            allCategories.find { it.id == resolvedId }?.name ?: (if (isIncome) "Other Income" else "Misc")
         }
     }
 }

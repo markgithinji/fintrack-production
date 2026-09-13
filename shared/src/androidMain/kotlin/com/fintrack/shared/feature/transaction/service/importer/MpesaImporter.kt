@@ -109,7 +109,7 @@ class MpesaImporter(
                         latestBalance = MpesaParser.parseBalance(body)
                     }
 
-                    val parsed = MpesaParser.parse(body, accountId, smsInstant, rules)
+                    val parsed = MpesaParser.parse(body, accountId, smsInstant, rules, categories)
                     if (parsed != null) {
                         val categoryName = parsed.category
                         val isExpense = !parsed.isIncome
