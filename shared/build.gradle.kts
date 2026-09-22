@@ -72,6 +72,10 @@ kotlin {
                 exclude(group = "org.apache.httpcomponents")
             }
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+            
+            // ML Kit Text Recognition & Document Scanner
+            implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.0")
+            implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0")
         }
         commonMain.dependencies {
             implementation(compose.runtime)
