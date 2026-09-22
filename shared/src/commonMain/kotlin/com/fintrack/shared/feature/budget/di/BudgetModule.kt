@@ -5,14 +5,22 @@ import com.fintrack.shared.feature.budget.domain.repository.BudgetRepository
 import com.fintrack.shared.feature.budget.domain.usecase.BudgetValidationUseCase
 import com.fintrack.shared.feature.budget.domain.usecase.CheckBudgetThresholdsUseCase
 import com.fintrack.shared.feature.budget.ui.BudgetViewModel
-import org.koin.core.module.dsl.bind
+import com.fintrack.shared.feature.transaction.domain.service.ReceiptScanner
 import org.koin.core.module.dsl.singleOf
-import org.koin.core.module.dsl.viewModelOf
+import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val budgetModule = module {
     single<BudgetRepository> { BudgetRepositoryOfflineImpl(database = get(), logger = get()) }
     singleOf(::BudgetValidationUseCase)
     singleOf(::CheckBudgetThresholdsUseCase)
-    viewModelOf(::BudgetViewModel)
+    viewModel { 
+        BudgetViewModel(
+            budgetRepository = get(),
+            validationUseCase = get(),
+            localCategoryDataSource = get(),
+            syncCategoriesUseCase = get(),
+            receiptScanner = getOrNull<ReceiptScanner>()
+        )
+    }
 }

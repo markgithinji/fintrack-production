@@ -16,6 +16,7 @@ import com.fintrack.shared.feature.core.domain.SaveState
 import com.fintrack.shared.feature.core.domain.ValidationResult
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.core.util.formatToTwoPrecision
+import com.fintrack.shared.feature.transaction.domain.service.ReceiptScanner
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,7 +36,8 @@ class BudgetViewModel(
     private val budgetRepository: BudgetRepository,
     private val validationUseCase: BudgetValidationUseCase,
     private val localCategoryDataSource: LocalCategoryDataSource,
-    private val syncCategoriesUseCase: SyncCategoriesUseCase
+    private val syncCategoriesUseCase: SyncCategoriesUseCase,
+    private val receiptScanner: ReceiptScanner? = null
 ) : ViewModel() {
 
     private val _categories = MutableStateFlow<List<Category>>(emptyList())
@@ -59,7 +61,49 @@ class BudgetViewModel(
     private val _formState = MutableStateFlow(BudgetFormState())
     val formState: StateFlow<BudgetFormState> = _formState.asStateFlow()
 
+    private val _receiptScanState = MutableStateFlow<Result<Unit>?>(null)
+    val receiptScanState: StateFlow<Result<Unit>?> = _receiptScanState.asStateFlow()
+
     private var hasInitializedForm = false
+
+    fun scanReceipt(imageBytes: ByteArray) {
+        if (receiptScanner == null) {
+            _receiptScanState.value = Result.Error(Exception("Receipt scanning is not supported on this device."))
+            return
+        }
+
+        viewModelScope.launch {
+            _receiptScanState.value = Result.Loading
+            val result = receiptScanner.scanReceipt(imageBytes)
+            
+            if (result is Result.Success) {
+                val data = result.data
+                
+                // Match the suggested category
+                val currentCategories = _categories.value
+                val matchedCategory = data.suggestedCategoryName?.let { suggested ->
+                    currentCategories.find { it.name.contains(suggested, ignoreCase = true) }
+                }
+
+                _formState.update { current ->
+                    current.copy(
+                        amount = data.amount?.toString() ?: current.amount,
+                        amountSelectionStart = data.amount?.toString()?.length ?: current.amountSelectionStart,
+                        amountSelectionEnd = data.amount?.toString()?.length ?: current.amountSelectionEnd,
+                        name = data.merchantName ?: current.name,
+                        selectedCategories = if (matchedCategory != null) setOf(matchedCategory) else current.selectedCategories
+                    )
+                }
+                _receiptScanState.value = Result.Success(Unit)
+            } else if (result is Result.Error) {
+                _receiptScanState.value = Result.Error(result.exception)
+            }
+        }
+    }
+
+    fun resetReceiptScanState() {
+        _receiptScanState.value = null
+    }
 
     val validationState: StateFlow<ValidationResult> = _formState.map { state ->
         validationUseCase(

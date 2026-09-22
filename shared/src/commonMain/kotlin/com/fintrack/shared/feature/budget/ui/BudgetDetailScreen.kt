@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -84,6 +85,7 @@ import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.core.util.formatAsShortDateWithYear
 import com.fintrack.shared.feature.core.ui.FintrackDatePickerDialog
 import com.fintrack.shared.feature.core.ui.LocalSharedTransitionScope
+import com.fintrack.shared.feature.core.ui.util.rememberImagePickerLauncher
 import androidx.compose.ui.platform.LocalFocusManager
 import com.fintrack.shared.feature.core.ui.AccountIcon
 import org.koin.compose.viewmodel.koinViewModel
@@ -119,10 +121,19 @@ fun BudgetDetailScreen(
     val validationState by viewModel.validationState.collectAsStateWithLifecycle()
     val validationError by viewModel.validationError.collectAsStateWithLifecycle()
     val accountsResult by accountsViewModel.accounts.collectAsStateWithLifecycle()
+    val receiptScanState by viewModel.receiptScanState.collectAsStateWithLifecycle()
 
     val focusManager = LocalFocusManager.current
     var showNumpad by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    val imagePickerLauncher = rememberImagePickerLauncher { bytes ->
+        if (bytes != null) {
+            viewModel.scanReceipt(bytes)
+        } else {
+            onShowToast("No image selected", true)
+        }
+    }
 
     KMPBackHandler(enabled = showNumpad) {
         showNumpad = false
@@ -203,7 +214,16 @@ fun BudgetDetailScreen(
             viewModel.clearValidationError()
         }
     }
-
+    
+    LaunchedEffect(receiptScanState) {
+        if (receiptScanState is Result.Error) {
+            onShowToast((receiptScanState as Result.Error).exception.message ?: "Failed to scan receipt", true)
+            viewModel.resetReceiptScanState()
+        } else if (receiptScanState is Result.Success) {
+            onShowToast("Receipt scanned successfully", false)
+            viewModel.resetReceiptScanState()
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -227,30 +247,63 @@ fun BudgetDetailScreen(
 
             else -> {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    with(sharedTransitionScope) {
-                        FinanceAmountHeader(
-                            amount = formState.amount,
-                            selectionStart = formState.amountSelectionStart,
-                            selectionEnd = formState.amountSelectionEnd,
-                            onSelectionChange = { start, end -> viewModel.onAmountSelectionChange(start, end) },
-                            label = if (formState.isExpense) "Expense Budget Limit" else "Income Target Limit",
-                            isIncome = !formState.isExpense,
-                            themeColor = themeColor,
-                            paddingValues = paddingValues,
-                            isActive = showNumpad,
-                            onToggleNumpad = { showNumpad = it },
-                            modifier = Modifier.sharedBounds(
-                                rememberSharedContentState(key = "budget_header_${budgetId ?: "new"}"),
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                boundsTransform = { _, _ ->
-                                    spring(
-                                        dampingRatio = Spring.DampingRatioLowBouncy,
-                                        stiffness = Spring.StiffnessLow
-                                    )
-                                },
-                                clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                    Box {
+                        with(sharedTransitionScope) {
+                            FinanceAmountHeader(
+                                amount = formState.amount,
+                                selectionStart = formState.amountSelectionStart,
+                                selectionEnd = formState.amountSelectionEnd,
+                                onSelectionChange = { start, end -> viewModel.onAmountSelectionChange(start, end) },
+                                label = if (formState.isExpense) "Expense Budget Limit" else "Income Target Limit",
+                                isIncome = !formState.isExpense,
+                                themeColor = themeColor,
+                                paddingValues = paddingValues,
+                                isActive = showNumpad,
+                                onToggleNumpad = { showNumpad = it },
+                                modifier = Modifier.sharedBounds(
+                                    rememberSharedContentState(key = "budget_header_${budgetId ?: "new"}"),
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    boundsTransform = { _, _ ->
+                                        spring(
+                                            dampingRatio = Spring.DampingRatioLowBouncy,
+                                            stiffness = Spring.StiffnessLow
+                                        )
+                                    },
+                                    clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                                )
                             )
-                        )
+                        }
+                        
+                        // Receipt Scanner Button inside Header (for new budgets only)
+                        if (budgetId == null) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(top = paddingValues.calculateTopPadding() + 8.dp, end = 16.dp)
+                            ) {
+                                IconButton(
+                                    onClick = { imagePickerLauncher() },
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(Color.White.copy(alpha = 0.2f), CircleShape)
+                                ) {
+                                    if (receiptScanState is Result.Loading) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            color = Color.White,
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.CameraAlt,
+                                            contentDescription = "Scan Budget/Receipt",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     Column(
