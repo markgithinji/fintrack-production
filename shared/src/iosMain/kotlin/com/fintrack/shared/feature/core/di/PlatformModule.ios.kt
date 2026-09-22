@@ -9,7 +9,9 @@ import com.fintrack.shared.feature.core.util.FileSaver
 import com.fintrack.shared.feature.core.util.IosFileSaver
 import com.fintrack.shared.feature.settings.data.local.IOSSettingsDataSource
 import com.fintrack.shared.feature.settings.domain.datasource.SettingsDataSource
+import com.fintrack.shared.feature.transaction.domain.service.ReceiptScanner
 import com.fintrack.shared.feature.transaction.domain.service.TransactionImporter
+import com.fintrack.shared.feature.transaction.service.IosReceiptScanner
 import com.fintrack.shared.feature.transaction.service.IosTransactionImporter
 import org.koin.dsl.bind
 import org.koin.dsl.module
@@ -20,5 +22,6 @@ actual val platformModule: org.koin.core.module.Module = module {
     single { IOSSettingsDataSource() } bind SettingsDataSource::class
     single { IOSNotificationService(get()) } bind NotificationService::class
     single { IosFileSaver() } bind FileSaver::class
+    single { IosReceiptScanner() } bind ReceiptScanner::class
     single { IosTransactionImporter() } bind TransactionImporter::class
 }

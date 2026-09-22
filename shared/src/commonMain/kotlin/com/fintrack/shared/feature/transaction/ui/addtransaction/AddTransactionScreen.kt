@@ -192,32 +192,65 @@ fun AddTransactionScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            with(sharedTransitionScope) {
-                FinanceAmountHeader(
-                    amount = formState.amount,
-                    selectionStart = formState.amountSelectionStart,
-                    selectionEnd = formState.amountSelectionEnd,
-                    onSelectionChange = { start, end -> transactionsViewModel.onAmountSelectionChange(start, end) },
-                    label = if (formState.isIncome) "Income Amount" else "Expense Amount",
-                    isIncome = formState.isIncome,
-                    themeColor = themeColor,
-                    paddingValues = paddingValues,
-                    isActive = showNumpad && numpadTarget == NumpadTarget.Amount,
-                    onToggleNumpad = {
-                        numpadTarget = NumpadTarget.Amount
-                        showNumpad = it
-                    },
-                    modifier = Modifier.sharedBounds(
-                        rememberSharedContentState(key = "transaction_header_${transactionId ?: "new"}"),
-                        animatedVisibilityScope = animatedVisibilityScope,
-                        boundsTransform = { _, _ ->
-                            spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
+            Box {
+                with(sharedTransitionScope) {
+                    FinanceAmountHeader(
+                        amount = formState.amount,
+                        selectionStart = formState.amountSelectionStart,
+                        selectionEnd = formState.amountSelectionEnd,
+                        onSelectionChange = { start, end -> transactionsViewModel.onAmountSelectionChange(start, end) },
+                        label = if (formState.isIncome) "Income Amount" else "Expense Amount",
+                        isIncome = formState.isIncome,
+                        themeColor = themeColor,
+                        paddingValues = paddingValues,
+                        isActive = showNumpad && numpadTarget == NumpadTarget.Amount,
+                        onToggleNumpad = {
+                            numpadTarget = NumpadTarget.Amount
+                            showNumpad = it
                         },
-                        clipInOverlayDuringTransition = OverlayClip(
-                            RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
+                        modifier = Modifier.sharedBounds(
+                            rememberSharedContentState(key = "transaction_header_${transactionId ?: "new"}"),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            boundsTransform = { _, _ ->
+                                spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
+                            },
+                            clipInOverlayDuringTransition = OverlayClip(
+                                RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
+                            )
                         )
                     )
-                )
+                }
+                
+                // Receipt Scanner Button inside Header
+                if (transactionId == null) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = paddingValues.calculateTopPadding() + 8.dp, end = 16.dp)
+                    ) {
+                        IconButton(
+                            onClick = { imagePickerLauncher() },
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(Color.White.copy(alpha = 0.2f), CircleShape)
+                        ) {
+                            if (receiptScanState is Result.Loading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.CameraAlt,
+                                    contentDescription = "Scan Receipt",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
             
             // Receipt Scanner Header Button
@@ -228,21 +261,7 @@ fun AddTransactionScreen(
                         .padding(horizontal = 20.dp, vertical = 8.dp),
                     contentAlignment = Alignment.CenterEnd
                 ) {
-                    OutlinedButton(
-                        onClick = { imagePickerLauncher() },
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
-                    ) {
-                        if (receiptScanState is Result.Loading) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Default.CameraAlt, contentDescription = "Scan Receipt", modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Text("Scan Receipt")
-                    }
+                    // Removed old position
                 }
             }
 
@@ -300,6 +319,32 @@ fun AddTransactionScreen(
                     onDateClicked = { showDatePicker = true },
                     onTimeClicked = { showTimePicker = true }
                 )
+                
+                // Moved Receipt Scanner Button to bottom of form
+                if (transactionId == null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        OutlinedButton(
+                            onClick = { imagePickerLauncher() },
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.primary
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                        ) {
+                            if (receiptScanState is Result.Loading) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.CameraAlt, contentDescription = "Scan Receipt", modifier = Modifier.size(18.dp))
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Text("Scan Receipt / Auto-fill")
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(140.dp))
             }

@@ -17,11 +17,15 @@ import com.fintrack.shared.feature.core.util.formatToTwoPrecision
 import com.fintrack.shared.feature.transaction.domain.model.Transaction
 import com.fintrack.shared.feature.transaction.domain.model.TransactionFormState
 import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository
+import com.fintrack.shared.feature.transaction.domain.service.ReceiptScanner
 import com.fintrack.shared.feature.transaction.domain.service.TransactionImporter
 import com.fintrack.shared.feature.transaction.domain.usecase.CreateTransactionUseCase
 import com.fintrack.shared.feature.transaction.domain.usecase.ValidateTransactionUseCase
 import com.fintrack.shared.feature.core.util.DateTimeHelper
 import kotlinx.coroutines.CancellationException
+import kotlinx.datetime.atTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -46,7 +50,8 @@ class TransactionViewModel(
     private val syncCategoriesUseCase: SyncCategoriesUseCase,
     private val validateTransactionUseCase: ValidateTransactionUseCase,
     private val createTransactionUseCase: CreateTransactionUseCase,
-    private val transactionImporter: TransactionImporter
+    private val transactionImporter: TransactionImporter,
+    private val receiptScanner: ReceiptScanner? = null
 ) : ViewModel() {
 
     val categories: StateFlow<List<Category>> = localCategoryDataSource.categories
@@ -88,6 +93,58 @@ class TransactionViewModel(
     
     private var lastPagingParams: TransactionPagingParams? = null
     private var cachedPagingFlow: Flow<PagingData<Transaction>>? = null
+    
+    private val _receiptScanState = MutableStateFlow<Result<Unit>?>(null)
+    val receiptScanState: StateFlow<Result<Unit>?> = _receiptScanState.asStateFlow()
+
+    fun scanReceipt(imageBytes: ByteArray) {
+        if (receiptScanner == null) {
+            _receiptScanState.value = Result.Error(Exception("Receipt scanning is not supported on this device."))
+            return
+        }
+
+        viewModelScope.launch {
+            _receiptScanState.value = Result.Loading
+            val result = receiptScanner.scanReceipt(imageBytes)
+            
+            if (result is Result.Success) {
+                val data = result.data
+                
+                // Attempt to match the suggested category against the user's available categories
+                val currentCategories = categories.value
+                val matchedCategory = data.suggestedCategoryName?.let { suggested ->
+                    currentCategories.find { it.name.contains(suggested, ignoreCase = true) }
+                } ?: _formState.value.selectedCategory
+                
+                // Build a smart description based on M-Pesa detection
+                val smartDescription = if (data.isMpesa) {
+                    "M-Pesa: ${data.merchantName ?: "Payment"}"
+                } else {
+                    data.merchantName ?: _formState.value.description
+                }
+                
+                // Update form state with scanned data
+                _formState.update { current ->
+                    current.copy(
+                        amount = data.amount?.toString() ?: current.amount,
+                        amountSelectionStart = data.amount?.toString()?.length ?: current.amountSelectionStart,
+                        amountSelectionEnd = data.amount?.toString()?.length ?: current.amountSelectionEnd,
+                        description = smartDescription,
+                        selectedCategory = matchedCategory,
+                        // Convert LocalDate back to Instant at start of day UTC for the form
+                        dateTime = data.date?.atTime(0, 0)?.toInstant(TimeZone.UTC) ?: current.dateTime
+                    )
+                }
+                _receiptScanState.value = Result.Success(Unit)
+            } else if (result is Result.Error) {
+                _receiptScanState.value = Result.Error(result.exception)
+            }
+        }
+    }
+    
+    fun resetReceiptScanState() {
+        _receiptScanState.value = null
+    }
 
     fun importTransactions(accountId: String? = null, isPortfolioSeed: Boolean = false) {
         if (_importState.value[accountId] is Result.Loading) {

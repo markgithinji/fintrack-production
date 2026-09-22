@@ -9,8 +9,9 @@ import com.fintrack.shared.feature.transaction.domain.usecase.GetSpendingSummary
 import com.fintrack.shared.feature.transaction.domain.usecase.SyncRecurringBillsUseCase
 import com.fintrack.shared.feature.transaction.domain.usecase.ValidateTransactionUseCase
 import com.fintrack.shared.feature.transaction.ui.TransactionViewModel
+import com.fintrack.shared.feature.transaction.domain.service.ReceiptScanner
 import org.koin.core.module.dsl.singleOf
-import org.koin.core.module.dsl.viewModelOf
+import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val transactionModule = module {
@@ -29,5 +30,15 @@ val transactionModule = module {
     singleOf(::SyncRecurringBillsUseCase)
     singleOf(::GetSpendingSummaryUseCase)
 
-    viewModelOf(::TransactionViewModel)
+    viewModel {
+        TransactionViewModel(
+            repo = get(),
+            localCategoryDataSource = get(),
+            syncCategoriesUseCase = get(),
+            validateTransactionUseCase = get(),
+            createTransactionUseCase = get(),
+            transactionImporter = get(),
+            receiptScanner = getOrNull<ReceiptScanner>()
+        )
+    }
 }
