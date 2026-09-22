@@ -222,31 +222,33 @@ fun AccountChipShimmer(
         )
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             AnimatedShimmerBox(
                 modifier = Modifier
-                    .size(24.dp)
+                    .size(20.dp)
                     .clip(CircleShape)
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            AnimatedShimmerBox(
-                modifier = Modifier
-                    .width(60.dp)
-                    .height(14.dp)
-                    .clip(RoundedCornerShape(4.dp))
             )
 
             Spacer(Modifier.height(4.dp))
 
             AnimatedShimmerBox(
                 modifier = Modifier
+                    .width(60.dp)
+                    .height(13.dp)
+                    .clip(RoundedCornerShape(4.dp))
+            )
+
+            Spacer(Modifier.height(2.dp))
+
+            AnimatedShimmerBox(
+                modifier = Modifier
                     .width(40.dp)
-                    .height(12.dp)
+                    .height(11.dp)
                     .clip(RoundedCornerShape(4.dp))
             )
         }
@@ -299,7 +301,9 @@ fun AccountChip(
         elevation = CardDefaults.cardElevation(defaultElevation = elevation)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -307,15 +311,15 @@ fun AccountChip(
                 imageVector = accountIcon.icon,
                 contentDescription = account.name,
                 tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(20.dp)
             )
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
 
             Text(
                 text = account.name,
                 fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -323,8 +327,10 @@ fun AccountChip(
 
             Text(
                 text = account.balance?.toCurrencyString() ?: "${LocalCurrency.current.symbol} --",
-                fontSize = 12.sp,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+                fontSize = 11.sp,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
