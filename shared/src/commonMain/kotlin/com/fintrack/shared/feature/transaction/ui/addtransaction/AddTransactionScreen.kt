@@ -319,32 +319,6 @@ fun AddTransactionScreen(
                     onDateClicked = { showDatePicker = true },
                     onTimeClicked = { showTimePicker = true }
                 )
-                
-                // Moved Receipt Scanner Button to bottom of form
-                if (transactionId == null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        OutlinedButton(
-                            onClick = { imagePickerLauncher() },
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary
-                            ),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
-                        ) {
-                            if (receiptScanState is Result.Loading) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                            } else {
-                                Icon(Icons.Default.CameraAlt, contentDescription = "Scan Receipt", modifier = Modifier.size(18.dp))
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            Text("Scan Receipt / Auto-fill")
-                        }
-                    }
-                }
 
                 Spacer(modifier = Modifier.height(140.dp))
             }
