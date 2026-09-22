@@ -44,6 +44,7 @@ import com.fintrack.shared.feature.settings.domain.util.format
 import com.fintrack.shared.feature.navigation.ui.LocalTimeFormat
 import com.fintrack.shared.feature.core.ui.LocalSharedTransitionScope
 import com.fintrack.shared.feature.core.ui.util.ThousandsSeparatorOffsetMapping
+import com.fintrack.shared.feature.core.ui.util.rememberImagePickerLauncher
 import com.fintrack.shared.feature.transaction.ui.TransactionViewModel
 import kotlinx.coroutines.delay
 import kotlinx.datetime.LocalDateTime
@@ -73,6 +74,7 @@ fun AddTransactionScreen(
     val validationError by transactionsViewModel.validationError.collectAsStateWithLifecycle()
     val allCategories by transactionsViewModel.categories.collectAsStateWithLifecycle()
     val formState by transactionsViewModel.formState.collectAsStateWithLifecycle()
+    val receiptScanState by transactionsViewModel.receiptScanState.collectAsStateWithLifecycle()
 
     val focusManager = LocalFocusManager.current
     var showDatePicker by remember { mutableStateOf(value = false) }
@@ -80,6 +82,14 @@ fun AddTransactionScreen(
     var showNumpad by remember { mutableStateOf(false) }
     var numpadTarget by remember { mutableStateOf(NumpadTarget.Amount) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    val imagePickerLauncher = rememberImagePickerLauncher { bytes ->
+        if (bytes != null) {
+            transactionsViewModel.scanReceipt(bytes)
+        } else {
+            onShowToast("No image selected", true)
+        }
+    }
 
     KMPBackHandler(enabled = showNumpad) {
         showNumpad = false
@@ -166,6 +176,16 @@ fun AddTransactionScreen(
         }
     }
 
+    LaunchedEffect(receiptScanState) {
+        if (receiptScanState is Result.Error) {
+            onShowToast((receiptScanState as Result.Error).exception.message ?: "Failed to scan receipt", true)
+            transactionsViewModel.resetReceiptScanState()
+        } else if (receiptScanState is Result.Success) {
+            onShowToast("Receipt scanned successfully", false)
+            transactionsViewModel.resetReceiptScanState()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -198,6 +218,32 @@ fun AddTransactionScreen(
                         )
                     )
                 )
+            }
+            
+            // Receipt Scanner Header Button
+            if (transactionId == null) { // Only show on new transactions
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    OutlinedButton(
+                        onClick = { imagePickerLauncher() },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.primary
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                    ) {
+                        if (receiptScanState is Result.Loading) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.CameraAlt, contentDescription = "Scan Receipt", modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text("Scan Receipt")
+                    }
+                }
             }
 
             Column(
