@@ -46,6 +46,9 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.EventRepeat
 import androidx.compose.material.icons.filled.FileDownload
@@ -176,6 +179,9 @@ fun SettingsScreen(
     val deleteAccountState by viewModel.deleteAccountState.collectAsStateWithLifecycle()
     val seedState by viewModel.seedState.collectAsStateWithLifecycle()
     val seedProgress by viewModel.seedProgress.collectAsStateWithLifecycle()
+    val localBackupState by viewModel.localBackupState.collectAsStateWithLifecycle()
+    val googleDriveBackupState by viewModel.googleDriveBackupState.collectAsStateWithLifecycle()
+    val restoreState by viewModel.restoreState.collectAsStateWithLifecycle()
 
     val biometricAuthenticator = LocalBiometricAuthenticator.current
     val scope = rememberCoroutineScope()
@@ -226,6 +232,38 @@ fun SettingsScreen(
         exportResult?.let { path ->
             onShowToast("Data exported to: $path", false)
             viewModel.clearExportResult()
+        }
+    }
+
+    LaunchedEffect(localBackupState) {
+        if (localBackupState is SaveState.Success) {
+            onShowToast("Local backup created at: ${(localBackupState as SaveState.Success).data}", false)
+            viewModel.resetBackupStates()
+        } else if (localBackupState is SaveState.Error) {
+            onShowToast("Backup failed: ${(localBackupState as SaveState.Error).exception.message}", true)
+            viewModel.resetBackupStates()
+        }
+    }
+
+    LaunchedEffect(googleDriveBackupState) {
+        if (googleDriveBackupState is SaveState.Success) {
+            onShowToast("Google Drive backup completed successfully!", false)
+            viewModel.resetBackupStates()
+        } else if (googleDriveBackupState is SaveState.Error) {
+            onShowToast("Google Drive backup failed: ${(googleDriveBackupState as SaveState.Error).exception.message}", true)
+            viewModel.resetBackupStates()
+        }
+    }
+
+    LaunchedEffect(restoreState) {
+        if (restoreState is SaveState.Success) {
+            onShowToast("Database restored successfully!", false)
+            viewModel.resetBackupStates()
+            viewModel.loadAccounts()
+            viewModel.reloadBudgets(force = true)
+        } else if (restoreState is SaveState.Error) {
+            onShowToast("Restore failed: ${(restoreState as SaveState.Error).exception.message}", true)
+            viewModel.resetBackupStates()
         }
     }
 
@@ -610,6 +648,45 @@ fun SettingsScreen(
                             subtitle = "Download data as ${exportFormat.name}",
                             icon = Icons.Default.FileDownload,
                             onClick = { showExportFormatDialog = true }
+                        )
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+
+                        SettingsItem(
+                            title = "Export Local Backup (.json)",
+                            subtitle = "Save full database snapshot to storage",
+                            icon = Icons.Default.CloudUpload,
+                            onClick = { viewModel.exportLocalBackup() }
+                        )
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+
+                        SettingsItem(
+                            title = "Backup to Google Drive",
+                            subtitle = "Sync full backup to Google Drive AppData",
+                            icon = Icons.Default.CloudSync,
+                            onClick = { viewModel.backupToGoogleDrive() }
+                        )
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+
+                        SettingsItem(
+                            title = "Restore from Google Drive",
+                            subtitle = "Restore database from Google Drive AppData",
+                            icon = Icons.Default.CloudDone,
+                            onClick = { viewModel.restoreFromGoogleDrive() }
                         )
 
                         HorizontalDivider(

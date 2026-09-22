@@ -34,6 +34,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalTime
+import com.fintrack.shared.feature.settings.domain.usecase.BackupRestoreUseCase
+import com.fintrack.shared.feature.settings.service.CloudDriveBackupService
 
 class SettingsViewModel(
     private val settingsDataSource: SettingsDataSource,
@@ -46,6 +48,8 @@ class SettingsViewModel(
     private val accountRepository: AccountRepository,
     private val budgetRepository: BudgetRepository,
     private val transactionImporter: TransactionImporter,
+    private val backupRestoreUseCase: BackupRestoreUseCase,
+    private val cloudDriveBackupService: CloudDriveBackupService? = null,
 ) : ViewModel() {
 
     // State Flows
@@ -87,6 +91,15 @@ class SettingsViewModel(
 
     private val _seedState = MutableStateFlow<SaveState<String>>(SaveState.Idle)
     val seedState: StateFlow<SaveState<String>> = _seedState.asStateFlow()
+
+    private val _localBackupState = MutableStateFlow<SaveState<String>>(SaveState.Idle)
+    val localBackupState: StateFlow<SaveState<String>> = _localBackupState.asStateFlow()
+
+    private val _googleDriveBackupState = MutableStateFlow<SaveState<String>>(SaveState.Idle)
+    val googleDriveBackupState: StateFlow<SaveState<String>> = _googleDriveBackupState.asStateFlow()
+
+    private val _restoreState = MutableStateFlow<SaveState<Unit>>(SaveState.Idle)
+    val restoreState: StateFlow<SaveState<Unit>> = _restoreState.asStateFlow()
 
     // Settings Flows
     val theme: StateFlow<AppTheme> = settingsDataSource.theme
@@ -491,6 +504,79 @@ class SettingsViewModel(
     fun resetSeedState() {
         _seedState.value = SaveState.Idle
         _seedProgress.value = 0f
+    }
+
+    fun exportLocalBackup() {
+        viewModelScope.launch {
+            _localBackupState.value = SaveState.Loading
+            val result = backupRestoreUseCase.exportLocalBackup()
+            if (result is Result.Success) {
+                _localBackupState.value = SaveState.Success(result.data)
+            } else if (result is Result.Error) {
+                _localBackupState.value = SaveState.Error(result.exception)
+                _error.value = "Failed to export local backup: ${result.exception.message}"
+            }
+        }
+    }
+
+    fun restoreLocalBackup(jsonContent: String) {
+        viewModelScope.launch {
+            _restoreState.value = SaveState.Loading
+            val result = backupRestoreUseCase.restoreFromBackupJson(jsonContent)
+            if (result is Result.Success) {
+                _restoreState.value = SaveState.Success(Unit)
+            } else if (result is Result.Error) {
+                _restoreState.value = SaveState.Error(result.exception)
+                _error.value = "Failed to restore backup: ${result.exception.message}"
+            }
+        }
+    }
+
+    fun backupToGoogleDrive() {
+        viewModelScope.launch {
+            _googleDriveBackupState.value = SaveState.Loading
+            val jsonResult = backupRestoreUseCase.createBackupJson()
+            if (jsonResult is Result.Success) {
+                val uploadResult = cloudDriveBackupService?.uploadBackup(jsonResult.data)
+                if (uploadResult is Result.Success) {
+                    _googleDriveBackupState.value = SaveState.Success(uploadResult.data)
+                } else if (uploadResult is Result.Error) {
+                    _googleDriveBackupState.value = SaveState.Error(uploadResult.exception)
+                    _error.value = "Google Drive backup failed: ${uploadResult.exception.message}"
+                } else {
+                    _googleDriveBackupState.value = SaveState.Error(Exception("Cloud Drive service unavailable"))
+                }
+            } else if (jsonResult is Result.Error) {
+                _googleDriveBackupState.value = SaveState.Error(jsonResult.exception)
+            }
+        }
+    }
+
+    fun restoreFromGoogleDrive() {
+        viewModelScope.launch {
+            _restoreState.value = SaveState.Loading
+            val downloadResult = cloudDriveBackupService?.downloadLatestBackup()
+            if (downloadResult is Result.Success) {
+                val restoreResult = backupRestoreUseCase.restoreFromBackupJson(downloadResult.data)
+                if (restoreResult is Result.Success) {
+                    _restoreState.value = SaveState.Success(Unit)
+                } else if (restoreResult is Result.Error) {
+                    _restoreState.value = SaveState.Error(restoreResult.exception)
+                    _error.value = "Restore failed: ${restoreResult.exception.message}"
+                }
+            } else if (downloadResult is Result.Error) {
+                _restoreState.value = SaveState.Error(downloadResult.exception)
+                _error.value = "Google Drive download failed: ${downloadResult.exception.message}"
+            } else {
+                _restoreState.value = SaveState.Error(Exception("Cloud Drive service unavailable"))
+            }
+        }
+    }
+
+    fun resetBackupStates() {
+        _localBackupState.value = SaveState.Idle
+        _googleDriveBackupState.value = SaveState.Idle
+        _restoreState.value = SaveState.Idle
     }
 }
 
