@@ -59,6 +59,19 @@ kotlin {
             implementation(libs.androidx.work.runtime.ktx)
             implementation(libs.androidx.paging.compose)
             implementation(libs.sqldelight.android.driver)
+            
+            // Google Drive Backup
+            implementation("com.google.android.gms:play-services-auth:21.0.0")
+            implementation("com.google.api-client:google-api-client-android:1.35.0") {
+                exclude(group = "org.apache.httpcomponents")
+            }
+            implementation("com.google.apis:google-api-services-drive:v3-rev20220815-2.0.0") {
+                exclude(group = "org.apache.httpcomponents")
+            }
+            implementation("com.google.http-client:google-http-client-gson:1.43.3") {
+                exclude(group = "org.apache.httpcomponents")
+            }
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
         }
         commonMain.dependencies {
             implementation(compose.runtime)

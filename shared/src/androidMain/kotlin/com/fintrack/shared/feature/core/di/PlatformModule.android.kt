@@ -9,6 +9,8 @@ import com.fintrack.shared.feature.core.util.AndroidFileSaver
 import com.fintrack.shared.feature.core.util.FileSaver
 import com.fintrack.shared.feature.settings.data.local.AndroidSettingsDataSource
 import com.fintrack.shared.feature.settings.domain.datasource.SettingsDataSource
+import com.fintrack.shared.feature.settings.service.AndroidGoogleDriveBackupService
+import com.fintrack.shared.feature.settings.service.CloudDriveBackupService
 import com.fintrack.shared.feature.transaction.domain.service.TransactionImporter
 import com.fintrack.shared.feature.transaction.service.importer.AndroidTransactionImporter
 import org.koin.dsl.bind
@@ -25,6 +27,7 @@ actual val platformModule: org.koin.core.module.Module = module {
         )
     } bind NotificationService::class
     single { AndroidFileSaver(context = get()) } bind FileSaver::class
+    single { AndroidGoogleDriveBackupService(context = get(), logger = get()) } bind CloudDriveBackupService::class
     single {
         AndroidTransactionImporter(
             context = get(),
