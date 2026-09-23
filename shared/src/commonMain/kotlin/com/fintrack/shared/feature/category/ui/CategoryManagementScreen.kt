@@ -23,10 +23,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -69,6 +73,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fintrack.shared.feature.auth.ui.common.FinanceTextField
 import com.fintrack.shared.feature.category.domain.model.Category
+import com.fintrack.shared.feature.category.domain.model.CategoryRule
 import com.fintrack.shared.feature.category.ui.util.toIcon
 import com.fintrack.shared.feature.core.ui.CommonErrorState
 import com.fintrack.shared.feature.core.ui.ConfirmationDialog
@@ -87,7 +92,9 @@ fun CategoryManagementScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
+    var showAddRuleDialog by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf<Category?>(null) }
+    var ruleToDelete by remember { mutableStateOf<CategoryRule?>(null) }
 
     LaunchedEffect(refreshTrigger) {
         if (refreshTrigger > 0) {
@@ -170,6 +177,51 @@ fun CategoryManagementScreen(
                                 onDelete = { categoryToDelete = category }
                             )
                         }
+
+                        // Smart Auto-Categorization Rules
+                        item(span = { GridItemSpan(2) }) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Smart Auto-Categorization Rules",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Auto-assigns categories to SMS & scanned receipts",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                TextButton(onClick = { showAddRuleDialog = true }) {
+                                    Text("+ Add Rule")
+                                }
+                            }
+                        }
+                        if (state.rules.isEmpty()) {
+                            item(span = { GridItemSpan(2) }) {
+                                Text(
+                                    text = "No custom rules defined yet. Tap '+ Add Rule' to create one.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+                            }
+                        } else {
+                            items(state.rules) { rule ->
+                                val category = state.categories.find { it.id == rule.categoryId }
+                                RuleItem(
+                                    rule = rule,
+                                    categoryName = category?.name ?: "Unknown",
+                                    onDelete = { ruleToDelete = rule }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -198,6 +250,17 @@ fun CategoryManagementScreen(
         )
     }
 
+    if (showAddRuleDialog) {
+        AddCategoryRuleDialog(
+            categories = state.categories,
+            onDismiss = { showAddRuleDialog = false },
+            onConfirm = { keyword, categoryId, isExpense ->
+                viewModel.addRule(keyword, categoryId, isExpense)
+                showAddRuleDialog = false
+            }
+        )
+    }
+
     categoryToDelete?.let { category ->
         ConfirmationDialog(
             title = "Delete Category?",
@@ -210,6 +273,254 @@ fun CategoryManagementScreen(
             },
             onDismiss = { categoryToDelete = null }
         )
+    }
+
+    ruleToDelete?.let { rule ->
+        ConfirmationDialog(
+            title = "Delete Rule?",
+            message = "Are you sure you want to delete the rule for '${rule.keyword}'?",
+            confirmLabel = "Delete",
+            isDestructive = true,
+            onConfirm = {
+                viewModel.deleteRule(rule.id)
+                ruleToDelete = null
+            },
+            onDismiss = { ruleToDelete = null }
+        )
+    }
+}
+
+@Composable
+fun RuleItem(
+    rule: CategoryRule,
+    categoryName: String,
+    onDelete: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = rule.keyword,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "➔ $categoryName",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete Rule",
+                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddCategoryRuleDialog(
+    categories: List<Category>,
+    onDismiss: () -> Unit,
+    onConfirm: (keyword: String, categoryId: String, isExpense: Boolean) -> Unit
+) {
+    var keyword by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf<Category?>(categories.firstOrNull { it.isExpense }) }
+    var isExpense by remember { mutableStateOf(true) }
+    val colorScheme = MaterialTheme.colorScheme
+
+    val filteredCategories = remember(isExpense, categories) {
+        categories.filter { it.isExpense == isExpense }
+    }
+
+    LaunchedEffect(isExpense) {
+        selectedCategory = filteredCategories.firstOrNull()
+    }
+
+    BasicAlertDialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        modifier = Modifier
+            .padding(28.dp)
+            .widthIn(max = 400.dp)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = colorScheme.surface,
+            tonalElevation = 6.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth()
+                    .animateContentSize()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Add Smart Rule",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.onSurface
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                FinanceTextField(
+                    value = keyword,
+                    onValueChange = { keyword = it },
+                    label = "Keyword / Merchant Name",
+                    leadingIcon = Icons.Default.Category,
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Done,
+                    colorScheme = colorScheme,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Type",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    CategoryTypeButton(
+                        text = "Expense",
+                        isSelected = isExpense,
+                        selectedColor = PinkExpense,
+                        modifier = Modifier.weight(1f),
+                        onClick = { isExpense = true }
+                    )
+                    CategoryTypeButton(
+                        text = "Income",
+                        isSelected = !isExpense,
+                        selectedColor = GreenIncome,
+                        modifier = Modifier.weight(1f),
+                        onClick = { isExpense = false }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Target Category",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // Simple Category Picker
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 160.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    filteredCategories.forEach { cat ->
+                        val isSelected = selectedCategory?.id == cat.id
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedCategory = cat }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = cat.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (isSelected) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.height(48.dp).padding(horizontal = 8.dp)
+                    ) {
+                        Text("Cancel")
+                    }
+                    Button(
+                        onClick = {
+                            selectedCategory?.let { cat ->
+                                onConfirm(keyword, cat.id, isExpense)
+                            }
+                        },
+                        enabled = keyword.isNotBlank() && selectedCategory != null,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.height(48.dp),
+                        contentPadding = PaddingValues(horizontal = 24.dp)
+                    ) {
+                        Text("Add Rule")
+                    }
+                }
+            }
+        }
     }
 }
 

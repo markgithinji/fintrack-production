@@ -119,4 +119,37 @@ class CategoryRepositoryOfflineImpl(
             Result.Error(e)
         }
     }
+
+    override suspend fun addCategoryRule(keyword: String, categoryId: String, isExpense: Boolean): Result<CategoryRule> = withContext(Dispatchers.IO) {
+        try {
+            val id = randomUUID()
+            val rule = CategoryRule(
+                id = id,
+                keyword = keyword,
+                categoryId = categoryId,
+                isExpense = isExpense
+            )
+            queries.insertCategoryRule(
+                id = id,
+                userId = offlineUserId,
+                keyword = keyword,
+                categoryId = categoryId,
+                isExpense = if (isExpense) 1L else 0L
+            )
+            Result.Success(rule)
+        } catch (e: Exception) {
+            logger.error(TAG, "Error adding category rule with keyword $keyword", e)
+            Result.Error(e)
+        }
+    }
+
+    override suspend fun deleteCategoryRule(id: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            queries.deleteCategoryRule(id)
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            logger.error(TAG, "Error deleting category rule $id", e)
+            Result.Error(e)
+        }
+    }
 }

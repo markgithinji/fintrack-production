@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.fintrack.shared.feature.category.data.LocalCategoryDataSource
 import com.fintrack.shared.feature.category.domain.model.Category
 import com.fintrack.shared.feature.category.domain.model.allCategories
+import com.fintrack.shared.feature.category.domain.repository.CategoryRepository
 import com.fintrack.shared.feature.category.domain.usecase.AddCategoryUseCase
 import com.fintrack.shared.feature.category.domain.usecase.DeleteCategoryUseCase
 import com.fintrack.shared.feature.category.domain.usecase.SyncCategoriesUseCase
@@ -21,7 +22,8 @@ class CategoryManagementViewModel(
     private val localCategoryDataSource: LocalCategoryDataSource,
     private val syncCategoriesUseCase: SyncCategoriesUseCase,
     private val addCategoryUseCase: AddCategoryUseCase,
-    private val deleteCategoryUseCase: DeleteCategoryUseCase
+    private val deleteCategoryUseCase: DeleteCategoryUseCase,
+    private val categoryRepository: CategoryRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CategoryManagementState(categories = Category.allCategories))
@@ -39,15 +41,55 @@ class CategoryManagementViewModel(
     fun refresh() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            when (val result = syncCategoriesUseCase()) {
+            val syncResult = syncCategoriesUseCase()
+            if (syncResult is Result.Error) {
+                val exception = syncResult.exception
+                _state.update { it.copy(
+                    error = (exception as? ApiException)?.getUserFriendlyMessage()
+                        ?: exception.message ?: "Failed to refresh categories"
+                ) }
+            }
+            
+            val rulesResult = categoryRepository.getCategoryRules()
+            if (rulesResult is Result.Success) {
+                _state.update { it.copy(rules = rulesResult.data) }
+            }
+            
+            _state.update { it.copy(isLoading = false) }
+        }
+    }
+
+    fun addRule(keyword: String, categoryId: String, isExpense: Boolean) {
+        if (keyword.isBlank()) {
+            _state.update { it.copy(error = "Keyword cannot be empty") }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            when (val result = categoryRepository.addCategoryRule(keyword.trim(), categoryId, isExpense)) {
                 is Result.Error -> {
-                    val exception = result.exception
-                    _state.update { it.copy(
-                        error = (exception as? ApiException)?.getUserFriendlyMessage()
-                            ?: exception.message ?: "Failed to refresh categories"
-                    ) }
+                    _state.update { it.copy(error = result.exception.message ?: "Failed to add rule") }
                 }
-                else -> { /* Success or Loading handled elsewhere */ }
+                is Result.Success -> {
+                    refresh()
+                }
+                else -> {}
+            }
+            _state.update { it.copy(isLoading = false) }
+        }
+    }
+
+    fun deleteRule(id: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            when (val result = categoryRepository.deleteCategoryRule(id)) {
+                is Result.Error -> {
+                    _state.update { it.copy(error = result.exception.message ?: "Failed to delete rule") }
+                }
+                is Result.Success -> {
+                    refresh()
+                }
+                else -> {}
             }
             _state.update { it.copy(isLoading = false) }
         }

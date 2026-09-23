@@ -9,4 +9,6 @@ interface CategoryRepository {
     suspend fun getCategoryRules(): Result<List<CategoryRule>>
     suspend fun addCategory(name: String, isExpense: Boolean, iconName: String? = null): Result<Category>
     suspend fun deleteCategory(id: String): Result<Unit>
+    suspend fun addCategoryRule(keyword: String, categoryId: String, isExpense: Boolean): Result<CategoryRule>
+    suspend fun deleteCategoryRule(id: String): Result<Unit>
 }
