@@ -1,6 +1,5 @@
 package com.fintrack.shared.feature.account.di
 
-import com.fintrack.shared.feature.account.data.remote.AccountsApi
 import com.fintrack.shared.feature.account.data.repository.AccountRepositoryOfflineImpl
 import com.fintrack.shared.feature.account.domain.repository.AccountRepository
 import com.fintrack.shared.feature.account.domain.usecase.GetAccountsUseCase
@@ -11,8 +10,6 @@ import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val accountModule = module {
-    singleOf(::AccountsApi)
-    
     single<AccountRepository> {
         AccountRepositoryOfflineImpl(
             database = get(),

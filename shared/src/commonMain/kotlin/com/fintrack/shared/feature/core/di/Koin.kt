@@ -3,8 +3,6 @@ package com.fintrack.shared.feature.core.di
 import com.fintrack.shared.feature.account.di.accountModule
 import com.fintrack.shared.feature.auth.di.authModule
 import com.fintrack.shared.feature.budget.di.budgetModule
-import com.fintrack.shared.feature.core.data.remote.ApiConfig
-import com.fintrack.shared.feature.core.data.remote.Environment
 import com.fintrack.shared.feature.category.di.categoryModule
 import com.fintrack.shared.feature.navigation.di.navigationModule
 import com.fintrack.shared.feature.summary.di.summaryModule
@@ -21,23 +19,10 @@ object Koin {
         get() = _koinApplication ?: throw IllegalStateException("Koin not initialized")
 
     fun init(
-        environment: Environment = Environment.STAGING,
-        enableNetworkLogs: Boolean = false,
-        isOffline: Boolean = false,
         appDeclaration: KoinApplication.() -> Unit = {}
     ) {
-        ApiConfig.initialize(environment)
-
         _koinApplication = startKoin {
             appDeclaration()
-            
-            properties(
-                mapOf(
-                    "baseUrl" to ApiConfig.BASE_URL,
-                    "enableNetworkLogs" to enableNetworkLogs.toString(),
-                    "isOffline" to isOffline.toString()
-                )
-            )
 
             modules(
                 platformModule,
