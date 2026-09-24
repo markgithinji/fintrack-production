@@ -176,7 +176,6 @@ fun SettingsScreen(
 
     val changePasswordFormState by viewModel.changePasswordFormState.collectAsStateWithLifecycle()
     val changePasswordState by viewModel.changePasswordState.collectAsStateWithLifecycle()
-    val deleteAccountState by viewModel.deleteAccountState.collectAsStateWithLifecycle()
     val seedState by viewModel.seedState.collectAsStateWithLifecycle()
     val seedProgress by viewModel.seedProgress.collectAsStateWithLifecycle()
     val localBackupState by viewModel.localBackupState.collectAsStateWithLifecycle()
@@ -190,7 +189,6 @@ fun SettingsScreen(
     var showThemeDialog by remember { mutableStateOf(false) }
     var showTimeFormatDialog by remember { mutableStateOf(false) }
     var showTimePickerDialog by remember { mutableStateOf(false) }
-    var showDeleteAccountDialog by remember { mutableStateOf(false) }
     var showChangePasswordDialog by remember { mutableStateOf(false) }
     var showTrackedCategoriesDialog by remember { mutableStateOf(false) }
     var showBudgetSelectionDialog by remember { mutableStateOf(false) }
@@ -688,21 +686,6 @@ fun SettingsScreen(
                             icon = Icons.Default.CloudDone,
                             onClick = { viewModel.restoreFromGoogleDrive() }
                         )
-
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                        )
-
-                        SettingsItem(
-                            title = "Delete Account",
-                            subtitle = "Permanently delete your account",
-                            icon = Icons.Default.PersonRemove,
-                            iconContainerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
-                            iconTint = MaterialTheme.colorScheme.error,
-                            onClick = { showDeleteAccountDialog = true }
-                        )
                     }
 
                     SettingsSection(title = "Portfolio Demo") {
@@ -888,43 +871,6 @@ fun SettingsScreen(
                 }
             },
             onDismiss = { showExportFormatDialog = false }
-        )
-    }
-
-    if (showDeleteAccountDialog) {
-        ConfirmationDialog(
-            title = "Delete Account",
-            message = "Are you sure you want to delete your account? This will permanently remove all your data, including accounts, transactions, and budgets. This action cannot be undone.",
-            confirmLabel = "Delete Forever",
-            isDestructive = true,
-            isLoading = deleteAccountState is SaveState.Loading,
-            isSuccess = deleteAccountState is SaveState.Success,
-            errorMessage = (deleteAccountState as? SaveState.Error)?.exception?.message,
-            successTitle = "Account Deleted",
-            successMessage = "Your account and all associated data have been permanently deleted.",
-            autoDismiss = false,
-            onConfirm = {
-                scope.launch {
-                    val authResult = biometricAuthenticator.authenticate(
-                        title = "Delete Account",
-                        subtitle = "This will permanently delete your account and all data"
-                    )
-
-                    when (authResult) {
-                        is BiometricResult.Success, BiometricResult.NotAvailable -> {
-                            viewModel.deleteAccount()
-                        }
-
-                        is BiometricResult.Error -> {
-                            viewModel.setError(authResult.message)
-                        }
-                    }
-                }
-            },
-            onDismiss = {
-                showDeleteAccountDialog = false
-                viewModel.resetDeleteAccountState()
-            }
         )
     }
 
