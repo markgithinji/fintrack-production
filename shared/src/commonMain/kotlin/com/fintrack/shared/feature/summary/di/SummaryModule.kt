@@ -3,6 +3,7 @@ package com.fintrack.shared.feature.summary.di
 import com.fintrack.shared.feature.summary.data.repository.SummaryRepositoryOfflineImpl
 import com.fintrack.shared.feature.summary.domain.repository.SummaryRepository
 import com.fintrack.shared.feature.summary.ui.StatisticsViewModel
+import com.fintrack.shared.feature.summary.ui.custom.CustomAnalysisViewModel
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
@@ -18,4 +19,5 @@ val summaryModule = module {
     }
 
     viewModelOf(::StatisticsViewModel)
+    viewModelOf(::CustomAnalysisViewModel)
 }

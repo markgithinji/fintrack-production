@@ -29,6 +29,7 @@ import com.fintrack.shared.feature.core.ui.util.navigateThrottled
 import com.fintrack.shared.feature.navigation.model.Screen
 import com.fintrack.shared.feature.settings.ui.SettingsScreen
 import com.fintrack.shared.feature.summary.ui.StatisticsScreen
+import com.fintrack.shared.feature.summary.ui.custom.CustomAnalysisScreen
 import com.fintrack.shared.feature.transaction.ui.addtransaction.AddTransactionScreen
 import com.fintrack.shared.feature.transaction.ui.home.HomeScreen
 import com.fintrack.shared.feature.transaction.ui.transactionlist.TransactionListScreen
@@ -179,6 +180,9 @@ fun MainNavigation(
                 refreshTrigger = refreshTrigger,
                 paddingValues = paddingValues,
                 animatedVisibilityScope = this,
+                onNavigateToCustomAnalysis = {
+                    navController.navigateThrottled(Screen.CustomAnalysis)
+                },
                 onCategoryClick = { categoryName: String, categoryId: String, isIncome: Boolean, startDate: String?, endDate: String?, accountIdParam: String ->
                     val isTransactionCost = categoryId == "transaction_cost" || categoryName == "Transaction Fees"
                     navController.navigateThrottled(
@@ -256,6 +260,13 @@ fun MainNavigation(
                 onGlobalRefresh = onGlobalRefresh,
                 onShowToast = { message, isError -> mainViewModel.showToast(message, isError) },
                 paddingValues = paddingValues
+            )
+        }
+
+        composable<Screen.CustomAnalysis> {
+            CustomAnalysisScreen(
+                paddingValues = paddingValues,
+                onShowToast = { message, isError -> mainViewModel.showToast(message, isError) }
             )
         }
 

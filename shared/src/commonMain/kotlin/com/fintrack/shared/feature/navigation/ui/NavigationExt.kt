@@ -20,7 +20,8 @@ fun NavDestination.isProfileDetailScreen(): Boolean =
     hasRoute<Screen.Accounts>() ||
             hasRoute<Screen.Categories>() ||
             hasRoute<Screen.Settings>() ||
-            hasRoute<Screen.EditProfile>()
+            hasRoute<Screen.EditProfile>() ||
+            hasRoute<Screen.CustomAnalysis>()
 
 fun NavDestination.isMainScreen(): Boolean =
     hasRoute<Screen.Home>() ||
@@ -57,6 +58,11 @@ fun NavDestination.getAppBarState(entry: NavBackStackEntry?, navController: NavC
         )
         hasRoute<Screen.Settings>() -> AppBarState(
             title = "Settings",
+            showBackButton = true,
+            onBack = { navController.popBackStack() }
+        )
+        hasRoute<Screen.CustomAnalysis>() -> AppBarState(
+            title = "Custom Analysis",
             showBackButton = true,
             onBack = { navController.popBackStack() }
         )

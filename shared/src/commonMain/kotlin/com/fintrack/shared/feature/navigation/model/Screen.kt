@@ -16,6 +16,9 @@ sealed interface Screen {
     data class Statistics(val accountId: String? = null) : Screen
 
     @Serializable
+    data object CustomAnalysis : Screen
+
+    @Serializable
     data object Budget : Screen
 
     @Serializable
