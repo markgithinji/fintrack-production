@@ -179,10 +179,7 @@ class TransactionViewModel(
 
     fun autoSyncTransactions(accountId: String? = null, lastSyncedAt: Instant? = null) {
         val now = Clock.System.now()
-        val isFirstTimeInSession = !sessionSyncStarted.contains(accountId)
-        
-        // App Open: 2 mins cooldown | Screen Resume: 15 mins cooldown
-        val cooldown = if (isFirstTimeInSession) 2.minutes else 15.minutes
+        val cooldown = 15.minutes
 
         // 1. Check against the persistent last successful sync time (from DB)
         if (lastSyncedAt != null && (now - lastSyncedAt) < cooldown) {
