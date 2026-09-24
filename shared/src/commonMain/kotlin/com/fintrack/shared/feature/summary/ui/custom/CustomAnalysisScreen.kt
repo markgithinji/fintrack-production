@@ -286,7 +286,7 @@ fun CustomAnalysisScreen(
                         top = 8.dp,
                         bottom = paddingValues.calculateBottomPadding() + 88.dp
                     ),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     // Summary KPIs
                     item {
@@ -421,48 +421,57 @@ fun CustomAnalysisScreen(
                     // Category Distribution Breakdown
                     if (state.categoryBreakdown.isNotEmpty()) {
                         item {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = "Category Breakdown",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
+                            Card(
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                ),
+                                border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "Category Breakdown",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    )
 
-                                state.categoryBreakdown.take(5).forEach { share ->
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 4.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = share.categoryName,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                            Text(
-                                                text = "${share.totalAmount.toCurrencyString()} (${share.percentage.toInt()}%)",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (share.isExpense) PinkExpense else GreenIncome
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        LinearProgressIndicator(
-                                            progress = { (share.percentage / 100.0).toFloat().coerceIn(0f, 1f) },
+                                    state.categoryBreakdown.take(5).forEach { share ->
+                                        Column(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .height(6.dp)
-                                                .clip(RoundedCornerShape(3.dp)),
-                                            color = if (share.isExpense) PinkExpense else GreenIncome,
-                                            trackColor = colorScheme.outlineVariant.copy(alpha = 0.2f),
-                                            drawStopIndicator = {},
-                                            gapSize = 0.dp
-                                        )
+                                                .padding(vertical = 4.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = share.categoryName,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                                Text(
+                                                    text = "${share.totalAmount.toCurrencyString()} (${share.percentage.toInt()}%)",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (share.isExpense) PinkExpense else GreenIncome
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            LinearProgressIndicator(
+                                                progress = { (share.percentage / 100.0).toFloat().coerceIn(0f, 1f) },
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(6.dp)
+                                                    .clip(RoundedCornerShape(3.dp)),
+                                                color = if (share.isExpense) PinkExpense else GreenIncome,
+                                                trackColor = colorScheme.outlineVariant.copy(alpha = 0.2f),
+                                                drawStopIndicator = {},
+                                                gapSize = 0.dp
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -474,7 +483,8 @@ fun CustomAnalysisScreen(
                         Text(
                             text = "Matching Transactions (${state.matchingTransactions.size})",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 4.dp)
                         )
                     }
 
@@ -502,8 +512,10 @@ fun CustomAnalysisScreen(
                                 }
                             }
 
+                            val category = state.allCategories.find { it.id == tx.categoryId }
+
                             Card(
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(14.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = colorScheme.surface
                                 ),
@@ -513,11 +525,27 @@ fun CustomAnalysisScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = if (!tx.isIncome) PinkExpense.copy(alpha = 0.1f) else GreenIncome.copy(alpha = 0.1f),
+                                        modifier = Modifier.size(38.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = category?.toIcon() ?: Icons.Default.Category,
+                                                contentDescription = null,
+                                                tint = if (!tx.isIncome) PinkExpense else GreenIncome,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.width(10.dp))
+
+                                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                                         Text(
                                             text = tx.description ?: tx.category ?: "Transaction",
                                             style = MaterialTheme.typography.bodyMedium,
@@ -534,6 +562,7 @@ fun CustomAnalysisScreen(
                                             overflow = TextOverflow.Ellipsis
                                         )
                                     }
+
                                     Text(
                                         text = (if (!tx.isIncome) "-" else "+") + tx.amount.doubleValue(false).toCurrencyString(),
                                         style = MaterialTheme.typography.titleMedium,
