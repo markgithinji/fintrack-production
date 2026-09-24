@@ -24,9 +24,9 @@ import com.fintrack.shared.feature.account.ui.AccountsScreen
 import com.fintrack.shared.feature.budget.ui.BudgetDetailScreen
 import com.fintrack.shared.feature.budget.ui.BudgetScreen
 import com.fintrack.shared.feature.category.ui.CategoryManagementScreen
+import com.fintrack.shared.feature.core.ui.AppLoadingScreen
 import com.fintrack.shared.feature.core.ui.util.navigateThrottled
 import com.fintrack.shared.feature.navigation.model.Screen
-import com.fintrack.shared.feature.navigation.ui.components.AuthLoadingScreen
 import com.fintrack.shared.feature.settings.ui.SettingsScreen
 import com.fintrack.shared.feature.summary.ui.StatisticsScreen
 import com.fintrack.shared.feature.transaction.ui.addtransaction.AddTransactionScreen
@@ -37,7 +37,6 @@ import com.fintrack.shared.feature.user.ui.ProfileScreen
 import com.fintrack.shared.feature.user.ui.onboarding.OnboardingScreen
 import org.koin.compose.koinInject
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MainNavigation(
     paddingValues: PaddingValues,
@@ -55,7 +54,7 @@ fun MainNavigation(
     val completed = isOnboardingCompletedState
     if (completed == null) {
         // Show loading while reading onboarding status from DataStore
-        AuthLoadingScreen()
+        AppLoadingScreen()
         return
     }
 
