@@ -241,9 +241,9 @@ class AndroidSettingsDataSource(
         context.settingsDataStore.edit { it[Keys.USER_NAME] = name }
     }
 
-    override val isOnboardingCompleted: StateFlow<Boolean> = context.settingsDataStore.data
-        .map { prefs -> prefs[Keys.ONBOARDING_COMPLETED] ?: false }
-        .stateIn(scope, SharingStarted.Eagerly, false)
+    override val isOnboardingCompleted: StateFlow<Boolean?> = context.settingsDataStore.data
+        .map<Preferences, Boolean?> { prefs -> prefs[Keys.ONBOARDING_COMPLETED] ?: false }
+        .stateIn(scope, SharingStarted.Eagerly, null)
 
     override suspend fun setOnboardingCompleted(completed: Boolean) {
         context.settingsDataStore.edit { it[Keys.ONBOARDING_COMPLETED] = completed }

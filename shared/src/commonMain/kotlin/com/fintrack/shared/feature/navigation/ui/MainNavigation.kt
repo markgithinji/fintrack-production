@@ -26,6 +26,7 @@ import com.fintrack.shared.feature.budget.ui.BudgetScreen
 import com.fintrack.shared.feature.category.ui.CategoryManagementScreen
 import com.fintrack.shared.feature.core.ui.util.navigateThrottled
 import com.fintrack.shared.feature.navigation.model.Screen
+import com.fintrack.shared.feature.navigation.ui.components.AuthLoadingScreen
 import com.fintrack.shared.feature.settings.ui.SettingsScreen
 import com.fintrack.shared.feature.summary.ui.StatisticsScreen
 import com.fintrack.shared.feature.transaction.ui.addtransaction.AddTransactionScreen
@@ -48,12 +49,19 @@ fun MainNavigation(
     val navController = LocalNavController.current
     val selectedAccountId by mainViewModel.selectedAccountId.collectAsStateWithLifecycle()
     val refreshTrigger by mainViewModel.refreshTrigger.collectAsStateWithLifecycle()
-    val isOnboardingCompleted by mainViewModel.isOnboardingCompleted.collectAsStateWithLifecycle()
+    val isOnboardingCompletedState by mainViewModel.isOnboardingCompleted.collectAsStateWithLifecycle()
     val onGlobalRefresh = remember { { mainViewModel.triggerGlobalRefresh() } }
+
+    val completed = isOnboardingCompletedState
+    if (completed == null) {
+        // Show loading while reading onboarding status from DataStore
+        AuthLoadingScreen()
+        return
+    }
 
     NavHost(
         navController = navController,
-        startDestination = if (isOnboardingCompleted) Screen.Home() else Screen.Onboarding,
+        startDestination = if (completed) Screen.Home() else Screen.Onboarding,
         modifier = Modifier.fillMaxSize(),
         enterTransition = {
             if (targetState.destination.isMorphScreen()) {

@@ -84,7 +84,7 @@ interface SettingsDataSource {
     val userName: StateFlow<String>
     suspend fun setUserName(name: String)
 
-    val isOnboardingCompleted: StateFlow<Boolean>
+    val isOnboardingCompleted: StateFlow<Boolean?>
     suspend fun setOnboardingCompleted(completed: Boolean)
 
     suspend fun clear()
