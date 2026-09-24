@@ -9,7 +9,7 @@ import com.fintrack.shared.feature.navigation.model.AppBarState
 import com.fintrack.shared.feature.navigation.model.Screen
 
 fun NavDestination.isAuthScreen(): Boolean =
-    hasRoute<Screen.Login>() || hasRoute<Screen.Register>()
+    hasRoute<Screen.Login>() || hasRoute<Screen.Register>() || hasRoute<Screen.Onboarding>()
 
 fun NavDestination.isMorphScreen(): Boolean =
     hasRoute<Screen.BudgetDetail>() ||

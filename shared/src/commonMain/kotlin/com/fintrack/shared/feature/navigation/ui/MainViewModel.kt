@@ -43,6 +43,7 @@ class MainViewModel(
     val showDecimals = settingsDataSource.showDecimals
     val timeFormat = settingsDataSource.timeFormat
     val isSmsRationaleHidden = settingsDataSource.isSmsRationaleHidden
+    val isOnboardingCompleted = settingsDataSource.isOnboardingCompleted
     val userProfile = userRepository.getUserProfile()
 
     private val _toastMessage = MutableStateFlow<Pair<String, Boolean>?>(null)

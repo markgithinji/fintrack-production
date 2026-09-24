@@ -976,10 +976,14 @@ class SummaryRepositoryOfflineImpl(
                 BigDecimal.fromDouble(essentialSpend).divide(totalExpense, ratioMode).multiply(BigDecimal.fromInt(100))
             } else BigDecimal.ZERO
 
+            val user = userRepository.getUserProfile().value
+            val userName = user?.name?.ifBlank { "User" } ?: "User"
+            val userEmail = user?.email?.ifBlank { "user@fintrack.local" } ?: "user@fintrack.local"
+
             Result.Success(
                 ProfileMetrics(
-                    name = "Offline User",
-                    email = "offline@fintrack.local",
+                    name = userName,
+                    email = userEmail,
                     netWorth = BigDecimal.fromDouble(netWorthDouble),
                     savingsRate = savingsRate,
                     essentialSpendRatio = essentialSpendRatio

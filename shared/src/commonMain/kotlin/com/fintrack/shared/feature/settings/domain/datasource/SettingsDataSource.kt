@@ -81,5 +81,11 @@ interface SettingsDataSource {
     val isSmsRationaleHidden: StateFlow<Boolean>
     suspend fun setSmsRationaleHidden(hidden: Boolean)
 
+    val userName: StateFlow<String>
+    suspend fun setUserName(name: String)
+
+    val isOnboardingCompleted: StateFlow<Boolean>
+    suspend fun setOnboardingCompleted(completed: Boolean)
+
     suspend fun clear()
 }

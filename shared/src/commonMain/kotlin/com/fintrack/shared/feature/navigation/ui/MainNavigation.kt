@@ -33,6 +33,7 @@ import com.fintrack.shared.feature.transaction.ui.home.HomeScreen
 import com.fintrack.shared.feature.transaction.ui.transactionlist.TransactionListScreen
 import com.fintrack.shared.feature.user.ui.EditProfileScreen
 import com.fintrack.shared.feature.user.ui.ProfileScreen
+import com.fintrack.shared.feature.user.ui.onboarding.OnboardingScreen
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -47,11 +48,12 @@ fun MainNavigation(
     val navController = LocalNavController.current
     val selectedAccountId by mainViewModel.selectedAccountId.collectAsStateWithLifecycle()
     val refreshTrigger by mainViewModel.refreshTrigger.collectAsStateWithLifecycle()
+    val isOnboardingCompleted by mainViewModel.isOnboardingCompleted.collectAsStateWithLifecycle()
     val onGlobalRefresh = remember { { mainViewModel.triggerGlobalRefresh() } }
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Home(),
+        startDestination = if (isOnboardingCompleted) Screen.Home() else Screen.Onboarding,
         modifier = Modifier.fillMaxSize(),
         enterTransition = {
             if (targetState.destination.isMorphScreen()) {
@@ -262,6 +264,16 @@ fun MainNavigation(
                 animatedVisibilityScope = this,
                 onSave = { navController.popBackStack() },
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable<Screen.Onboarding> {
+            OnboardingScreen(
+                onOnboardingComplete = {
+                    navController.navigate(Screen.Home()) {
+                        popUpTo(Screen.Onboarding) { inclusive = true }
+                    }
+                }
             )
         }
 

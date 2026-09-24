@@ -233,6 +233,22 @@ class AndroidSettingsDataSource(
         context.settingsDataStore.edit { it[Keys.SMS_RATIONALE_HIDDEN] = hidden }
     }
 
+    override val userName: StateFlow<String> = context.settingsDataStore.data
+        .map { prefs -> prefs[Keys.USER_NAME] ?: "User" }
+        .stateIn(scope, SharingStarted.Eagerly, "User")
+
+    override suspend fun setUserName(name: String) {
+        context.settingsDataStore.edit { it[Keys.USER_NAME] = name }
+    }
+
+    override val isOnboardingCompleted: StateFlow<Boolean> = context.settingsDataStore.data
+        .map { prefs -> prefs[Keys.ONBOARDING_COMPLETED] ?: false }
+        .stateIn(scope, SharingStarted.Eagerly, false)
+
+    override suspend fun setOnboardingCompleted(completed: Boolean) {
+        context.settingsDataStore.edit { it[Keys.ONBOARDING_COMPLETED] = completed }
+    }
+
     override suspend fun clear() {
         context.settingsDataStore.edit { it.clear() }
     }
@@ -262,5 +278,7 @@ class AndroidSettingsDataSource(
         val DEFAULT_ACCOUNT_ID = stringPreferencesKey("default_account_id")
         val EXPORT_FORMAT = stringPreferencesKey("export_format")
         val SMS_RATIONALE_HIDDEN = booleanPreferencesKey("sms_rationale_hidden")
+        val USER_NAME = stringPreferencesKey("user_name")
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 }

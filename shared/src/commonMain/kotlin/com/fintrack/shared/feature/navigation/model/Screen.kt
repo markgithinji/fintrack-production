@@ -4,6 +4,9 @@ import kotlinx.serialization.Serializable
 
 sealed interface Screen {
     @Serializable
+    data object Onboarding : Screen
+
+    @Serializable
     data class Home(val accountId: String? = null) : Screen
 
     @Serializable

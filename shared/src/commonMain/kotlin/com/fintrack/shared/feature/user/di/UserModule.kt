@@ -5,13 +5,15 @@ import com.fintrack.shared.feature.user.domain.repository.UserRepository
 import com.fintrack.shared.feature.user.domain.usecase.DeleteAccountUseCase
 import com.fintrack.shared.feature.user.domain.usecase.ProfileValidationUseCase
 import com.fintrack.shared.feature.user.ui.ProfileViewModel
+import com.fintrack.shared.feature.user.ui.onboarding.OnboardingViewModel
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val userModule = module {
-    single<UserRepository> { UserRepositoryOfflineImpl() }
+    single<UserRepository> { UserRepositoryOfflineImpl(settingsDataSource = get()) }
     singleOf(::DeleteAccountUseCase)
     singleOf(::ProfileValidationUseCase)
     viewModelOf(::ProfileViewModel)
+    viewModelOf(::OnboardingViewModel)
 }
