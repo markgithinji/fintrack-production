@@ -549,7 +549,20 @@ private fun formatOverviewPeriod(
     periodCode: String,
     data: List<DaySummary>
 ): String {
-    val firstDate = data.firstOrNull()?.date?.let {
+    if (periodCode.length >= 7 && periodCode.contains("-")) {
+        try {
+            val parts = periodCode.split("-")
+            val year = parts[0].toInt()
+            val monthNumber = parts[1].take(2).toInt()
+            val month = Month(monthNumber)
+            val weekPart = if (periodCode.contains("-W")) "W${periodCode.split("-W")[1]} · " else ""
+            return "$weekPart${getMonthName(month)} $year"
+        } catch (_: Exception) {}
+    }
+
+    val targetDate = data.lastOrNull()?.date?.let {
+        try { LocalDate.parse(it) } catch (_: Exception) { null }
+    } ?: data.firstOrNull()?.date?.let {
         try { LocalDate.parse(it) } catch (_: Exception) { null }
     } ?: return ""
 
@@ -559,10 +572,10 @@ private fun formatOverviewPeriod(
                 "W${periodCode.split("-W")[1]} · "
             } else ""
             
-            "$weekPart${getMonthName(firstDate.month)} ${firstDate.year}"
+            "$weekPart${getMonthName(targetDate.month)} ${targetDate.year}"
         }
         OverviewPeriod.Monthly -> {
-            "${getMonthName(firstDate.month)} ${firstDate.year}"
+            "${getMonthName(targetDate.month)} ${targetDate.year}"
         }
     }
 }

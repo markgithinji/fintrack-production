@@ -637,13 +637,11 @@ class SummaryRepositoryOfflineImpl(
     override suspend fun getOverviewSummary(accountId: String?): Result<OverviewSummary> = withContext(Dispatchers.IO) {
         try {
             val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
-            val availableMonths = queries.selectDistinctMonths(offlineUserId, accountId).executeAsList()
             
             @Suppress("DEPRECATION")
             val currentMonthCode = "${now.year}-${now.monthNumber.toString().padStart(2, '0')}"
-            val targetMonthCode = availableMonths.firstOrNull() ?: currentMonthCode
-            
-            val isCurrent = targetMonthCode == currentMonthCode
+            val targetMonthCode = currentMonthCode
+            val isCurrent = true
             
             val monthStart = try { LocalDate.parse("$targetMonthCode-01") } catch(_: Exception) { now }
             val monthEnd = monthStart.plus(DatePeriod(months = 1)).minus(DatePeriod(days = 1))
