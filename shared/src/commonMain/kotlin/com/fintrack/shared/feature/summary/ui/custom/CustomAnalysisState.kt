@@ -29,6 +29,7 @@ data class CategoryShare(
 
 data class CustomAnalysisState(
     // Filter parameters
+    val searchQuery: String = "",
     val datePreset: DatePreset = DatePreset.THIS_MONTH,
     val startDate: String? = null,
     val endDate: String? = null,

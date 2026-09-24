@@ -3,6 +3,8 @@ package com.fintrack.shared.feature.summary.ui.custom
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fintrack.shared.feature.account.domain.repository.AccountRepository
+import com.fintrack.shared.feature.category.domain.model.Category
+import com.fintrack.shared.feature.category.domain.model.fromId
 import com.fintrack.shared.feature.category.domain.repository.CategoryRepository
 import com.fintrack.shared.feature.core.util.DateTimeHelper
 import com.fintrack.shared.feature.core.util.FileSaver
@@ -122,6 +124,11 @@ class CustomAnalysisViewModel(
         runAnalysis()
     }
 
+    fun onSearchQueryChange(query: String) {
+        _state.update { it.copy(searchQuery = query) }
+        runAnalysis()
+    }
+
     fun setAmountRange(min: Double?, max: Double?) {
         _state.update { it.copy(minAmount = min, maxAmount = max) }
         runAnalysis()
@@ -133,6 +140,7 @@ class CustomAnalysisViewModel(
 
         _state.update {
             it.copy(
+                searchQuery = "",
                 datePreset = DatePreset.THIS_MONTH,
                 startDate = startOfMonth,
                 endDate = today.toString(),
@@ -196,10 +204,22 @@ class CustomAnalysisViewModel(
                 val matchMin = currentState.minAmount == null || txAmount >= currentState.minAmount
                 val matchMax = currentState.maxAmount == null || txAmount <= currentState.maxAmount
 
-                matchDate && matchAccount && matchCategory && matchType && matchMin && matchMax
+                // Text search query
+                val query = currentState.searchQuery.trim().lowercase()
+                val matchQuery = query.isEmpty() ||
+                        (tx.description?.lowercase()?.contains(query) == true) ||
+                        (tx.category?.lowercase()?.contains(query) == true) ||
+                        (tx.externalId?.lowercase()?.contains(query) == true) ||
+                        txAmount.toString().contains(query)
+
+                matchDate && matchAccount && matchCategory && matchType && matchMin && matchMax && matchQuery
             }.map { tx ->
-                val catName = currentState.allCategories.find { it.id == tx.categoryId }?.name ?: tx.category ?: "Uncategorized"
-                tx.copy(category = catName)
+                val resolvedCatName = Category.fromId(
+                    id = tx.categoryId,
+                    name = tx.category.takeIf { !it.isNullOrBlank() && it != "Uncategorized" },
+                    knownCategories = currentState.allCategories
+                ).name
+                tx.copy(category = resolvedCatName)
             }
 
             // Calculations

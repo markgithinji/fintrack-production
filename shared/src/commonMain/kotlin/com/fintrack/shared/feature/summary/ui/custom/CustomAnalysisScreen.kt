@@ -30,9 +30,11 @@ import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -49,6 +51,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -66,10 +69,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fintrack.shared.feature.core.ui.FintrackDatePickerDialog
 import com.fintrack.shared.feature.navigation.ui.LocalCurrency
 import com.fintrack.shared.feature.navigation.ui.toCurrencyString
 import com.fintrack.shared.ui.theme.GreenIncome
 import com.fintrack.shared.ui.theme.PinkExpense
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -81,6 +88,8 @@ fun CustomAnalysisScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showFilterSheet by remember { mutableStateOf(false) }
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
 
     LaunchedEffect(state.exportSuccessMessage) {
@@ -105,14 +114,19 @@ fun CustomAnalysisScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 DatePreset.entries.forEach { preset ->
                     val isSelected = state.datePreset == preset
                     FilterChip(
                         selected = isSelected,
-                        onClick = { viewModel.applyDatePreset(preset) },
+                        onClick = {
+                            viewModel.applyDatePreset(preset)
+                            if (preset == DatePreset.CUSTOM) {
+                                showStartDatePicker = true
+                            }
+                        },
                         label = { Text(preset.label) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = colorScheme.primaryContainer,
@@ -121,6 +135,55 @@ fun CustomAnalysisScreen(
                     )
                 }
             }
+
+            // Compact Single-Line Search Bar
+            OutlinedTextField(
+                value = state.searchQuery,
+                onValueChange = { viewModel.onSearchQueryChange(it) },
+                placeholder = {
+                    Text(
+                        "Search merchant, description...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                },
+                trailingIcon = {
+                    if (state.searchQuery.isNotEmpty()) {
+                        IconButton(
+                            onClick = { viewModel.onSearchQueryChange("") },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Clear,
+                                contentDescription = "Clear Search",
+                                tint = colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                },
+                singleLine = true,
+                maxLines = 1,
+                textStyle = MaterialTheme.typography.bodyMedium,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = colorScheme.surface,
+                    unfocusedContainerColor = colorScheme.surface,
+                    focusedBorderColor = colorScheme.primary.copy(alpha = 0.5f),
+                    unfocusedBorderColor = colorScheme.outlineVariant.copy(alpha = 0.5f)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 2.dp)
+            )
 
             // Active Filters Summary Bar
             Row(
@@ -135,7 +198,8 @@ fun CustomAnalysisScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    val activeFiltersCount = (if (state.selectedAccountIds.isNotEmpty()) 1 else 0) +
+                    val activeFiltersCount = (if (state.searchQuery.isNotBlank()) 1 else 0) +
+                            (if (state.selectedAccountIds.isNotEmpty()) 1 else 0) +
                             (if (state.selectedCategoryIds.isNotEmpty()) 1 else 0) +
                             (if (state.typeFilter != TransactionTypeFilter.ALL) 1 else 0) +
                             (if (state.minAmount != null || state.maxAmount != null) 1 else 0)
@@ -418,6 +482,14 @@ fun CustomAnalysisScreen(
                         }
                     } else {
                         items(state.matchingTransactions) { tx ->
+                            val formattedDate = remember(tx.dateTime) {
+                                try {
+                                    tx.dateTime.toLocalDateTime(TimeZone.currentSystemDefault()).date.toString()
+                                } catch (_: Exception) {
+                                    tx.dateTime.toString().take(10)
+                                }
+                            }
+
                             Card(
                                 shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(
@@ -427,27 +499,35 @@ fun CustomAnalysisScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(12.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
+                                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                                         Text(
                                             text = tx.description ?: tx.category ?: "Transaction",
                                             style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
+                                        Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = "${tx.dateTime} • ${tx.category ?: "Uncategorized"}",
+                                            text = "$formattedDate • ${tx.category ?: "Uncategorized"}",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = colorScheme.onSurfaceVariant
+                                            color = colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                     Text(
                                         text = (if (!tx.isIncome) "-" else "+") + tx.amount.doubleValue(false).toCurrencyString(),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (!tx.isIncome) PinkExpense else GreenIncome
+                                        color = if (!tx.isIncome) PinkExpense else GreenIncome,
+                                        maxLines = 1
                                     )
                                 }
                             }
@@ -568,6 +648,35 @@ fun CustomAnalysisScreen(
                     }
                 }
 
+                // Date Range Custom Pickers in Sheet
+                Text(
+                    text = "Custom Date Range",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showStartDatePicker = true },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(state.startDate ?: "Start Date")
+                    }
+
+                    OutlinedButton(
+                        onClick = { showEndDatePicker = true },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(state.endDate ?: "End Date")
+                    }
+                }
+
                 Button(
                     onClick = { showFilterSheet = false },
                     modifier = Modifier.fillMaxWidth()
@@ -576,5 +685,29 @@ fun CustomAnalysisScreen(
                 }
             }
         }
+    }
+
+    if (showStartDatePicker) {
+        val initial = try { state.startDate?.let { LocalDate.parse(it) } } catch (_: Exception) { null }
+        FintrackDatePickerDialog(
+            initialDate = initial,
+            onDateSelected = { pickedStart ->
+                showStartDatePicker = false
+                viewModel.setCustomDateRange(pickedStart.toString(), state.endDate ?: pickedStart.toString())
+            },
+            onDismiss = { showStartDatePicker = false }
+        )
+    }
+
+    if (showEndDatePicker) {
+        val initial = try { state.endDate?.let { LocalDate.parse(it) } } catch (_: Exception) { null }
+        FintrackDatePickerDialog(
+            initialDate = initial,
+            onDateSelected = { pickedEnd ->
+                showEndDatePicker = false
+                viewModel.setCustomDateRange(state.startDate ?: pickedEnd.toString(), pickedEnd.toString())
+            },
+            onDismiss = { showEndDatePicker = false }
+        )
     }
 }
