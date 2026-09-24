@@ -7,8 +7,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -114,26 +117,6 @@ fun TransactionListScreen(
         }
     }
 
-    val bottomPadding = paddingValues.calculateBottomPadding()
-    var lastBottomPadding by remember { mutableStateOf(0.dp) }
-    SideEffect {
-        if (bottomPadding > 0.dp) {
-            lastBottomPadding = bottomPadding
-        }
-    }
-
-    val transition = animatedVisibilityScope.transition
-    val isTransitionRunning = transition.isRunning
-    val isExiting = transition.targetState == androidx.compose.animation.EnterExitState.PostExit ||
-            transition.targetState == androidx.compose.animation.EnterExitState.PreEnter
-
-    val stableBottomPadding =
-        if (isTransitionRunning || isExiting || (bottomPadding == 0.dp && lastBottomPadding > 0.dp)) {
-            lastBottomPadding
-        } else {
-            bottomPadding
-        }
-
     var includeFees by remember { mutableStateOf(true) }
     val throttledOnEditTransaction = rememberThrottleClick(onClick = onEditTransaction)
 
@@ -165,7 +148,7 @@ fun TransactionListScreen(
         sharedTransitionScope = sharedTransitionScope,
         onTransactionClick = throttledOnEditTransaction,
         onRetry = onRetry,
-        modifier = (if (sharedTransitionScope != null) {
+        modifier = if (sharedTransitionScope != null) {
             with(sharedTransitionScope) {
                 Modifier.sharedBounds(
                     rememberSharedContentState(key = sharedBoundsKey),
@@ -173,8 +156,7 @@ fun TransactionListScreen(
                     clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(0.dp))
                 )
             }
-        } else Modifier)
-            .padding(bottom = stableBottomPadding)
+        } else Modifier
     )
 }
 
@@ -197,6 +179,8 @@ private fun TransactionListContent(
     onRetry: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val navBarsPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -205,7 +189,7 @@ private fun TransactionListContent(
             start = 16.dp,
             top = 16.dp + paddingValues.calculateTopPadding(),
             end = 16.dp,
-            bottom = 32.dp
+            bottom = 32.dp + navBarsPadding
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         state = listState
