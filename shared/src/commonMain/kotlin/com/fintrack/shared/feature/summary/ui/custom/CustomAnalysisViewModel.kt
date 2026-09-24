@@ -169,6 +169,15 @@ class CustomAnalysisViewModel(
             val filtered = allFetched.filter { tx ->
                 val txAmount = tx.amount.doubleValue(false)
                 val isExpense = !tx.isIncome
+                val txDateStr = try {
+                    tx.dateTime.toLocalDateTime(TimeZone.currentSystemDefault()).date.toString()
+                } catch (_: Exception) {
+                    ""
+                }
+
+                // Date filter
+                val matchDate = (currentState.startDate == null || txDateStr >= currentState.startDate) &&
+                        (currentState.endDate == null || txDateStr <= currentState.endDate)
 
                 // Account filter
                 val matchAccount = currentState.selectedAccountIds.isEmpty() || currentState.selectedAccountIds.contains(tx.accountId)
@@ -187,7 +196,10 @@ class CustomAnalysisViewModel(
                 val matchMin = currentState.minAmount == null || txAmount >= currentState.minAmount
                 val matchMax = currentState.maxAmount == null || txAmount <= currentState.maxAmount
 
-                matchAccount && matchCategory && matchType && matchMin && matchMax
+                matchDate && matchAccount && matchCategory && matchType && matchMin && matchMax
+            }.map { tx ->
+                val catName = currentState.allCategories.find { it.id == tx.categoryId }?.name ?: tx.category ?: "Uncategorized"
+                tx.copy(category = catName)
             }
 
             // Calculations
