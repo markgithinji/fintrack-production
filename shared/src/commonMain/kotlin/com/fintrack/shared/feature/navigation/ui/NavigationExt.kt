@@ -9,7 +9,7 @@ import com.fintrack.shared.feature.navigation.model.AppBarState
 import com.fintrack.shared.feature.navigation.model.Screen
 
 fun NavDestination.isAuthScreen(): Boolean =
-    hasRoute<Screen.Login>() || hasRoute<Screen.Register>() || hasRoute<Screen.Onboarding>()
+    hasRoute<Screen.Onboarding>()
 
 fun NavDestination.isMorphScreen(): Boolean =
     hasRoute<Screen.BudgetDetail>() ||
@@ -91,16 +91,6 @@ fun NavDestination.getAppBarState(entry: NavBackStackEntry?, navController: NavC
                 onBack = { navController.popBackStack() }
             )
         }
-        hasRoute<Screen.Login>() -> AppBarState(title = "Login")
-        hasRoute<Screen.Register>() -> AppBarState(
-            title = "Create Account",
-            showBackButton = true,
-            onBack = {
-                navController.navigate(Screen.Login) {
-                    popUpTo(Screen.Register) { inclusive = true }
-                }
-            }
-        )
         else -> AppBarState(title = "Fintrack")
     }
 }

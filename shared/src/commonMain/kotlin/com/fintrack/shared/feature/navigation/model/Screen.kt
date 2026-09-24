@@ -37,12 +37,6 @@ sealed interface Screen {
     data class BudgetDetail(val budgetId: String? = null) : Screen
 
     @Serializable
-    data object Login : Screen
-
-    @Serializable
-    data object Register : Screen
-
-    @Serializable
     data class TransactionList(
         val accountId: String,
         val isIncome: Boolean? = null,
