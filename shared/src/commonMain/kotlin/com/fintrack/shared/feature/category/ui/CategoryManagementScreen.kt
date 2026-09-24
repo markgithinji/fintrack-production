@@ -1,6 +1,7 @@
 package com.fintrack.shared.feature.category.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
@@ -38,10 +39,12 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,11 +54,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -91,10 +99,15 @@ fun CategoryManagementScreen(
     viewModel: CategoryManagementViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: Expenses, 1: Income, 2: Smart Rules
     var showAddDialog by remember { mutableStateOf(false) }
+    var addCategoryIsExpense by remember { mutableStateOf(true) }
     var showAddRuleDialog by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf<Category?>(null) }
     var ruleToDelete by remember { mutableStateOf<CategoryRule?>(null) }
+
+    val expenseCategories = remember(state.categories) { state.categories.filter { it.isExpense } }
+    val incomeCategories = remember(state.categories) { state.categories.filter { !it.isExpense } }
 
     LaunchedEffect(refreshTrigger) {
         if (refreshTrigger > 0) {
@@ -114,11 +127,59 @@ fun CategoryManagementScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = paddingValues.calculateTopPadding())
+        ) {
+            // Tab Row Header
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary,
+                indicator = { tabPositions ->
+                    TabRowDefaults.SecondaryIndicator(
+                        Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            ) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = {
+                        Text(
+                            text = "Expenses (${expenseCategories.size})",
+                            fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = {
+                        Text(
+                            text = "Income (${incomeCategories.size})",
+                            fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                )
+                Tab(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    text = {
+                        Text(
+                            text = "Smart Rules (${state.rules.size})",
+                            fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                )
+            }
+
             when {
                 state.error != null && state.categories.isEmpty() -> {
                     CommonErrorState(
-                        modifier = Modifier.fillMaxSize().padding(top = paddingValues.calculateTopPadding()),
+                        modifier = Modifier.fillMaxSize(),
                         title = "Category Error",
                         errorMessage = state.error,
                         onRetry = {
@@ -135,113 +196,68 @@ fun CategoryManagementScreen(
                 }
 
                 else -> {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 16.dp, 
-                            end = 16.dp, 
-                            top = paddingValues.calculateTopPadding() + 12.dp, 
-                            bottom = paddingValues.calculateBottomPadding() + 88.dp
-                        ),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        item(span = { GridItemSpan(2) }) {
-                            Text(
-                                text = "Expenses",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(top = 0.dp, bottom = 4.dp)
+                    Crossfade(
+                        targetState = selectedTab,
+                        modifier = Modifier.fillMaxSize()
+                    ) { tab ->
+                        when (tab) {
+                            0 -> CategoryGrid(
+                                categories = expenseCategories,
+                                emptyMessage = "No expense categories found.",
+                                paddingValues = paddingValues,
+                                onDelete = { categoryToDelete = it }
                             )
-                        }
-                        items(state.categories.filter { it.isExpense }) { category ->
-                            CategoryItem(
-                                category = category,
-                                onDelete = { categoryToDelete = category }
+                            1 -> CategoryGrid(
+                                categories = incomeCategories,
+                                emptyMessage = "No income categories found.",
+                                paddingValues = paddingValues,
+                                onDelete = { categoryToDelete = it }
                             )
-                        }
-
-                        item(span = { GridItemSpan(2) }) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Income",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(vertical = 4.dp)
+                            2 -> SmartRulesList(
+                                rules = state.rules,
+                                categories = state.categories,
+                                paddingValues = paddingValues,
+                                onDelete = { ruleToDelete = it }
                             )
-                        }
-                        items(state.categories.filter { !it.isExpense }) { category ->
-                            CategoryItem(
-                                category = category,
-                                onDelete = { categoryToDelete = category }
-                            )
-                        }
-
-                        // Smart Auto-Categorization Rules
-                        item(span = { GridItemSpan(2) }) {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text(
-                                        text = "Smart Auto-Categorization Rules",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = "Auto-assigns categories to SMS & scanned receipts",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                TextButton(onClick = { showAddRuleDialog = true }) {
-                                    Text("+ Add Rule")
-                                }
-                            }
-                        }
-                        if (state.rules.isEmpty()) {
-                            item(span = { GridItemSpan(2) }) {
-                                Text(
-                                    text = "No custom rules defined yet. Tap '+ Add Rule' to create one.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                    modifier = Modifier.padding(vertical = 8.dp)
-                                )
-                            }
-                        } else {
-                            items(state.rules) { rule ->
-                                val category = state.categories.find { it.id == rule.categoryId }
-                                RuleItem(
-                                    rule = rule,
-                                    categoryName = category?.name ?: "Unknown",
-                                    onDelete = { ruleToDelete = rule }
-                                )
-                            }
                         }
                     }
                 }
             }
         }
 
-        // FAB
+        // Contextual FAB
         FloatingActionButton(
-            onClick = { showAddDialog = true },
+            onClick = {
+                when (selectedTab) {
+                    0 -> {
+                        addCategoryIsExpense = true
+                        showAddDialog = true
+                    }
+                    1 -> {
+                        addCategoryIsExpense = false
+                        showAddDialog = true
+                    }
+                    2 -> {
+                        showAddRuleDialog = true
+                    }
+                }
+            },
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 16.dp, bottom = paddingValues.calculateBottomPadding() + 16.dp)
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Add Category")
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = if (selectedTab == 2) "Add Rule" else "Add Category"
+            )
         }
     }
 
     if (showAddDialog) {
         AddCategoryDialog(
+            initialIsExpense = addCategoryIsExpense,
             onDismiss = { showAddDialog = false },
             onConfirm = { name, isExpense ->
                 viewModel.addCategory(name, isExpense)
@@ -287,6 +303,105 @@ fun CategoryManagementScreen(
             },
             onDismiss = { ruleToDelete = null }
         )
+    }
+}
+
+@Composable
+private fun CategoryGrid(
+    categories: List<Category>,
+    emptyMessage: String,
+    paddingValues: PaddingValues,
+    onDelete: (Category) -> Unit
+) {
+    if (categories.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = emptyMessage,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    } else {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 16.dp,
+                bottom = paddingValues.calculateBottomPadding() + 88.dp
+            ),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(categories) { category ->
+                CategoryItem(
+                    category = category,
+                    onDelete = { onDelete(category) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SmartRulesList(
+    rules: List<CategoryRule>,
+    categories: List<Category>,
+    paddingValues: PaddingValues,
+    onDelete: (CategoryRule) -> Unit
+) {
+    if (rules.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Default.Psychology,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "No Smart Rules Yet",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Smart rules automatically assign categories to SMS messages and scanned receipts.\nTap '+' to create one!",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        }
+    } else {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(1),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 16.dp,
+                bottom = paddingValues.calculateBottomPadding() + 88.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(rules) { rule ->
+                val category = categories.find { it.id == rule.categoryId }
+                RuleItem(
+                    rule = rule,
+                    categoryName = category?.name ?: "Unknown",
+                    onDelete = { onDelete(rule) }
+                )
+            }
+        }
     }
 }
 
@@ -587,11 +702,12 @@ fun CategoryItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddCategoryDialog(
+    initialIsExpense: Boolean = true,
     onDismiss: () -> Unit,
     onConfirm: (String, Boolean) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
-    var isExpense by remember { mutableStateOf(true) }
+    var isExpense by remember { mutableStateOf(initialIsExpense) }
     val colorScheme = MaterialTheme.colorScheme
 
     BasicAlertDialog(
