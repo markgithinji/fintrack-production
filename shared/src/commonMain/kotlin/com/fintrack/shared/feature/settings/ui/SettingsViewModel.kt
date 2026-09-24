@@ -3,6 +3,7 @@ package com.fintrack.shared.feature.settings.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fintrack.shared.feature.account.domain.model.Account
+import com.fintrack.shared.feature.account.domain.model.AccountType
 import com.fintrack.shared.feature.account.domain.repository.AccountRepository
 import com.fintrack.shared.feature.budget.domain.model.BudgetWithStatus
 import com.fintrack.shared.feature.budget.domain.repository.BudgetRepository
@@ -241,10 +242,20 @@ class SettingsViewModel(
         viewModelScope.launch {
             settingsDataSource.setMpesaListenerEnabled(enabled)
             if (enabled) {
-                val linkedIds = settingsDataSource.mpesaLinkedAccountIds.first()
-                if (linkedIds.isEmpty()) {
-                    _error.value = "Tracking enabled, but no account is linked to M-Pesa. Enable 'M-Pesa SMS Link' in the Accounts screen."
+                val accountsResult = accountRepository.getAccounts()
+                val accounts = (accountsResult as? Result.Success)?.data ?: emptyList()
+                val mpesaAccounts = accounts.filter { acc ->
+                    acc.linkedSources.any { it.equals("mpesa", ignoreCase = true) } ||
+                            acc.type == AccountType.MPESA ||
+                            acc.name.contains("mpesa", ignoreCase = true)
                 }
+
+                if (mpesaAccounts.isEmpty()) {
+                    _error.value = "Tracking enabled, but no account is linked to M-Pesa. Enable 'M-Pesa SMS Link' in the Accounts screen."
+                } else {
+                    settingsDataSource.setMpesaLinkedAccountIds(mpesaAccounts.map { it.id }.toSet())
+                }
+
                 if (!notificationService.areNotificationsEnabled()) {
                     _showPermissionRequest.value = true
                 }
@@ -256,10 +267,20 @@ class SettingsViewModel(
         viewModelScope.launch {
             settingsDataSource.setEquityListenerEnabled(enabled)
             if (enabled) {
-                val linkedIds = settingsDataSource.equityLinkedAccountIds.first()
-                if (linkedIds.isEmpty()) {
-                    _error.value = "Tracking enabled, but no account is linked to Equity. Enable 'Equity Bank SMS Link' in the Accounts screen."
+                val accountsResult = accountRepository.getAccounts()
+                val accounts = (accountsResult as? Result.Success)?.data ?: emptyList()
+                val equityAccounts = accounts.filter { acc ->
+                    acc.linkedSources.any { it.equals("equity", ignoreCase = true) } ||
+                            acc.type == AccountType.BANK ||
+                            acc.name.contains("equity", ignoreCase = true)
                 }
+
+                if (equityAccounts.isEmpty()) {
+                    _error.value = "Tracking enabled, but no account is linked to Equity. Enable 'Equity Bank SMS Link' in the Accounts screen."
+                } else {
+                    settingsDataSource.setEquityLinkedAccountIds(equityAccounts.map { it.id }.toSet())
+                }
+
                 if (!notificationService.areNotificationsEnabled()) {
                     _showPermissionRequest.value = true
                 }
