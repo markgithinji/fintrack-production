@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -565,31 +566,52 @@ fun AddCategoryRuleDialog(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                // Simple Category Picker
+                // Category Picker
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 160.dp)
+                        .heightIn(max = 180.dp)
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     filteredCategories.forEach { cat ->
                         val isSelected = selectedCategory?.id == cat.id
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (isSelected) colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) colorScheme.primaryContainer else colorScheme.surfaceVariant,
+                            border = BorderStroke(
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = if (isSelected) colorScheme.primary else colorScheme.outlineVariant
+                            ),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { selectedCategory = cat }
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .background(
+                                            if (isSelected) colorScheme.primary.copy(alpha = 0.2f) else colorScheme.outline.copy(alpha = 0.1f),
+                                            CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = cat.toIcon(),
+                                        contentDescription = null,
+                                        tint = if (isSelected) colorScheme.primary else colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
                                 Text(
                                     text = cat.name,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                     color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface,
                                     modifier = Modifier.weight(1f)
                                 )
@@ -598,7 +620,7 @@ fun AddCategoryRuleDialog(
                                         Icons.Default.Check,
                                         contentDescription = null,
                                         tint = colorScheme.primary,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
                             }

@@ -11,6 +11,7 @@ class DatabaseSeeder(private val database: FintrackDatabase) {
 
     fun seedIfEmpty() {
         try {
+            queries.createCategoryRuleTableIfNotExists()
             seedAccounts()
             seedCategories()
             seedCategoryRules()
