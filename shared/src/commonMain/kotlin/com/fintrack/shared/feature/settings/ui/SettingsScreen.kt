@@ -174,8 +174,6 @@ fun SettingsScreen(
 
     val smsPermissionGranted = rememberSmsPermissionState()
 
-    val changePasswordFormState by viewModel.changePasswordFormState.collectAsStateWithLifecycle()
-    val changePasswordState by viewModel.changePasswordState.collectAsStateWithLifecycle()
     val seedState by viewModel.seedState.collectAsStateWithLifecycle()
     val seedProgress by viewModel.seedProgress.collectAsStateWithLifecycle()
     val localBackupState by viewModel.localBackupState.collectAsStateWithLifecycle()
@@ -189,7 +187,6 @@ fun SettingsScreen(
     var showThemeDialog by remember { mutableStateOf(false) }
     var showTimeFormatDialog by remember { mutableStateOf(false) }
     var showTimePickerDialog by remember { mutableStateOf(false) }
-    var showChangePasswordDialog by remember { mutableStateOf(false) }
     var showTrackedCategoriesDialog by remember { mutableStateOf(false) }
     var showBudgetSelectionDialog by remember { mutableStateOf(false) }
     var showThresholdDialog by remember { mutableStateOf(false) }
@@ -211,18 +208,6 @@ fun SettingsScreen(
     LaunchedEffect(refreshTrigger) {
         if (refreshTrigger > 0) {
             viewModel.reloadBudgets(force = true, showLoading = false)
-        }
-    }
-
-    LaunchedEffect(changePasswordState) {
-        if (changePasswordState is SaveState.Success) {
-            onShowToast("Password updated successfully", false)
-            // Dismiss dialog first before resetting state
-            showChangePasswordDialog = false
-            viewModel.resetChangePasswordState()
-        } else if (changePasswordState is SaveState.Error) {
-            val exception = (changePasswordState as SaveState.Error).exception
-            onShowToast(exception.message ?: "Update failed", true)
         }
     }
 
@@ -626,18 +611,6 @@ fun SettingsScreen(
                             }
                         )
 
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                        )
-
-                        SettingsItem(
-                            title = "Change Password",
-                            subtitle = "Update your account password",
-                            icon = Icons.Default.Lock,
-                            onClick = { showChangePasswordDialog = true }
-                        )
                     }
 
                     SettingsSection(title = "Data & Backup") {
@@ -874,22 +847,6 @@ fun SettingsScreen(
         )
     }
 
-    if (showChangePasswordDialog) {
-        ChangePasswordDialog(
-            formState = changePasswordFormState,
-            saveState = changePasswordState,
-            onCurrentPasswordChange = viewModel::updateCurrentPassword,
-            onNewPasswordChange = viewModel::updateNewPassword,
-            onConfirmPasswordChange = viewModel::updateConfirmPassword,
-            onConfirm = viewModel::changePassword,
-            onDismiss = {
-                showChangePasswordDialog = false
-                viewModel.resetChangePasswordState()
-            },
-            onClearError = { viewModel.resetChangePasswordState() }
-        )
-    }
-
     if (showTrackedCategoriesDialog) {
         TrackedCategoriesSelectionDialog(
             allCategories = allCategories,
@@ -973,133 +930,6 @@ fun SettingsScreen(
             contentAlignment = Alignment.Center
         ) {
             CircularProgressIndicator()
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ChangePasswordDialog(
-    formState: ChangePasswordFormState,
-    saveState: SaveState<Unit>,
-    onCurrentPasswordChange: (String) -> Unit,
-    onNewPasswordChange: (String) -> Unit,
-    onConfirmPasswordChange: (String) -> Unit,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-    onClearError: () -> Unit
-) {
-    var currentPasswordVisible by remember { mutableStateOf(false) }
-    var newPasswordVisible by remember { mutableStateOf(false) }
-    var confirmPasswordVisible by remember { mutableStateOf(false) }
-    val colorScheme = MaterialTheme.colorScheme
-
-    BasicAlertDialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-        modifier = Modifier
-            .padding(28.dp)
-            .widthIn(max = 400.dp)
-    ) {
-        Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth()
-                    .animateContentSize()
-            ) {
-                Text(
-                    text = "Change Password",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 24.dp)
-                )
-
-                FinanceTextField(
-                    value = formState.currentPassword,
-                    onValueChange = onCurrentPasswordChange,
-                    label = "Current Password",
-                    leadingIcon = Icons.Default.Lock,
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Next,
-                    isPassword = true,
-                    passwordVisible = currentPasswordVisible,
-                    onPasswordToggle = { currentPasswordVisible = !currentPasswordVisible },
-                    colorScheme = colorScheme,
-                    isError = formState.currentPasswordError != null,
-                    errorMessage = formState.currentPasswordError,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                FinanceTextField(
-                    value = formState.newPassword,
-                    onValueChange = onNewPasswordChange,
-                    label = "New Password",
-                    leadingIcon = Icons.Default.Lock,
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Next,
-                    isPassword = true,
-                    passwordVisible = newPasswordVisible,
-                    onPasswordToggle = { newPasswordVisible = !newPasswordVisible },
-                    colorScheme = colorScheme,
-                    isError = formState.newPasswordError != null,
-                    errorMessage = formState.newPasswordError,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                FinanceTextField(
-                    value = formState.confirmPassword,
-                    onValueChange = onConfirmPasswordChange,
-                    label = "Confirm New Password",
-                    leadingIcon = Icons.Default.Lock,
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Done,
-                    isPassword = true,
-                    passwordVisible = confirmPasswordVisible,
-                    onPasswordToggle = { confirmPasswordVisible = !confirmPasswordVisible },
-                    colorScheme = colorScheme,
-                    isError = formState.confirmPasswordError != null,
-                    errorMessage = formState.confirmPasswordError,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = onConfirm,
-                        enabled = saveState is SaveState.Idle,
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        if (saveState is SaveState.Loading || saveState is SaveState.Success) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                        } else {
-                            Text("Update")
-                        }
-                    }
-                }
-            }
         }
     }
 }

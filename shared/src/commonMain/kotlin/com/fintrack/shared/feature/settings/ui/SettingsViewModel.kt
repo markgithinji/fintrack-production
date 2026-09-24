@@ -77,12 +77,6 @@ class SettingsViewModel(
     private val _showPermissionRequest = MutableStateFlow(false)
     val showPermissionRequest: StateFlow<Boolean> = _showPermissionRequest.asStateFlow()
 
-    private val _changePasswordState = MutableStateFlow<SaveState<Unit>>(SaveState.Idle)
-    val changePasswordState: StateFlow<SaveState<Unit>> = _changePasswordState.asStateFlow()
-
-    private val _changePasswordFormState = MutableStateFlow(ChangePasswordFormState())
-    val changePasswordFormState: StateFlow<ChangePasswordFormState> = _changePasswordFormState.asStateFlow()
-
     private val _deleteAccountState = MutableStateFlow<SaveState<Unit>>(SaveState.Idle)
     val deleteAccountState: StateFlow<SaveState<Unit>> = _deleteAccountState.asStateFlow()
 
@@ -444,20 +438,6 @@ class SettingsViewModel(
         _exportEndDate.value = endDate
     }
 
-    // Password change methods (No-op in offline mode)
-    fun updateCurrentPassword(password: String) {}
-
-    fun updateNewPassword(password: String) {}
-
-    fun updateConfirmPassword(password: String) {}
-
-    fun changePassword() {}
-
-    fun resetChangePasswordState() {
-        _changePasswordState.value = SaveState.Idle
-        _changePasswordFormState.value = ChangePasswordFormState()
-    }
-
     fun updateTrackedCategories(categories: List<String>, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -579,12 +559,3 @@ class SettingsViewModel(
         _restoreState.value = SaveState.Idle
     }
 }
-
-data class ChangePasswordFormState(
-    val currentPassword: String = "",
-    val currentPasswordError: String? = null,
-    val newPassword: String = "",
-    val newPasswordError: String? = null,
-    val confirmPassword: String = "",
-    val confirmPasswordError: String? = null
-)
