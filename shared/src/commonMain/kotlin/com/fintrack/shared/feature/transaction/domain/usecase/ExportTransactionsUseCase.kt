@@ -31,7 +31,8 @@ class ExportTransactionsUseCase(
         val transactions = (result as Result.Success).data
         
         val now = Clock.System.now()
-        val timestamp = now.toLocalDateTime(TimeZone.currentSystemDefault())
+        val tz = try { TimeZone.currentSystemDefault() } catch (_: Exception) { TimeZone.UTC }
+        val timestamp = now.toLocalDateTime(tz)
             .toString()
             .replace(":", "-")
             .split(".")[0]
