@@ -4,7 +4,7 @@ import com.fintrack.shared.feature.category.domain.model.Category
 import com.fintrack.shared.feature.category.domain.model.CategoryRule
 import com.fintrack.shared.feature.core.util.Result
 
-class FakeCategoryRepository : CategoryRepository {
+open class FakeCategoryRepository : CategoryRepository {
     override suspend fun getCategories(): Result<List<Category>> = Result.Success(emptyList())
     override suspend fun getCategoryRules(): Result<List<CategoryRule>> = Result.Success(emptyList())
     override suspend fun addCategory(name: String, isExpense: Boolean, iconName: String?): Result<Category> =
