@@ -31,7 +31,7 @@ import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.DatePeriod
 
-class SummaryRepositoryOfflineImpl(
+class SummaryRepositoryImpl(
     database: FintrackDatabase,
     private val logger: KMPLogger,
     private val userRepository: UserRepository,

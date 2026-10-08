@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class UserRepositoryOfflineImpl(
+class UserRepositoryImpl(
     private val settingsDataSource: SettingsDataSource
 ) : UserRepository {
 
@@ -65,6 +65,7 @@ class UserRepositoryOfflineImpl(
     }
 
     override fun clearProfile() {
-        // No-op for offline
+        // Clear local cached profile state
+        _userProfile.value = null
     }
 }

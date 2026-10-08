@@ -20,11 +20,11 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class AccountRepositoryOfflineTest {
+class AccountRepositoryTest {
 
     private lateinit var driver: JdbcSqliteDriver
     private lateinit var database: FintrackDatabase
-    private lateinit var repository: AccountRepositoryOfflineImpl
+    private lateinit var repository: AccountRepositoryImpl
 
     private val userId = "offline_user"
 
@@ -52,7 +52,7 @@ class AccountRepositoryOfflineTest {
                 createdAtAdapter = instantAdapter
             )
         )
-        repository = AccountRepositoryOfflineImpl(
+        repository = AccountRepositoryImpl(
             database = database,
             logger = KMPLogger()
         )

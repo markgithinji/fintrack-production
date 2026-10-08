@@ -7,10 +7,10 @@ import com.fintrack.shared.feature.budget.domain.model.BudgetWithStatus
 import com.fintrack.shared.feature.budget.domain.repository.BudgetRepository
 import com.fintrack.shared.feature.category.domain.model.Category
 import com.fintrack.shared.feature.category.domain.model.allCategories
+import com.fintrack.shared.feature.core.logger.KMPLogger
+import com.fintrack.shared.feature.core.util.DateTimeHelper
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.core.util.randomUUID
-import com.fintrack.shared.feature.core.util.DateTimeHelper
-import com.fintrack.shared.feature.core.logger.KMPLogger
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import com.ionspin.kotlin.bignum.decimal.DecimalMode
 import com.ionspin.kotlin.bignum.decimal.RoundingMode
@@ -23,7 +23,7 @@ import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.atTime
 import kotlinx.datetime.toInstant
 
-class BudgetRepositoryOfflineImpl(
+class BudgetRepositoryImpl(
     private val database: FintrackDatabase,
     private val logger: KMPLogger
 ) : BudgetRepository {

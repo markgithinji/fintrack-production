@@ -16,11 +16,11 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
-class CategoryRepositoryOfflineTest {
+class CategoryRepositoryTest {
 
     private lateinit var driver: JdbcSqliteDriver
     private lateinit var database: FintrackDatabase
-    private lateinit var repository: CategoryRepositoryOfflineImpl
+    private lateinit var repository: CategoryRepositoryImpl
 
     @BeforeTest
     fun setup() {
@@ -46,7 +46,7 @@ class CategoryRepositoryOfflineTest {
                 createdAtAdapter = instantAdapter
             )
         )
-        repository = CategoryRepositoryOfflineImpl(
+        repository = CategoryRepositoryImpl(
             database = database,
             logger = KMPLogger()
         )

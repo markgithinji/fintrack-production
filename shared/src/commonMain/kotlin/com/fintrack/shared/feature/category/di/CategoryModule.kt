@@ -1,7 +1,7 @@
 package com.fintrack.shared.feature.category.di
 
 import com.fintrack.shared.feature.category.data.LocalCategoryDataSource
-import com.fintrack.shared.feature.category.data.repository.CategoryRepositoryOfflineImpl
+import com.fintrack.shared.feature.category.data.repository.CategoryRepositoryImpl
 import com.fintrack.shared.feature.category.domain.repository.CategoryRepository
 import com.fintrack.shared.feature.category.domain.usecase.AddCategoryUseCase
 import com.fintrack.shared.feature.category.domain.usecase.DeleteCategoryUseCase
@@ -15,7 +15,7 @@ val categoryModule = module {
     singleOf(::LocalCategoryDataSource)
     
     single<CategoryRepository> {
-        CategoryRepositoryOfflineImpl(
+        CategoryRepositoryImpl(
             database = get(),
             logger = get()
         )

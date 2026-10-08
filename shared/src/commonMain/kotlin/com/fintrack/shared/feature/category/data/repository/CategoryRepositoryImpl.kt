@@ -5,15 +5,15 @@ import com.fintrack.shared.feature.category.data.model.toDomain
 import com.fintrack.shared.feature.category.domain.model.Category
 import com.fintrack.shared.feature.category.domain.model.CategoryRule
 import com.fintrack.shared.feature.category.domain.repository.CategoryRepository
+import com.fintrack.shared.feature.core.logger.KMPLogger
+import com.fintrack.shared.feature.core.util.DateTimeHelper
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.core.util.randomUUID
-import com.fintrack.shared.feature.core.util.DateTimeHelper
-import com.fintrack.shared.feature.core.logger.KMPLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
-class CategoryRepositoryOfflineImpl(
+class CategoryRepositoryImpl(
     private val database: FintrackDatabase,
     private val logger: KMPLogger
 ) : CategoryRepository {

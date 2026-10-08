@@ -1,6 +1,6 @@
 package com.fintrack.shared.feature.summary.di
 
-import com.fintrack.shared.feature.summary.data.repository.SummaryRepositoryOfflineImpl
+import com.fintrack.shared.feature.summary.data.repository.SummaryRepositoryImpl
 import com.fintrack.shared.feature.summary.domain.repository.SummaryRepository
 import com.fintrack.shared.feature.summary.ui.StatisticsViewModel
 import com.fintrack.shared.feature.summary.ui.custom.CustomAnalysisViewModel
@@ -10,7 +10,7 @@ import org.koin.dsl.module
 
 val summaryModule = module {
     single<SummaryRepository> {
-        SummaryRepositoryOfflineImpl(
+        SummaryRepositoryImpl(
             database = get(), 
             logger = get(),
             userRepository = get(),

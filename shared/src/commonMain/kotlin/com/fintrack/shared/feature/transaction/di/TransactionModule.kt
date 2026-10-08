@@ -1,6 +1,6 @@
 package com.fintrack.shared.feature.transaction.di
 
-import com.fintrack.shared.feature.transaction.data.repository.TransactionRepositoryOfflineImpl
+import com.fintrack.shared.feature.transaction.data.repository.TransactionRepositoryImpl
 import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository
 import com.fintrack.shared.feature.transaction.domain.usecase.CreateTransactionUseCase
 import com.fintrack.shared.feature.transaction.domain.usecase.ExportTransactionsUseCase
@@ -15,7 +15,7 @@ import org.koin.dsl.module
 
 val transactionModule = module {
     single<TransactionRepository> {
-        TransactionRepositoryOfflineImpl(
+        TransactionRepositoryImpl(
             database = get(),
             logger = get()
         )

@@ -21,11 +21,11 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class BudgetRepositoryOfflineTest {
+class BudgetRepositoryTest {
 
     private lateinit var driver: JdbcSqliteDriver
     private lateinit var database: FintrackDatabase
-    private lateinit var repository: BudgetRepositoryOfflineImpl
+    private lateinit var repository: BudgetRepositoryImpl
 
     @BeforeTest
     fun setup() {
@@ -51,7 +51,7 @@ class BudgetRepositoryOfflineTest {
                 createdAtAdapter = instantAdapter
             )
         )
-        repository = BudgetRepositoryOfflineImpl(
+        repository = BudgetRepositoryImpl(
             database = database,
             logger = KMPLogger()
         )

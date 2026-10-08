@@ -6,10 +6,15 @@ import app.cash.paging.PagingData
 import app.cash.paging.map
 import app.cash.sqldelight.paging3.QueryPagingSource
 import com.fintrack.shared.db.FintrackDatabase
+import com.fintrack.shared.feature.core.logger.KMPLogger
+import com.fintrack.shared.feature.core.util.DateTimeHelper
 import com.fintrack.shared.feature.core.util.Result
+import com.fintrack.shared.feature.core.util.randomUUID
+import com.fintrack.shared.feature.core.util.toDouble
 import com.fintrack.shared.feature.transaction.domain.model.RecurringBill
 import com.fintrack.shared.feature.transaction.domain.model.Transaction
 import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository
+import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
@@ -21,18 +26,12 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.atTime
-import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
-import com.ionspin.kotlin.bignum.decimal.BigDecimal
-import com.fintrack.shared.feature.core.util.DateTimeHelper
-import com.fintrack.shared.feature.core.util.toDouble
-import com.fintrack.shared.feature.core.logger.KMPLogger
-import com.fintrack.shared.feature.core.util.randomUUID
 import kotlin.math.abs
 
-class TransactionRepositoryOfflineImpl(
+class TransactionRepositoryImpl(
     private val database: FintrackDatabase,
     private val logger: KMPLogger
 ) : TransactionRepository {

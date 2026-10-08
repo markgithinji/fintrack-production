@@ -6,20 +6,13 @@ import com.fintrack.shared.feature.account.domain.model.Account
 import com.fintrack.shared.feature.account.domain.repository.AccountRepository
 import com.fintrack.shared.feature.core.logger.KMPLogger
 import com.fintrack.shared.feature.core.util.DateTimeHelper
-import com.fintrack.shared.feature.core.util.DateTimeUtils
 import com.fintrack.shared.feature.core.util.Result
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
-import kotlin.time.Clock
-import kotlin.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.atStartOfDayIn
-import kotlinx.datetime.atTime
-import kotlinx.datetime.toInstant
 
-class AccountRepositoryOfflineImpl(
+class AccountRepositoryImpl(
     database: FintrackDatabase,
     private val logger: KMPLogger
 ) : AccountRepository {
