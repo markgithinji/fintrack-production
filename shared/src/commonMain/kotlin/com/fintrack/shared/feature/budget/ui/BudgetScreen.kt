@@ -189,7 +189,7 @@ fun BudgetScreen(
 }
 
 @Composable
-private fun BudgetSummaryHeader(budgets: List<BudgetWithStatus>) {
+fun BudgetSummaryHeader(budgets: List<BudgetWithStatus>) {
     val totalLimit = budgets.fold(BigDecimal.ZERO) { acc, b -> acc + b.budget.limit }
     val totalSpent = budgets.fold(BigDecimal.ZERO) { acc, b -> acc + b.status.spent }
     val progress = if (totalLimit > BigDecimal.ZERO) {

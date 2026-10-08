@@ -7,6 +7,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.fintrack.shared.feature.auth.ui.LockScreen
 import com.fintrack.shared.feature.auth.ui.common.FinanceTextField
 import org.junit.Rule
 import org.junit.Test
@@ -19,14 +20,14 @@ class AuthUiTest {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun financeTextField_typesTextCorrectly() {
+    fun financeTextField_typesTextAndDisplaysLabel() {
         var text = ""
         composeTestRule.setContent {
             MaterialTheme {
                 FinanceTextField(
                     value = text,
                     onValueChange = { text = it },
-                    label = "Email",
+                    label = "Email Address",
                     leadingIcon = Icons.Default.Email,
                     keyboardType = KeyboardType.Email,
                     colorScheme = MaterialTheme.colorScheme
@@ -34,7 +35,44 @@ class AuthUiTest {
             }
         }
 
-        composeTestRule.onNodeWithText("Email").assertIsDisplayed().performTextInput("test@example.com")
-        assert(text == "test@example.com")
+        composeTestRule.onNodeWithText("Email Address").assertIsDisplayed().performTextInput("user@fintrack.com")
+        assert(text == "user@fintrack.com")
+    }
+
+    @Test
+    fun financeTextField_errorState_displaysErrorMessage() {
+        composeTestRule.setContent {
+            MaterialTheme {
+                FinanceTextField(
+                    value = "invalid-email",
+                    onValueChange = {},
+                    label = "Email Address",
+                    leadingIcon = Icons.Default.Email,
+                    keyboardType = KeyboardType.Email,
+                    colorScheme = MaterialTheme.colorScheme,
+                    isError = true,
+                    errorMessage = "Please enter a valid email address"
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Please enter a valid email address").assertIsDisplayed()
+    }
+
+    @Test
+    fun lockScreen_displaysLockUIAndTriggersUnlock() {
+        var unlocked = false
+        composeTestRule.setContent {
+            MaterialTheme {
+                LockScreen(
+                    onUnlock = { unlocked = true }
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Fintrack is Locked").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Please authenticate to continue").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Use Fingerprint").assertIsDisplayed().performClick()
+        assert(unlocked)
     }
 }

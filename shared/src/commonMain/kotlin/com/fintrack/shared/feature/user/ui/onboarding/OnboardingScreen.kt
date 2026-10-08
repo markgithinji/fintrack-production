@@ -188,7 +188,7 @@ fun OnboardingScreen(
 }
 
 @Composable
-private fun OnboardingPageOne() {
+fun OnboardingPageOne() {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -231,7 +231,7 @@ private fun OnboardingPageOne() {
 }
 
 @Composable
-private fun OnboardingPageTwo() {
+fun OnboardingPageTwo() {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -272,7 +272,7 @@ private fun OnboardingPageTwo() {
 }
 
 @Composable
-private fun FeatureHighlightCard(
+fun FeatureHighlightCard(
     icon: ImageVector,
     title: String,
     description: String
@@ -323,7 +323,7 @@ private fun FeatureHighlightCard(
 }
 
 @Composable
-private fun OnboardingPageThree(
+fun OnboardingPageThree(
     name: String,
     nameError: String?,
     onNameChange: (String) -> Unit,

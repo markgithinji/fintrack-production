@@ -102,7 +102,7 @@ kotlin {
             implementation(libs.ktor.client.logging)
             implementation(libs.androidx.paging.common)
             implementation(libs.kotlinx.serialization.json)
-            implementation(libs.bignum)
+            api(libs.bignum)
             implementation(libs.sqldelight.coroutines.extensions)
             implementation(libs.sqldelight.paging)
         }
