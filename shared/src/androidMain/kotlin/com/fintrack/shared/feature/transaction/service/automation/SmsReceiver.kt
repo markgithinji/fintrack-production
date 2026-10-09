@@ -81,13 +81,14 @@ class SmsReceiver : BroadcastReceiver(), KoinComponent {
                     val accountsResult = accountRepository.getAccounts()
                     val accounts = (accountsResult as? Result.Success)?.data ?: emptyList()
                     
-                    val accountId = if (isMpesa) {
+                    val matchedAccountId = if (isMpesa) {
                         accounts.find { it.linkedSources.contains("mpesa") }?.id
                     } else {
                         accounts.find { it.linkedSources.contains("equity") }?.id
                     }
 
-                    if (accountId == null) return@launch
+                    val fallbackAccount = accounts.find { it.isDefault } ?: accounts.firstOrNull()
+                    val accountId = matchedAccountId ?: fallbackAccount?.id ?: return@launch
                     
                     val categoriesResult = categoryRepository.getCategories()
                     val allCategories = (categoriesResult as? Result.Success)?.data ?: emptyList()

@@ -2,6 +2,7 @@ package com.fintrack.shared.feature.transaction.service.automation
 
 import android.content.Context
 import androidx.core.app.NotificationCompat
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.ForegroundInfo
@@ -62,8 +63,7 @@ class TransactionSyncWorker(
                 }
                 ListenableWorker.Result.success()
             } else {
-                // If it's a network error, retry. If it's a 4xx error, maybe fail.
-                ListenableWorker.Result.retry()
+                ListenableWorker.Result.failure()
             }
         } catch (_: Exception) {
             ListenableWorker.Result.failure()
@@ -81,6 +81,7 @@ class TransactionSyncWorker(
             
             val workRequest = OneTimeWorkRequestBuilder<TransactionSyncWorker>()
                 .setInputData(data)
+                .setConstraints(Constraints.NONE) // Pure offline execution - no internet or network required
                 .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .addTag("transaction_sync")
                 .build()
