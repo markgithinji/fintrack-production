@@ -92,7 +92,7 @@ object MpesaParser {
             if (transaction.amount <= BigDecimal.ZERO) {
                 return null
             }
-            return transaction
+            return transaction.copy(rawMessage = message)
         }
 
         // 1. Fuliza (Check this FIRST because it often uses "transferred from M-PESA")
@@ -253,7 +253,8 @@ object MpesaParser {
         accountId: String,
         smsTimestamp: Instant? = null,
         rules: List<CategoryRule> = emptyList(),
-        allCategories: List<Category> = emptyList()
+        allCategories: List<Category> = emptyList(),
+        rawMessage: String? = null
     ): Transaction {
         val code = match.groupValues[1]
         val amount = parseAmount(match.groupValues[2])
@@ -262,7 +263,7 @@ object MpesaParser {
         val date = if (match.groupValues.size > 4) match.groupValues[4] else ""
         val time = if (match.groupValues.size > 5) match.groupValues[5] else ""
         
-        return createTransactionModel(code, amount, cost, balance, fixedCategory ?: inferCategory(party, isIncome, rules, allCategories), parseDateTime(date, time, smsTimestamp), "$prefix $party", accountId, isIncome)
+        return createTransactionModel(code, amount, cost, balance, fixedCategory ?: inferCategory(party, isIncome, rules, allCategories), parseDateTime(date, time, smsTimestamp), "$prefix $party", accountId, isIncome, rawMessage)
     }
 
     private fun cleanPartyName(name: String): String {
@@ -281,7 +282,8 @@ object MpesaParser {
         dateTime: Instant,
         description: String,
         accountId: String,
-        isIncome: Boolean
+        isIncome: Boolean,
+        rawMessage: String? = null
     ): Transaction {
         val resolvedCategory = Category.fromName(category, !isIncome)
         
@@ -295,7 +297,8 @@ object MpesaParser {
             dateTime = dateTime,
             description = "$description (Ref: $code)",
             externalId = code,
-            balance = balance
+            balance = balance,
+            rawMessage = rawMessage
         )
     }
 

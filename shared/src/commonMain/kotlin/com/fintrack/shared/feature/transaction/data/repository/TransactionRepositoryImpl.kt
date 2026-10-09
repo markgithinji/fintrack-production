@@ -67,7 +67,8 @@ class TransactionRepositoryImpl(
                         dateTime = row.dateTime,
                         description = row.description,
                         externalId = row.externalId,
-                        balance = row.balance?.let { BigDecimal.parseString(it) }
+                        balance = row.balance?.let { BigDecimal.parseString(it) },
+                        rawMessage = row.rawMessage
                     )
                 }
             } else {
@@ -83,7 +84,8 @@ class TransactionRepositoryImpl(
                         dateTime = row.dateTime,
                         description = row.description,
                         externalId = row.externalId,
-                        balance = row.balance?.let { BigDecimal.parseString(it) }
+                        balance = row.balance?.let { BigDecimal.parseString(it) },
+                        rawMessage = row.rawMessage
                     )
                 }
             }
@@ -109,6 +111,7 @@ class TransactionRepositoryImpl(
                     description = transaction.description,
                     externalId = transaction.externalId,
                     balance = transaction.balance?.toPlainString(),
+                    rawMessage = transaction.rawMessage,
                     createdAt = DateTimeHelper.now(),
                     updatedAt = DateTimeHelper.now()
                 )
@@ -145,6 +148,7 @@ class TransactionRepositoryImpl(
                         description = transaction.description,
                         externalId = transaction.externalId,
                         balance = transaction.balance?.toPlainString(),
+                        rawMessage = transaction.rawMessage,
                         createdAt = DateTimeHelper.now(),
                         updatedAt = DateTimeHelper.now()
                     )
@@ -185,7 +189,8 @@ class TransactionRepositoryImpl(
                         dateTime = row.dateTime,
                         description = row.description,
                         externalId = row.externalId,
-                        balance = row.balance?.let { BigDecimal.parseString(it) }
+                        balance = row.balance?.let { BigDecimal.parseString(it) },
+                        rawMessage = row.rawMessage
                     )
                 )
             } else {
@@ -216,7 +221,8 @@ class TransactionRepositoryImpl(
                         dateTime = row.dateTime,
                         description = row.description,
                         externalId = row.externalId,
-                        balance = row.balance?.let { BigDecimal.parseString(it) }
+                        balance = row.balance?.let { BigDecimal.parseString(it) },
+                        rawMessage = row.rawMessage
                     )
                 }
             } else {
@@ -232,7 +238,8 @@ class TransactionRepositoryImpl(
                         dateTime = row.dateTime,
                         description = row.description,
                         externalId = row.externalId,
-                        balance = row.balance?.let { BigDecimal.parseString(it) }
+                        balance = row.balance?.let { BigDecimal.parseString(it) },
+                        rawMessage = row.rawMessage
                     )
                 }
             }
@@ -268,6 +275,7 @@ class TransactionRepositoryImpl(
                     dateTime = transaction.dateTime,
                     description = transaction.description,
                     balance = transaction.balance?.toPlainString(),
+                    rawMessage = transaction.rawMessage,
                     updatedAt = DateTimeHelper.now(),
                     id = id
                 )
@@ -512,7 +520,8 @@ class TransactionRepositoryImpl(
                     dateTime = row.dateTime,
                     description = row.description,
                     externalId = row.externalId,
-                    balance = row.balance?.let { BigDecimal.parseString(it) }
+                    balance = row.balance?.let { BigDecimal.parseString(it) },
+                    rawMessage = row.rawMessage
                 )
             }
         }

@@ -83,7 +83,7 @@ class CategoryRepositoryTest {
         queries.insertCategory("cat_old", userId, "Misc", 1L, "misc", 1L, now)
         queries.insertCategory("cat_new", userId, "Coffee", 1L, "coffee", 0L, now)
 
-        // Seed transaction with old category and "Java House" description
+        // Seed transaction with old category and "Java House" description and rawMessage
         queries.insertTransaction(
             id = "tx_1",
             userId = userId,
@@ -93,9 +93,10 @@ class CategoryRepositoryTest {
             amount = "350.0",
             transactionCost = "0.0",
             dateTime = now,
-            description = "Java House Westlands",
+            description = "Paid to Merchant (Ref: QZE12345)",
             externalId = null,
             balance = null,
+            rawMessage = "QZE12345 Confirmed. Ksh350.00 paid to Java House Westlands on 15/1/25.",
             createdAt = now,
             updatedAt = now
         )

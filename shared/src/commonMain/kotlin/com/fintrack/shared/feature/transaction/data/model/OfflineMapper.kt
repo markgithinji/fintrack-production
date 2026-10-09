@@ -16,6 +16,7 @@ fun TransactionEntity.toDomain(categoryName: String? = null): Transaction {
         dateTime = dateTime,
         description = description,
         externalId = externalId,
-        balance = balance?.let { BigDecimal.parseString(it) }
+        balance = balance?.let { BigDecimal.parseString(it) },
+        rawMessage = rawMessage
     )
 }

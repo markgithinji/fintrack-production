@@ -14,7 +14,8 @@ fun TransactionDto.toDomain(): Transaction =
         dateTime = dateTime,
         description = description,
         externalId = externalId,
-        balance = balance
+        balance = balance,
+        rawMessage = rawMessage
     )
 
 fun Transaction.toCreateRequest(): CreateTransactionRequest {

@@ -21,6 +21,7 @@ data class Transaction(
     val externalId: String? = null,
     @Serializable(with = BigDecimalSerializer::class)
     val balance: BigDecimal? = null,
+    val rawMessage: String? = null,
 ) {
     /**
      * The final amount that impacts the account balance.

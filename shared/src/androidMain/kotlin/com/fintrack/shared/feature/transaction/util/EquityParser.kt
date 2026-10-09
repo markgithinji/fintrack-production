@@ -100,7 +100,7 @@ object EquityParser {
             if (transaction.amount <= BigDecimal.ZERO) {
                 return null
             }
-            return transaction
+            return transaction.copy(rawMessage = message)
         }
 
         // 1. Card Auth
@@ -273,7 +273,8 @@ object EquityParser {
         description: String,
         accountId: String,
         isIncome: Boolean,
-        allCategories: List<Category>
+        allCategories: List<Category>,
+        rawMessage: String? = null
     ): Transaction {
         // Find existing category or use name-based lookup
         val matched = allCategories.find { it.name.equals(category, ignoreCase = true) && it.isExpense == !isIncome }
@@ -290,7 +291,8 @@ object EquityParser {
             dateTime = dateTime,
             description = "$description (Ref: $code)",
             externalId = code,
-            balance = balance
+            balance = balance,
+            rawMessage = rawMessage
         )
     }
 

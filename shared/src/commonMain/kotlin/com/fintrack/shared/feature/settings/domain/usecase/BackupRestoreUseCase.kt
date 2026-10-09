@@ -82,7 +82,8 @@ class BackupRestoreUseCase(
                     dateTime = it.dateTime.toString(),
                     description = it.description,
                     externalId = it.externalId,
-                    balance = it.balance
+                    balance = it.balance,
+                    rawMessage = it.rawMessage
                 )
             }
 
@@ -195,6 +196,7 @@ class BackupRestoreUseCase(
                         description = tx.description,
                         externalId = tx.externalId,
                         balance = tx.balance,
+                        rawMessage = tx.rawMessage,
                         createdAt = DateTimeHelper.now(),
                         updatedAt = DateTimeHelper.now()
                     )

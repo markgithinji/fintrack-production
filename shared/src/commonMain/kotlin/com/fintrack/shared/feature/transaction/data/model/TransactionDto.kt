@@ -21,6 +21,7 @@ data class TransactionDto(
     val externalId: String? = null,
     @Serializable(with = BigDecimalSerializer::class)
     val balance: BigDecimal? = null,
+    val rawMessage: String? = null,
     val createdAt: Instant? = null,
     val updatedAt: Instant? = null
 )

@@ -46,7 +46,8 @@ data class TransactionBackupDto(
     val dateTime: String,
     val description: String? = null,
     val externalId: String? = null,
-    val balance: String? = null
+    val balance: String? = null,
+    val rawMessage: String? = null
 )
 
 @Serializable
