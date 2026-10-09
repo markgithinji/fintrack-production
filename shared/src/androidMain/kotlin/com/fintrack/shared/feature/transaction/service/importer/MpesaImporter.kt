@@ -5,6 +5,8 @@ import android.provider.Telephony
 import com.fintrack.shared.feature.account.domain.repository.AccountRepository
 import com.fintrack.shared.feature.category.domain.model.Category
 import com.fintrack.shared.feature.category.domain.model.CategoryRule
+import com.fintrack.shared.feature.category.domain.model.UncategorizedExpense
+import com.fintrack.shared.feature.category.domain.model.UncategorizedIncome
 import com.fintrack.shared.feature.category.domain.repository.CategoryRepository
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository
@@ -85,8 +87,8 @@ class MpesaImporter(
                 context.contentResolver.query(
                     Telephony.Sms.Inbox.CONTENT_URI,
                     arrayOf(Telephony.Sms.Inbox.BODY, Telephony.Sms.Inbox.ADDRESS, Telephony.Sms.Inbox.DATE),
-                    "${Telephony.Sms.Inbox.ADDRESS} = ?",
-                    arrayOf("MPESA"),
+                    "${Telephony.Sms.Inbox.ADDRESS} LIKE ? OR ${Telephony.Sms.Inbox.ADDRESS} LIKE ?",
+                    arrayOf("%MPESA%", "%M-PESA%"),
                     "${Telephony.Sms.Inbox.DATE} DESC"
                 )
             } catch (e: SecurityException) {
@@ -119,7 +121,9 @@ class MpesaImporter(
                             ?: categories.find { cat ->
                                 cat.name.contains("Other", ignoreCase = true) && cat.isExpense == isExpense
                             }?.id
-                            ?: "pending"
+                            ?: categories.find { cat -> cat.isExpense == isExpense }?.id
+                            ?: categories.firstOrNull()?.id
+                            ?: if (isExpense) Category.UncategorizedExpense.id else Category.UncategorizedIncome.id
 
                         transactions.add(parsed.copy(categoryId = finalCategoryId))
                     }
