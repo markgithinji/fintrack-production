@@ -10,7 +10,7 @@ open class FakeCategoryRepository : CategoryRepository {
     override suspend fun addCategory(name: String, isExpense: Boolean, iconName: String?): Result<Category> =
         Result.Success(Category(id = "1", name = name, isExpense = isExpense))
     override suspend fun deleteCategory(id: String): Result<Unit> = Result.Success(Unit)
-    override suspend fun addCategoryRule(keyword: String, categoryId: String, isExpense: Boolean): Result<CategoryRule> =
+    override suspend fun addCategoryRule(keyword: String, categoryId: String, isExpense: Boolean, applyToExisting: Boolean): Result<CategoryRule> =
         Result.Error(NotImplementedError())
     override suspend fun deleteCategoryRule(id: String): Result<Unit> = Result.Success(Unit)
 }

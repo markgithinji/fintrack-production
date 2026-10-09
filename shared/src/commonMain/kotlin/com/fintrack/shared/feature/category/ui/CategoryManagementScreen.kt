@@ -51,6 +51,7 @@ import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -274,8 +275,8 @@ fun CategoryManagementScreen(
         AddCategoryRuleDialog(
             categories = state.categories,
             onDismiss = { showAddRuleDialog = false },
-            onConfirm = { keyword, categoryId, isExpense ->
-                viewModel.addRule(keyword, categoryId, isExpense)
+            onConfirm = { keyword, categoryId, isExpense, applyToExisting ->
+                viewModel.addRule(keyword, categoryId, isExpense, applyToExisting)
                 showAddRuleDialog = false
             }
         )
@@ -496,11 +497,12 @@ fun RuleItem(
 fun AddCategoryRuleDialog(
     categories: List<Category>,
     onDismiss: () -> Unit,
-    onConfirm: (keyword: String, categoryId: String, isExpense: Boolean) -> Unit
+    onConfirm: (keyword: String, categoryId: String, isExpense: Boolean, applyToExisting: Boolean) -> Unit
 ) {
     var keyword by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<Category?>(categories.firstOrNull { it.isExpense }) }
     var isExpense by remember { mutableStateOf(true) }
+    var applyToExisting by remember { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
 
     val filteredCategories = remember(isExpense, categories) {
@@ -664,6 +666,28 @@ fun AddCategoryRuleDialog(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { applyToExisting = !applyToExisting }
+                        .padding(vertical = 4.dp)
+                ) {
+                    Checkbox(
+                        checked = applyToExisting,
+                        onCheckedChange = { applyToExisting = it }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Update existing matching transactions",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurface
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Row(
@@ -681,7 +705,7 @@ fun AddCategoryRuleDialog(
                     Button(
                         onClick = {
                             selectedCategory?.let { cat ->
-                                onConfirm(keyword, cat.id, isExpense)
+                                onConfirm(keyword, cat.id, isExpense, applyToExisting)
                             }
                         },
                         enabled = keyword.isNotBlank() && selectedCategory != null,

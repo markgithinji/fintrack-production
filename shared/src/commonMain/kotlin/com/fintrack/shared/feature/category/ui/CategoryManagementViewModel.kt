@@ -59,14 +59,14 @@ class CategoryManagementViewModel(
         }
     }
 
-    fun addRule(keyword: String, categoryId: String, isExpense: Boolean) {
+    fun addRule(keyword: String, categoryId: String, isExpense: Boolean, applyToExisting: Boolean = false) {
         if (keyword.isBlank()) {
             _state.update { it.copy(error = "Keyword cannot be empty") }
             return
         }
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            when (val result = categoryRepository.addCategoryRule(keyword.trim(), categoryId, isExpense)) {
+            when (val result = categoryRepository.addCategoryRule(keyword.trim(), categoryId, isExpense, applyToExisting)) {
                 is Result.Error -> {
                     _state.update { it.copy(error = result.exception.message ?: "Failed to add rule") }
                 }

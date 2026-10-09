@@ -113,6 +113,13 @@ UPDATE TransactionEntity
 SET accountId = ?, categoryId = ?, isIncome = ?, amount = ?, transactionCost = ?, dateTime = ?, description = ?, balance = ?, updatedAt = ?
 WHERE id = ?;
 
+updateTransactionsCategoryByKeyword:
+UPDATE TransactionEntity
+SET categoryId = :newCategoryId
+WHERE userId = :userId
+AND isIncome = :isIncome
+AND LOWER(description) LIKE '%' || LOWER(:keyword) || '%';
+
 selectAllTransactionsWithCategory:
 SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, C.name AS categoryName
 FROM TransactionEntity T
