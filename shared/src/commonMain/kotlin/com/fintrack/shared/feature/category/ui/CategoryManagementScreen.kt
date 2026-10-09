@@ -98,6 +98,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun CategoryManagementScreen(
     refreshTrigger: Int,
+    onGlobalRefresh: () -> Unit = {},
     onShowToast: (String, Boolean) -> Unit,
     paddingValues: PaddingValues = PaddingValues(0.dp),
     onNavigateBack: () -> Unit,
@@ -277,6 +278,9 @@ fun CategoryManagementScreen(
             onDismiss = { showAddRuleDialog = false },
             onConfirm = { keyword, categoryId, isExpense, applyToExisting ->
                 viewModel.addRule(keyword, categoryId, isExpense, applyToExisting)
+                if (applyToExisting) {
+                    onGlobalRefresh()
+                }
                 showAddRuleDialog = false
             }
         )

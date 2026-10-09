@@ -132,7 +132,11 @@ WHERE T.userId = ?
 ORDER BY T.dateTime DESC;
 
 selectAllTransactions:
-SELECT id, accountId, categoryId, isIncome, amount, transactionCost, dateTime, description, externalId, balance, rawMessage FROM TransactionEntity WHERE userId = ? ORDER BY dateTime DESC;
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
+FROM TransactionEntity T
+LEFT JOIN CategoryEntity C ON T.categoryId = C.id
+WHERE T.userId = ?
+ORDER BY T.dateTime DESC;
 
 selectTransactionsByRange:
 SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
@@ -142,10 +146,19 @@ WHERE T.userId = ? AND T.dateTime >= ? AND T.dateTime <= ?
 ORDER BY T.dateTime DESC;
 
 selectTransactionsByAccount:
-SELECT id, accountId, categoryId, isIncome, amount, transactionCost, dateTime, description, externalId, balance, rawMessage FROM TransactionEntity WHERE accountId = ? ORDER BY dateTime DESC;
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
+FROM TransactionEntity T
+LEFT JOIN CategoryEntity C ON T.categoryId = C.id
+WHERE T.accountId = ?
+ORDER BY T.dateTime DESC;
 
 selectRecentTransactionsByAccount:
-SELECT id, accountId, categoryId, isIncome, amount, transactionCost, dateTime, description, externalId, balance, rawMessage FROM TransactionEntity WHERE accountId = :accountId ORDER BY dateTime DESC LIMIT :limit;
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
+FROM TransactionEntity T
+LEFT JOIN CategoryEntity C ON T.categoryId = C.id
+WHERE T.accountId = :accountId
+ORDER BY T.dateTime DESC
+LIMIT :limit;
 
 getLatestTransactionBalance:
 SELECT balance FROM TransactionEntity WHERE accountId = ? ORDER BY dateTime DESC LIMIT 1;
@@ -154,7 +167,10 @@ deleteTransaction:
 DELETE FROM TransactionEntity WHERE id = ?;
 
 selectTransactionById:
-SELECT id, accountId, categoryId, isIncome, amount, transactionCost, dateTime, description, externalId, balance, rawMessage FROM TransactionEntity WHERE id = ?;
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
+FROM TransactionEntity T
+LEFT JOIN CategoryEntity C ON T.categoryId = C.id
+WHERE T.id = ?;
 
 countTransactions:
 SELECT COUNT(*) FROM TransactionEntity

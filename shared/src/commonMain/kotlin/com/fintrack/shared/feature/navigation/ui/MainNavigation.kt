@@ -248,6 +248,7 @@ fun MainNavigation(
         composable<Screen.Categories> { 
             CategoryManagementScreen(
                 refreshTrigger = refreshTrigger,
+                onGlobalRefresh = onGlobalRefresh,
                 onShowToast = { message, isError -> mainViewModel.showToast(message, isError) },
                 paddingValues = paddingValues,
                 onNavigateBack = { navController.popBackStack() }
