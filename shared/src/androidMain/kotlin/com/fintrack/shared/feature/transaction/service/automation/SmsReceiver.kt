@@ -28,17 +28,20 @@ class SmsReceiver : BroadcastReceiver(), KoinComponent {
     private val notificationService: NotificationService by inject()
 
     companion object {
-        // Cache to deduplicate real-time messages that arrive in pairs (e.g. Sent + Drawn)
+        // REAL-TIME DUPLICATE SMS FILTER (Timer #1):
+        // Prevents double-counting when Safaricom/Equity sends dual SMS broadcasts in rapid succession
+        // (e.g. payment receipt + M-Shwari/Fuliza balance update within seconds of each other).
+        // Caches (Amount, Timestamp, Sender) for 60 seconds (1 minute) to ignore duplicate broadcasts.
         private val recentTransactions = mutableListOf<Triple<BigDecimal, Long, String>>()
 
         @Synchronized
         private fun isDuplicate(amount: BigDecimal, timestamp: Long, sender: String?): Boolean {
             val now = System.currentTimeMillis() / 1000
-            // Keep only last 1 minute of signatures
+            // Keep signatures from the last 60 seconds
             recentTransactions.removeAll { it.second < (now - 60) }
             
             val senderPrefix = sender?.take(5) ?: ""
-            // Check for similar amount and sender within 1 minute (60 seconds)
+            // Ignore duplicate SMS with matching amount and provider sender prefix within 60 seconds
             val exists = recentTransactions.any { (a, t, s) ->
                 a == amount && abs(t - timestamp) < 60 && s == senderPrefix
             }

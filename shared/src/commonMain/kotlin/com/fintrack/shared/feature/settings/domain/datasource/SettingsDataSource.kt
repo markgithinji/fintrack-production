@@ -21,6 +21,9 @@ interface SettingsDataSource {
     val isBiometricEnabled: StateFlow<Boolean>
     suspend fun setBiometricEnabled(enabled: Boolean)
 
+    val biometricLockTimeoutSeconds: StateFlow<Int>
+    suspend fun setBiometricLockTimeoutSeconds(seconds: Int)
+
     val isBalanceHidden: StateFlow<Boolean>
     suspend fun setBalanceHidden(hidden: Boolean)
 

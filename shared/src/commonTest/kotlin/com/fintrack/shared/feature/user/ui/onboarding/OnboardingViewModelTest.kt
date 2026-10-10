@@ -52,6 +52,8 @@ class OnboardingViewModelTest {
         override suspend fun setCurrency(currency: Currency) {}
         override val isBiometricEnabled: StateFlow<Boolean> = MutableStateFlow(false)
         override suspend fun setBiometricEnabled(enabled: Boolean) {}
+        override val biometricLockTimeoutSeconds: StateFlow<Int> = MutableStateFlow(30)
+        override suspend fun setBiometricLockTimeoutSeconds(seconds: Int) {}
         override val isBalanceHidden: StateFlow<Boolean> = MutableStateFlow(false)
         override suspend fun setBalanceHidden(hidden: Boolean) {}
         override val isReminderEnabled: StateFlow<Boolean> = MutableStateFlow(false)

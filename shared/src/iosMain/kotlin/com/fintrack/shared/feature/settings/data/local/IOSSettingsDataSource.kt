@@ -46,6 +46,16 @@ class IOSSettingsDataSource : SettingsDataSource {
         _isBiometricEnabled.value = enabled
     }
 
+    private val _biometricLockTimeoutSeconds = MutableStateFlow(
+        if (defaults.objectForKey("biometric_lock_timeout_seconds") != null) defaults.integerForKey("biometric_lock_timeout_seconds").toInt() else 30
+    )
+    override val biometricLockTimeoutSeconds: StateFlow<Int> = _biometricLockTimeoutSeconds.asStateFlow()
+
+    override suspend fun setBiometricLockTimeoutSeconds(seconds: Int) {
+        defaults.setInteger(seconds.toLong(), "biometric_lock_timeout_seconds")
+        _biometricLockTimeoutSeconds.value = seconds
+    }
+
     private val _isBalanceHidden = MutableStateFlow(defaults.boolForKey("balance_hidden"))
     override val isBalanceHidden: StateFlow<Boolean> = _isBalanceHidden.asStateFlow()
 

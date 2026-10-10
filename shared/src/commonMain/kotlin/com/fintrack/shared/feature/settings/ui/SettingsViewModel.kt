@@ -103,6 +103,7 @@ class SettingsViewModel(
     val isBalanceHidden: StateFlow<Boolean> = settingsDataSource.isBalanceHidden
     val isReminderEnabled: StateFlow<Boolean> = settingsDataSource.isReminderEnabled
     val isBiometricEnabled: StateFlow<Boolean> = settingsDataSource.isBiometricEnabled
+    val biometricLockTimeoutSeconds: StateFlow<Int> = settingsDataSource.biometricLockTimeoutSeconds
     val reminderTime: StateFlow<LocalTime> = settingsDataSource.reminderTime
     val isMpesaListenerEnabled: StateFlow<Boolean> = settingsDataSource.isMpesaListenerEnabled
     val isEquityListenerEnabled: StateFlow<Boolean> = settingsDataSource.isEquityListenerEnabled
@@ -215,6 +216,12 @@ class SettingsViewModel(
     fun toggleBiometric(enabled: Boolean) {
         viewModelScope.launch {
             settingsDataSource.setBiometricEnabled(enabled)
+        }
+    }
+
+    fun setBiometricLockTimeoutSeconds(seconds: Int) {
+        viewModelScope.launch {
+            settingsDataSource.setBiometricLockTimeoutSeconds(seconds)
         }
     }
 

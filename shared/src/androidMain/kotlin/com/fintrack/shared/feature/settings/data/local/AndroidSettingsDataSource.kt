@@ -61,6 +61,14 @@ class AndroidSettingsDataSource(
         context.settingsDataStore.edit { it[Keys.BIOMETRIC_ENABLED] = enabled }
     }
 
+    override val biometricLockTimeoutSeconds: StateFlow<Int> = context.settingsDataStore.data
+        .map { it[Keys.BIOMETRIC_LOCK_TIMEOUT_SECONDS] ?: 30 }
+        .stateIn(scope, SharingStarted.Eagerly, 30)
+
+    override suspend fun setBiometricLockTimeoutSeconds(seconds: Int) {
+        context.settingsDataStore.edit { it[Keys.BIOMETRIC_LOCK_TIMEOUT_SECONDS] = seconds }
+    }
+
     override val isBalanceHidden: StateFlow<Boolean> = context.settingsDataStore.data
         .map { it[Keys.BALANCE_HIDDEN] ?: false }
         .stateIn(scope, SharingStarted.Eagerly, false)
@@ -258,6 +266,7 @@ class AndroidSettingsDataSource(
         val TIME_FORMAT = stringPreferencesKey("time_format")
         val CURRENCY_CODE = stringPreferencesKey("currency_code")
         val BIOMETRIC_ENABLED = booleanPreferencesKey("biometric_enabled")
+        val BIOMETRIC_LOCK_TIMEOUT_SECONDS = intPreferencesKey("biometric_lock_timeout_seconds")
         val BALANCE_HIDDEN = booleanPreferencesKey("balance_hidden")
         val REMINDER_ENABLED = booleanPreferencesKey("reminder_enabled")
         val REMINDER_TIME = stringPreferencesKey("reminder_time")

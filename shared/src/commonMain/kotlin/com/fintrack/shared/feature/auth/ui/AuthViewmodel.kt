@@ -18,7 +18,6 @@ class AuthViewModel(
     val isAppLocked: StateFlow<Boolean> = _isAppLocked.asStateFlow()
 
     private var backgroundTimestamp: Long? = null
-    private val lockTimeoutMillis = 30000L // 30 seconds
 
     private val _toastMessage = MutableStateFlow<Pair<String, Boolean>?>(null)
     val toastMessage: StateFlow<Pair<String, Boolean>?> = _toastMessage.asStateFlow()
@@ -55,8 +54,11 @@ class AuthViewModel(
         val now = DateTimeHelper.now().toEpochMilliseconds()
         val elapsed = now - timestamp
 
-        if (elapsed >= lockTimeoutMillis) {
-            viewModelScope.launch {
+        viewModelScope.launch {
+            val timeoutSec = settingsDataSource.biometricLockTimeoutSeconds.first()
+            val timeoutMs = timeoutSec * 1000L
+
+            if (elapsed >= timeoutMs) {
                 val isBiometricEnabled = settingsDataSource.isBiometricEnabled.first()
                 if (isBiometricEnabled) {
                     _isAppLocked.value = true

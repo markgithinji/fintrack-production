@@ -183,7 +183,7 @@ class TransactionViewModel(
 
     fun autoSyncTransactions(accountId: String? = null, lastSyncedAt: Instant? = null) {
         val now = Clock.System.now()
-        val cooldown = 1.minutes
+        val cooldown = 15.minutes
 
         // 1. Check against the persistent last successful sync time (from DB)
         if (lastSyncedAt != null && (now - lastSyncedAt) < cooldown) {

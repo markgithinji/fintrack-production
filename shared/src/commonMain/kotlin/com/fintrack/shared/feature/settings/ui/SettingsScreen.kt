@@ -150,6 +150,7 @@ fun SettingsScreen(
     val isMpesaListenerEnabled by viewModel.isMpesaListenerEnabled.collectAsStateWithLifecycle()
     val isEquityListenerEnabled by viewModel.isEquityListenerEnabled.collectAsStateWithLifecycle()
     val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsStateWithLifecycle()
+    val biometricLockTimeoutSeconds by viewModel.biometricLockTimeoutSeconds.collectAsStateWithLifecycle()
     val budgetAlertsEnabled by viewModel.budgetAlertsEnabled.collectAsStateWithLifecycle()
     val budgetAlertThresholds by viewModel.budgetAlertThresholds.collectAsStateWithLifecycle()
     val alertBudgetId by viewModel.alertBudgetId.collectAsStateWithLifecycle()
@@ -188,6 +189,7 @@ fun SettingsScreen(
     var showTimeFormatDialog by remember { mutableStateOf(false) }
     var showTimePickerDialog by remember { mutableStateOf(false) }
     var showTrackedCategoriesDialog by remember { mutableStateOf(false) }
+    var showBiometricTimeoutDialog by remember { mutableStateOf(false) }
     var showBudgetSelectionDialog by remember { mutableStateOf(false) }
     var showThresholdDialog by remember { mutableStateOf(false) }
     var showSummaryTimePickerDialog by remember { mutableStateOf(false) }
@@ -611,6 +613,30 @@ fun SettingsScreen(
                             }
                         )
 
+                        if (isBiometricEnabled) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                            )
+
+                            val timeoutLabel = when (biometricLockTimeoutSeconds) {
+                                0 -> "Immediately"
+                                15 -> "15 seconds"
+                                30 -> "30 seconds (Default)"
+                                60 -> "1 minute"
+                                300 -> "5 minutes"
+                                else -> "$biometricLockTimeoutSeconds seconds"
+                            }
+
+                            SettingsItem(
+                                title = "Auto-Lock Timeout",
+                                subtitle = timeoutLabel,
+                                icon = Icons.Default.Schedule,
+                                onClick = { showBiometricTimeoutDialog = true }
+                            )
+                        }
+
                     }
 
                     SettingsSection(title = "Data & Backup") {
@@ -731,6 +757,17 @@ fun SettingsScreen(
                 showThemeDialog = false
             },
             onDismiss = { showThemeDialog = false }
+        )
+    }
+
+    if (showBiometricTimeoutDialog) {
+        BiometricTimeoutSelectionDialog(
+            currentTimeoutSeconds = biometricLockTimeoutSeconds,
+            onTimeoutSelected = {
+                viewModel.setBiometricLockTimeoutSeconds(it)
+                showBiometricTimeoutDialog = false
+            },
+            onDismiss = { showBiometricTimeoutDialog = false }
         )
     }
 
@@ -1160,6 +1197,92 @@ private fun DateRangeItem(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(14.dp)
                     )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BiometricTimeoutSelectionDialog(
+    currentTimeoutSeconds: Int,
+    onTimeoutSelected: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = listOf(
+        0 to "Immediately",
+        15 to "15 seconds",
+        30 to "30 seconds (Default)",
+        60 to "1 minute",
+        300 to "5 minutes"
+    )
+
+    BasicAlertDialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        modifier = Modifier
+            .padding(28.dp)
+            .widthIn(max = 400.dp)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = "Auto-Lock Timeout",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    options.forEach { (seconds, label) ->
+                        val isSelected = seconds == currentTimeoutSeconds
+
+                        Surface(
+                            onClick = { onTimeoutSelected(seconds) },
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isSelected)
+                                MaterialTheme.colorScheme.primaryContainer
+                            else
+                                Color.Transparent,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected)
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    else
+                                        MaterialTheme.colorScheme.onSurface
+                                )
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
