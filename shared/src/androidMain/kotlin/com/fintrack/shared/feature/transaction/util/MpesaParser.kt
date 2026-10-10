@@ -264,11 +264,11 @@ object MpesaParser {
         val date = if (match.groupValues.size > 4) match.groupValues[4] else ""
         val time = if (match.groupValues.size > 5) match.groupValues[5] else ""
         
-        return createTransactionModel(code, amount, cost, balance, fixedCategory ?: inferCategory(party, isIncome, rules, allCategories), parseDateTime(date, time, smsTimestamp), "$prefix $party", accountId, isIncome, rawMessage)
+        return createTransactionModel(code, amount, cost, balance, fixedCategory ?: inferCategory(party, isIncome, rules, allCategories, rawMessage), parseDateTime(date, time, smsTimestamp), "$prefix $party", accountId, isIncome, rawMessage)
     }
 
     private fun cleanPartyName(name: String): String {
-        return name.split(Regex("(?i)New M-PESA|Transaction cost|Amount you can transact|for account|on Lipa Na M-PESA|VIA\\s+[A-Z]+|Express"))[0]
+        return name.split(Regex("(?i)New M-PESA|Transaction cost|Amount you can transact|on Lipa Na M-PESA|VIA\\s+[A-Z]+|Express"))[0]
             .trim()
             .removeSuffix(".")
             .trim()
@@ -377,13 +377,14 @@ object MpesaParser {
         }
     }
 
-    private fun inferCategory(recipient: String, isIncome: Boolean = false, rules: List<CategoryRule> = emptyList(), allCategories: List<Category> = emptyList()): String {
+    private fun inferCategory(recipient: String, isIncome: Boolean = false, rules: List<CategoryRule> = emptyList(), allCategories: List<Category> = emptyList(), rawMessage: String? = null): String {
         // Backend Port: Use CategoryMatcher logic for intelligent matching
         // Note: The parser returns category NAMES for UI mapping, which is why we resolve to name here.
+        val searchBody = if (rawMessage.isNullOrBlank()) recipient else "$recipient $rawMessage"
         val resolvedId = CategoryMatcher.resolveCategory(
             inputCategoryId = null,
             inputCategoryName = null,
-            description = recipient,
+            description = searchBody,
             isIncome = isIncome,
             allCategories = allCategories,
             rules = rules,
