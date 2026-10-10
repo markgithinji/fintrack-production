@@ -32,6 +32,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material3.ColorScheme
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -533,7 +536,6 @@ fun AddCategoryRuleDialog(
                 modifier = Modifier
                     .padding(24.dp)
                     .fillMaxWidth()
-                    .animateContentSize()
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -608,65 +610,24 @@ fun AddCategoryRuleDialog(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                // Category Picker
-                Column(
+                // Category Picker using LazyColumn for 120fps smooth scrolling
+                LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 180.dp)
-                        .verticalScroll(rememberScrollState()),
+                        .height(180.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    filteredCategories.forEach { cat ->
+                    items(
+                        items = filteredCategories,
+                        key = { it.id }
+                    ) { cat ->
                         val isSelected = selectedCategory?.id == cat.id
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) colorScheme.primaryContainer else colorScheme.surfaceVariant,
-                            border = BorderStroke(
-                                width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) colorScheme.primary else colorScheme.outlineVariant
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { selectedCategory = cat }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .background(
-                                            if (isSelected) colorScheme.primary.copy(alpha = 0.2f) else colorScheme.outline.copy(alpha = 0.1f),
-                                            CircleShape
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = cat.toIcon(),
-                                        contentDescription = null,
-                                        tint = if (isSelected) colorScheme.primary else colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = cat.name,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                if (isSelected) {
-                                    Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint = colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                        }
+                        CategoryPickerItem(
+                            category = cat,
+                            isSelected = isSelected,
+                            colorScheme = colorScheme,
+                            onClick = { selectedCategory = cat }
+                        )
                     }
                 }
 
@@ -720,6 +681,64 @@ fun AddCategoryRuleDialog(
                         Text("Add Rule")
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryPickerItem(
+    category: Category,
+    isSelected: Boolean,
+    colorScheme: ColorScheme,
+    onClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = if (isSelected) colorScheme.primaryContainer else colorScheme.surfaceVariant,
+        border = BorderStroke(
+            width = if (isSelected) 2.dp else 1.dp,
+            color = if (isSelected) colorScheme.primary else colorScheme.outlineVariant
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .background(
+                        if (isSelected) colorScheme.primary.copy(alpha = 0.2f) else colorScheme.outline.copy(alpha = 0.1f),
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = category.toIcon(),
+                    contentDescription = null,
+                    tint = if (isSelected) colorScheme.primary else colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = category.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            if (isSelected) {
+                Icon(
+                    Icons.Default.Check,
+                    contentDescription = null,
+                    tint = colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
