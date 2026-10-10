@@ -4,18 +4,34 @@ import android.util.Log
 
 actual class KMPLogger actual constructor() {
     actual fun debug(tag: String, message: String) {
-        Log.d(tag, message)
+        try {
+            Log.d(tag, message)
+        } catch (_: Throwable) {
+            println("[$tag] $message")
+        }
     }
 
     actual fun info(tag: String, message: String) {
-        Log.i(tag, message)
+        try {
+            Log.i(tag, message)
+        } catch (_: Throwable) {
+            println("[$tag] $message")
+        }
     }
 
     actual fun warning(tag: String, message: String) {
-        Log.w(tag, message)
+        try {
+            Log.w(tag, message)
+        } catch (_: Throwable) {
+            println("[$tag] $message")
+        }
     }
 
     actual fun error(tag: String, message: String, throwable: Throwable?) {
-        Log.e(tag, message, throwable)
+        try {
+            Log.e(tag, message, throwable)
+        } catch (_: Throwable) {
+            println("[$tag] ERROR: $message ${throwable?.message ?: ""}")
+        }
     }
 }

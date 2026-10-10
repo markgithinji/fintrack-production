@@ -163,8 +163,12 @@ class TransactionViewModel(
                 transactionImporter.importHistory(accountId, isPortfolioSeed) { progress ->
                     _importProgress.update { it + (accountId to progress) }
                 }
+                invalidatePagingCache()
                 _importState.update { it + (accountId to Result.Success(Unit)) }
                 _importEvents.emit(ImportEvent.Success(accountId))
+                if (accountId != null) {
+                    loadRecentTransactions(accountId, force = true)
+                }
             } catch (e: Exception) {
                 if (e !is CancellationException) {
                     _importState.update { it + (accountId to Result.Error(e)) }
@@ -179,7 +183,7 @@ class TransactionViewModel(
 
     fun autoSyncTransactions(accountId: String? = null, lastSyncedAt: Instant? = null) {
         val now = Clock.System.now()
-        val cooldown = 15.minutes
+        val cooldown = 1.minutes
 
         // 1. Check against the persistent last successful sync time (from DB)
         if (lastSyncedAt != null && (now - lastSyncedAt) < cooldown) {
@@ -259,6 +263,11 @@ class TransactionViewModel(
             val end = DateTimeHelper.now()
             println("[DEBUG_ANR] Finished fetching recent transactions in ${end.toEpochMilliseconds() - start.toEpochMilliseconds()}ms")
         }
+    }
+
+    fun invalidatePagingCache() {
+        lastPagingParams = null
+        cachedPagingFlow = null
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -356,7 +365,11 @@ class TransactionViewModel(
             val transaction = createTransactionUseCase(state.amount, state.transactionCost, state.isIncome, state.selectedCategory, state.description, state.selectedAccount, state.dateTime) ?: return@launch
             val result = repo.addTransaction(transaction)
             _saveState.value = when (result) {
-                is Result.Success -> SaveState.Success(result.data)
+                is Result.Success -> {
+                    invalidatePagingCache()
+                    loadRecentTransactions(result.data.accountId, force = true)
+                    SaveState.Success(result.data)
+                }
                 is Result.Error -> SaveState.Error(result.exception)
                 is Result.Loading -> SaveState.Loading
             }
@@ -372,7 +385,11 @@ class TransactionViewModel(
             val transaction = createTransactionUseCase(state.amount, state.transactionCost, state.isIncome, state.selectedCategory, state.description, state.selectedAccount, state.dateTime)?.copy(id = id) ?: return@launch
             val result = repo.updateTransaction(id, transaction)
             _saveState.value = when (result) {
-                is Result.Success -> SaveState.Success(result.data)
+                is Result.Success -> {
+                    invalidatePagingCache()
+                    loadRecentTransactions(result.data.accountId, force = true)
+                    SaveState.Success(result.data)
+                }
                 is Result.Error -> SaveState.Error(result.exception)
                 is Result.Loading -> SaveState.Loading
             }
@@ -382,7 +399,12 @@ class TransactionViewModel(
     fun deleteTransaction(id: String) {
         viewModelScope.launch {
             _deleteResult.value = Result.Loading
-            _deleteResult.value = repo.deleteTransaction(id)
+            val res = repo.deleteTransaction(id)
+            if (res is Result.Success) {
+                invalidatePagingCache()
+                lastLoadedRecentAccountId?.let { loadRecentTransactions(it, force = true) }
+            }
+            _deleteResult.value = res
         }
     }
 

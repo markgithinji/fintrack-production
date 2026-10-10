@@ -106,17 +106,30 @@ class AccountRepositoryImpl(
 
     override suspend fun addOrUpdateAccount(account: Account): Result<Account> = withContext(Dispatchers.IO) {
         try {
-            queries.insertAccount(
-                id = account.id,
-                userId = offlineUserId,
-                name = account.name,
-                isDefault = if (account.isDefault) 1L else 0L,
-                type = account.type.name,
-                balance = (account.balance ?: BigDecimal.ZERO).toPlainString(),
-                linkedSources = account.linkedSources,
-                createdAt = account.createdAt ?: DateTimeHelper.now(),
-                lastSyncedAt = account.lastSyncedAt
-            )
+            val existing = queries.selectAccountById(account.id).executeAsOneOrNull()
+            if (existing != null) {
+                queries.updateAccountDetails(
+                    id = account.id,
+                    name = account.name,
+                    isDefault = if (account.isDefault) 1L else 0L,
+                    type = account.type.name,
+                    balance = (account.balance ?: BigDecimal.ZERO).toPlainString(),
+                    linkedSources = account.linkedSources,
+                    lastSyncedAt = account.lastSyncedAt
+                )
+            } else {
+                queries.insertAccount(
+                    id = account.id,
+                    userId = offlineUserId,
+                    name = account.name,
+                    isDefault = if (account.isDefault) 1L else 0L,
+                    type = account.type.name,
+                    balance = (account.balance ?: BigDecimal.ZERO).toPlainString(),
+                    linkedSources = account.linkedSources,
+                    createdAt = account.createdAt ?: DateTimeHelper.now(),
+                    lastSyncedAt = account.lastSyncedAt
+                )
+            }
             Result.Success(account)
         } catch (e: Exception) {
             logger.error(tag, "Error saving account ${account.name}", e)

@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -24,6 +25,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fintrack.shared.feature.account.ui.AccountsViewModel
 import com.fintrack.shared.feature.core.ui.util.rememberThrottleClick
@@ -87,7 +91,7 @@ fun HomeScreen(
             
             when (event) {
                 is ImportEvent.Success -> {
-                    if (event.accountId == accountId) {
+                    if (event.accountId == accountId || event.accountId == null || accountId == null) {
                         onGlobalRefresh()
                         delay(1500)
                         transactionsViewModel.resetImportState(event.accountId)
@@ -170,6 +174,21 @@ fun HomeScreen(
         }
     }
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, selectedAccountResult) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START || event == Lifecycle.Event.ON_RESUME) {
+                val acc = (selectedAccountResult as? Result.Success)?.data
+                println("[DEBUG_ANR] ON_RESUME/ON_START triggering auto-sync for account=${acc?.id}")
+                transactionsViewModel.autoSyncTransactions(acc?.id, acc?.lastSyncedAt)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     LaunchedEffect(selectedAccountResult) {
         val account = (selectedAccountResult as? Result.Success)?.data
         println("[DEBUG_ANR] LaunchedEffect(selectedAccount=${account?.id})")
@@ -178,11 +197,9 @@ fun HomeScreen(
             statsViewModel.loadOverview(acc.id)
             statsViewModel.loadCategoryComparisons(acc.id)
 
-            // Trigger auto-sync only if the account has linked sources
-            if (acc.linkedSources.contains("mpesa") || acc.linkedSources.contains("equity")) {
-                println("[DEBUG_ANR] Triggering auto-sync for ${acc.id}")
-                transactionsViewModel.autoSyncTransactions(acc.id, acc.lastSyncedAt)
-            }
+            // Trigger auto-sync for account
+            println("[DEBUG_ANR] Triggering auto-sync for ${acc.id}")
+            transactionsViewModel.autoSyncTransactions(acc.id, acc.lastSyncedAt)
         }
     }
 

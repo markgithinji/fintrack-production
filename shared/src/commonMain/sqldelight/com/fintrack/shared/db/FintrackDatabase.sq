@@ -86,6 +86,16 @@ SELECT * FROM AccountEntity WHERE id = ?;
 updateAccountBalance:
 UPDATE AccountEntity SET balance = ? WHERE id = ?;
 
+updateAccountDetails:
+UPDATE AccountEntity
+SET name = :name,
+    isDefault = :isDefault,
+    type = :type,
+    balance = :balance,
+    linkedSources = :linkedSources,
+    lastSyncedAt = :lastSyncedAt
+WHERE id = :id;
+
 deleteAccount:
 DELETE FROM AccountEntity WHERE id = ?;
 

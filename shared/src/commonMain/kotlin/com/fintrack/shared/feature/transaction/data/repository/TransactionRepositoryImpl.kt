@@ -54,8 +54,15 @@ class TransactionRepositoryImpl(
         hasTransactionCost: Boolean?
     ): Result<Pair<List<Transaction>, String?>> = withContext(Dispatchers.IO) {
         try {
+            logger.info(TAG, "[SMS_DIAGNOSTIC] [STAGE 3 - READ getTransactions] accountId=$accountId, limit=$limit, userId=$offlineUserId...")
+            val allDistinctAccounts = try {
+                queries.selectAllTransactions(offlineUserId).executeAsList().map { it.accountId }.distinct()
+            } catch (e: Exception) { emptyList() }
+            logger.info(TAG, "[SMS_DIAGNOSTIC] [STAGE 3 - DEBUG_ACCOUNT_IDS] Account IDs present in TransactionEntity table: $allDistinctAccounts (Requested accountId='$accountId')")
             val transactions = if (accountId != null) {
-                queries.selectRecentTransactionsByAccount(accountId, limit.toLong()).executeAsList().map { row ->
+                val rows = queries.selectRecentTransactionsByAccount(accountId, limit.toLong()).executeAsList()
+                logger.info(TAG, "[SMS_DIAGNOSTIC] [STAGE 3 - READ RESULT getTransactions] selectRecentTransactionsByAccount(accountId=$accountId) returned ${rows.size} rows.")
+                rows.map { row ->
                     Transaction(
                         id = row.id,
                         accountId = row.accountId,
@@ -72,7 +79,9 @@ class TransactionRepositoryImpl(
                     )
                 }
             } else {
-                queries.selectAllTransactions(offlineUserId).executeAsList().take(limit).map { row ->
+                val rows = queries.selectAllTransactions(offlineUserId).executeAsList()
+                logger.info(TAG, "[SMS_DIAGNOSTIC] [STAGE 3 - READ RESULT getTransactions] selectAllTransactions(userId=$offlineUserId) returned ${rows.size} rows.")
+                rows.take(limit).map { row ->
                     Transaction(
                         id = row.id,
                         accountId = row.accountId,
@@ -88,6 +97,9 @@ class TransactionRepositoryImpl(
                         rawMessage = row.rawMessage
                     )
                 }
+            }
+            if (transactions.isNotEmpty()) {
+                logger.info(TAG, "[SMS_DIAGNOSTIC] [STAGE 3 - SAMPLE READ] First transaction read: id=${transactions[0].id}, desc=${transactions[0].description}, amount=${transactions[0].amount}")
             }
             Result.Success(transactions to null)
         } catch (e: Exception) {
@@ -134,6 +146,11 @@ class TransactionRepositoryImpl(
 
     override suspend fun addTransactions(transactions: List<Transaction>): Result<Unit> = withContext(Dispatchers.IO) {
         try {
+            logger.info(TAG, "[SMS_DIAGNOSTIC] [STAGE 2 - SAVE START] Batch inserting ${transactions.size} transactions into database...")
+            if (transactions.isNotEmpty()) {
+                val sample = transactions.first()
+                logger.info(TAG, "[SMS_DIAGNOSTIC] [STAGE 2 - SAMPLE ITEM] First item: id=${sample.id}, accountId=${sample.accountId}, categoryId=${sample.categoryId}, amount=${sample.amount}, rawMessage=${sample.rawMessage?.take(30)}")
+            }
             queries.transaction {
                 transactions.forEach { transaction ->
                     queries.insertTransaction(
@@ -162,9 +179,13 @@ class TransactionRepositoryImpl(
                     )
                 }
             }
+            val totalInDb = try {
+                queries.countTransactions(userId = offlineUserId, accountId = null, isIncome = null, useCategoryFilter = 0, categoryIds = emptyList(), start = null, end = null, hasTransactionCost = null).executeAsOne()
+            } catch (e: Exception) { -1L }
+            logger.info(TAG, "[SMS_DIAGNOSTIC] [STAGE 2 - SAVE SUCCESS] Batch inserted ${transactions.size} transactions. Total transactions in SQLite DB for '$offlineUserId': $totalInDb")
             Result.Success(Unit)
         } catch (e: Exception) {
-            logger.error(TAG, "Error adding multiple transactions", e)
+            logger.error(TAG, "[SMS_DIAGNOSTIC] [STAGE 2 - SAVE EXCEPTION] Error inserting ${transactions.size} transactions into database!", e)
             Result.Error(e)
         }
     }

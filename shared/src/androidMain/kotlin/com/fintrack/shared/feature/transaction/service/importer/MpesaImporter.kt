@@ -1,7 +1,11 @@
 package com.fintrack.shared.feature.transaction.service.importer
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.provider.Telephony
+import android.util.Log
+import androidx.core.content.ContextCompat
 import com.fintrack.shared.feature.account.domain.repository.AccountRepository
 import com.fintrack.shared.feature.category.domain.model.Category
 import com.fintrack.shared.feature.category.domain.model.CategoryRule
@@ -9,23 +13,19 @@ import com.fintrack.shared.feature.category.domain.model.UncategorizedExpense
 import com.fintrack.shared.feature.category.domain.model.UncategorizedIncome
 import com.fintrack.shared.feature.category.domain.repository.CategoryRepository
 import com.fintrack.shared.feature.core.util.Result
+import com.fintrack.shared.feature.transaction.domain.model.Transaction
 import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository
 import com.fintrack.shared.feature.transaction.domain.service.TransactionImporter
-import com.fintrack.shared.feature.transaction.domain.model.Transaction
 import com.fintrack.shared.feature.transaction.util.MpesaParser
 import com.fintrack.shared.feature.transaction.util.PortfolioSeeder
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
-import kotlin.time.Clock
-import kotlin.time.Instant
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.job
 import kotlinx.coroutines.withContext
-
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
-import kotlinx.coroutines.currentCoroutineContext
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 class MpesaImporter(
     private val context: Context,
@@ -34,6 +34,10 @@ class MpesaImporter(
     private val categoryRepository: CategoryRepository
 ) : TransactionImporter {
     private val portfolioSeeder = PortfolioSeeder()
+
+    companion object {
+        private const val TAG = "SMS_SYNC"
+    }
 
     override suspend fun importHistory(
         targetAccountId: String?,
@@ -51,13 +55,14 @@ class MpesaImporter(
         val accountsResult = accountRepository.getAccounts()
         val accounts = (accountsResult as? Result.Success)?.data ?: emptyList()
         
-        val accountId = targetAccountId ?: accounts.find { it.linkedSources.contains("mpesa") }?.id
+        val accountId = targetAccountId ?: accounts.find { it.linkedSources.contains("mpesa") }?.id ?: accounts.firstOrNull()?.id
 
         if (accountId == null) {
             if (isPortfolioSeed) {
                  val fallbackId = accounts.firstOrNull()?.id ?: "mpesa"
                  processImport(fallbackId, categories, rules, true, onProgress)
             } else {
+                Log.e(TAG, "No account is available for M-Pesa sync.")
                 throw Exception("No account is configured for M-Pesa sync.")
             }
             return@withContext
@@ -80,6 +85,7 @@ class MpesaImporter(
             val permissionStatus = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS)
 
             if (permissionStatus != PackageManager.PERMISSION_GRANTED) {
+                Log.e(TAG, "Permission READ_SMS is not granted!")
                 throw Exception("Permission denied: READ_SMS is required for M-Pesa sync")
             }
 
@@ -92,18 +98,21 @@ class MpesaImporter(
                     "${Telephony.Sms.Inbox.DATE} DESC"
                 )
             } catch (e: SecurityException) {
+                Log.e(TAG, "SecurityException querying SMS inbox", e)
                 throw Exception("Permission denied: READ_SMS is required for M-Pesa sync", e)
             }
+
+            val totalMessages = cursor?.count ?: 0
+            Log.d(TAG, "M-Pesa SMS query returned $totalMessages messages.")
 
             cursor?.use { smsCursor ->
                 val bodyIndex = smsCursor.getColumnIndex(Telephony.Sms.Inbox.BODY)
                 val dateIndex = smsCursor.getColumnIndex(Telephony.Sms.Inbox.DATE)
                 var loggedCount = 0
-                val totalMessages = smsCursor.count
 
                 while (smsCursor.moveToNext()) {
                     currentCoroutineContext().job.ensureActive()
-                    val body = smsCursor.getString(bodyIndex)
+                    val body = smsCursor.getString(bodyIndex) ?: continue
                     val timestamp = smsCursor.getLong(dateIndex)
                     val smsInstant = Instant.fromEpochMilliseconds(timestamp)
 
@@ -129,9 +138,10 @@ class MpesaImporter(
                     }
 
                     loggedCount++
-                    if (loggedCount % 500 == 0) onProgress(0.05f + (loggedCount.toFloat() / totalMessages) * 0.25f)
+                    if (loggedCount % 500 == 0 && totalMessages > 0) onProgress(0.05f + (loggedCount.toFloat() / totalMessages) * 0.25f)
                 }
             }
+            Log.d(TAG, "M-Pesa SMS parsing complete: ${transactions.size} valid transactions parsed from $totalMessages SMS messages.")
         } else {
             val dummyTransactions = portfolioSeeder.generateDummyTransactions(accountId, categories)
             transactions.addAll(dummyTransactions)
@@ -139,28 +149,26 @@ class MpesaImporter(
 
         if (transactions.isNotEmpty()) {
             onProgress(0.3f)
+            Log.d(TAG, "Inserting ${transactions.size} parsed M-Pesa transactions into local database for account $accountId...")
             val chunks = transactions.chunked(250)
             chunks.forEachIndexed { index, chunk ->
                 currentCoroutineContext().job.ensureActive()
                 val result = transactionRepository.importMpesaTransactions(chunk)
                 if (result is Result.Error) {
+                    Log.e(TAG, "Error saving M-Pesa chunk $index to database", result.exception)
                     throw result.exception
                 }
                 onProgress(0.3f + ((index + 1).toFloat() / chunks.size) * 0.6f)
             }
+            Log.d(TAG, "M-Pesa database insertion finished successfully!")
         }
 
-        // Update lastSyncedAt even if no transactions were found, 
-        // as long as the process reached this point without error.
         val accountResult = accountRepository.getAccountById(accountId)
         if (accountResult is Result.Success) {
             val account = accountResult.data
-            val isPureMpesaAccount = account.linkedSources.contains("mpesa") && account.linkedSources.size == 1
-            
-            // Only update balance if we actually found transactions or are seeding
             val newBalance = when {
                 isPortfolioSeed -> BigDecimal.fromInt(72450)
-                transactions.isNotEmpty() && isPureMpesaAccount -> latestBalance ?: account.balance
+                transactions.isNotEmpty() -> latestBalance ?: account.balance
                 else -> account.balance
             }
 

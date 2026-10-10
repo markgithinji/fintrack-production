@@ -1,5 +1,6 @@
 package com.fintrack.shared.feature.transaction.util
 
+import android.util.Log
 import com.fintrack.shared.feature.category.domain.model.Category
 import com.fintrack.shared.feature.category.domain.model.CategoryRule
 import com.fintrack.shared.feature.category.util.CategoryMatcher
@@ -89,10 +90,10 @@ object MpesaParser {
         // Helper to validate and create model
         fun wrap(transaction: Transaction?): Transaction? {
             if (transaction == null) return null
-            if (transaction.amount <= BigDecimal.ZERO) {
-                return null
-            }
-            return transaction.copy(rawMessage = message)
+            if (transaction.amount <= BigDecimal.ZERO) return null
+            val result = transaction.copy(rawMessage = message)
+            println("[SMS_SYNC] [MpesaParser] Successfully parsed transaction: ref=${result.externalId}, amount=${result.amount}, category=${result.category}, accountId=${result.accountId}")
+            return result
         }
 
         // 1. Fuliza (Check this FIRST because it often uses "transferred from M-PESA")

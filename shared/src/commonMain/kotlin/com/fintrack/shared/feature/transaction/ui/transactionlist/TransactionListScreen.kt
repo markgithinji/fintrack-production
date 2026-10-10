@@ -77,17 +77,14 @@ fun TransactionListScreen(
             }
         }
 
-    val transactions =
-        remember(accountId, isIncome, categoryId, startDate, endDate, hasTransactionCost) {
-            transactionsViewModel.getTransactionsPagingData(
-                accountId = accountId,
-                isIncome = isIncome,
-                categoryId = categoryId,
-                startDate = startDate,
-                endDate = endDate,
-                hasTransactionCost = hasTransactionCost
-            )
-        }.collectAsLazyPagingItems()
+    val transactions = transactionsViewModel.getTransactionsPagingData(
+        accountId = accountId,
+        isIncome = isIncome,
+        categoryId = categoryId,
+        startDate = startDate,
+        endDate = endDate,
+        hasTransactionCost = hasTransactionCost
+    ).collectAsLazyPagingItems()
 
     LaunchedEffect(Unit) {
         transactionsViewModel.refreshCategories()

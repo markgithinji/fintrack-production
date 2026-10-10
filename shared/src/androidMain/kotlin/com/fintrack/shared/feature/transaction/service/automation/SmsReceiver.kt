@@ -34,13 +34,13 @@ class SmsReceiver : BroadcastReceiver(), KoinComponent {
         @Synchronized
         private fun isDuplicate(amount: BigDecimal, timestamp: Long, sender: String?): Boolean {
             val now = System.currentTimeMillis() / 1000
-            // Keep only last 5 minutes of signatures
-            recentTransactions.removeAll { it.second < (now - 300) }
+            // Keep only last 1 minute of signatures
+            recentTransactions.removeAll { it.second < (now - 60) }
             
             val senderPrefix = sender?.take(5) ?: ""
-            // Check for similar amount and sender within 2 minutes
+            // Check for similar amount and sender within 1 minute (60 seconds)
             val exists = recentTransactions.any { (a, t, s) ->
-                a == amount && abs(t - timestamp) < 120 && s == senderPrefix
+                a == amount && abs(t - timestamp) < 60 && s == senderPrefix
             }
             
             if (!exists) {
