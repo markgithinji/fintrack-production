@@ -1021,14 +1021,15 @@ private fun CustomAnalysisShimmerLoading(
         modifier = Modifier
             .fillMaxSize()
             .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = bottomPadding + 88.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Summary KPI Card Shimmer
+        // Summary KPI Card Shimmer (Matches exact height & row structure of loaded KPI card)
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
             ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -1045,7 +1046,13 @@ private fun CustomAnalysisShimmerLoading(
                         .height(28.dp)
                         .clip(RoundedCornerShape(6.dp))
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                // Row 1: Total Income & Total Expenses
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -1061,39 +1068,72 @@ private fun CustomAnalysisShimmerLoading(
                         AnimatedShimmerBox(modifier = Modifier.fillMaxWidth(0.7f).height(18.dp).clip(RoundedCornerShape(4.dp)))
                     }
                 }
+                Spacer(modifier = Modifier.height(12.dp))
+                // Row 2: Avg per Tx & Highest Tx
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        AnimatedShimmerBox(modifier = Modifier.width(70.dp).height(12.dp).clip(RoundedCornerShape(4.dp)))
+                        Spacer(Modifier.height(6.dp))
+                        AnimatedShimmerBox(modifier = Modifier.fillMaxWidth(0.6f).height(18.dp).clip(RoundedCornerShape(4.dp)))
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        AnimatedShimmerBox(modifier = Modifier.width(70.dp).height(12.dp).clip(RoundedCornerShape(4.dp)))
+                        Spacer(Modifier.height(6.dp))
+                        AnimatedShimmerBox(modifier = Modifier.fillMaxWidth(0.6f).height(18.dp).clip(RoundedCornerShape(4.dp)))
+                    }
+                }
             }
         }
 
-        // Category Breakdown Shimmer
-        AnimatedShimmerBox(
-            modifier = Modifier
-                .width(140.dp)
-                .height(18.dp)
-                .clip(RoundedCornerShape(4.dp))
-        )
-        repeat(2) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    AnimatedShimmerBox(modifier = Modifier.width(100.dp).height(14.dp).clip(RoundedCornerShape(4.dp)))
-                    AnimatedShimmerBox(modifier = Modifier.width(80.dp).height(14.dp).clip(RoundedCornerShape(4.dp)))
-                }
-                Spacer(modifier = Modifier.height(6.dp))
+        // Category Breakdown Card Shimmer (Matches exact height & row structure of loaded Breakdown card)
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
                 AnimatedShimmerBox(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
+                        .width(140.dp)
+                        .height(18.dp)
                         .clip(RoundedCornerShape(4.dp))
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                repeat(3) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            AnimatedShimmerBox(modifier = Modifier.width(100.dp).height(14.dp).clip(RoundedCornerShape(4.dp)))
+                            AnimatedShimmerBox(modifier = Modifier.width(80.dp).height(14.dp).clip(RoundedCornerShape(4.dp)))
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                        )
+                    }
+                }
             }
         }
 
         // Transaction List Items Shimmers
         repeat(4) {
             Card(
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
@@ -1103,11 +1143,16 @@ private fun CustomAnalysisShimmerLoading(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                         AnimatedShimmerBox(modifier = Modifier.fillMaxWidth(0.6f).height(16.dp).clip(RoundedCornerShape(4.dp)))
                         Spacer(modifier = Modifier.height(6.dp))
                         AnimatedShimmerBox(modifier = Modifier.fillMaxWidth(0.4f).height(12.dp).clip(RoundedCornerShape(4.dp)))
