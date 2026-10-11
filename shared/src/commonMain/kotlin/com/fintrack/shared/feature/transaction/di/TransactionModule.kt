@@ -30,6 +30,7 @@ val transactionModule = module {
     viewModel {
         TransactionViewModel(
             repo = get(),
+            accountRepository = get(),
             localCategoryDataSource = get(),
             syncCategoriesUseCase = get(),
             validateTransactionUseCase = get(),

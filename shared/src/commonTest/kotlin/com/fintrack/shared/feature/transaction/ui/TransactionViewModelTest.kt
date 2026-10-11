@@ -1,5 +1,6 @@
 package com.fintrack.shared.feature.transaction.ui
 
+import com.fintrack.shared.feature.account.domain.repository.FakeAccountRepository
 import com.fintrack.shared.feature.category.data.LocalCategoryDataSource
 import com.fintrack.shared.feature.category.domain.repository.FakeCategoryRepository
 import com.fintrack.shared.feature.category.domain.usecase.SyncCategoriesUseCase
@@ -13,6 +14,7 @@ import kotlin.test.assertEquals
 class TransactionViewModelTest {
 
     private val fakeRepo = FakeTransactionRepository()
+    private val fakeAccountRepo = FakeAccountRepository()
     private val localCategoryDataSource = LocalCategoryDataSource()
     private val syncCategoriesUseCase = SyncCategoriesUseCase(FakeCategoryRepository(), localCategoryDataSource)
     private val validateTransactionUseCase = ValidateTransactionUseCase()
@@ -21,6 +23,7 @@ class TransactionViewModelTest {
 
     private val viewModel = TransactionViewModel(
         repo = fakeRepo,
+        accountRepository = fakeAccountRepo,
         localCategoryDataSource = localCategoryDataSource,
         syncCategoriesUseCase = syncCategoriesUseCase,
         validateTransactionUseCase = validateTransactionUseCase,

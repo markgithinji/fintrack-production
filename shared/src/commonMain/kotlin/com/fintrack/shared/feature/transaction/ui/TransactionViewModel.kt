@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.cash.paging.PagingData
 import app.cash.paging.cachedIn
 import com.fintrack.shared.feature.account.domain.model.Account
+import com.fintrack.shared.feature.account.domain.repository.AccountRepository
 import com.fintrack.shared.feature.category.data.LocalCategoryDataSource
 import com.fintrack.shared.feature.category.domain.model.Category
 import com.fintrack.shared.feature.category.domain.model.allCategories
@@ -46,6 +47,7 @@ import kotlin.time.Duration.Companion.minutes
 @OptIn(FlowPreview::class)
 class TransactionViewModel(
     private val repo: TransactionRepository,
+    private val accountRepository: AccountRepository,
     private val localCategoryDataSource: LocalCategoryDataSource,
     private val syncCategoriesUseCase: SyncCategoriesUseCase,
     private val validateTransactionUseCase: ValidateTransactionUseCase,
@@ -408,12 +410,18 @@ class TransactionViewModel(
         }
     }
 
-    fun loadTransactionById(id: String, accounts: List<Account>) {
+    fun loadTransactionById(id: String, accounts: List<Account> = emptyList()) {
         viewModelScope.launch {
             val result = repo.getTransaction(id)
             if (result is Result.Success) {
                 val t = result.data
                 val currentCategories = categories.value
+                val resolvedAccount = if (accounts.isNotEmpty()) {
+                    accounts.find { it.id == t.accountId }
+                } else {
+                    (accountRepository.getAccountById(t.accountId) as? Result.Success)?.data
+                }
+
                 _formState.value = TransactionFormState(
                     amount = t.amount.formatToTwoPrecision(),
                     description = t.description ?: "",
@@ -424,7 +432,7 @@ class TransactionViewModel(
                         isExpense = !t.isIncome,
                         knownCategories = currentCategories
                     ),
-                    selectedAccount = accounts.find { it.id == t.accountId },
+                    selectedAccount = resolvedAccount,
                     dateTime = t.dateTime,
                     transactionCost = t.transactionCost.formatToTwoPrecision()
                 )

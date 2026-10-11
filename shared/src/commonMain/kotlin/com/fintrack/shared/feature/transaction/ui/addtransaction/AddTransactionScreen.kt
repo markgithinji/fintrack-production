@@ -101,17 +101,23 @@ fun AddTransactionScreen(
         }
     }
 
-    LaunchedEffect(transactionId, accountsResult) {
+    LaunchedEffect(transactionId) {
         transactionsViewModel.resetDeleteResult()
+        transactionsViewModel.resetSaveState()
         if (transactionId != null) {
-            if (accountsResult is Result.Success) {
-                transactionsViewModel.loadTransactionById(
-                    transactionId,
-                    (accountsResult as Result.Success).data
-                )
-            }
+            val accountsList = (accountsResult as? Result.Success)?.data ?: emptyList()
+            transactionsViewModel.loadTransactionById(transactionId, accountsList)
         } else {
             transactionsViewModel.resetSelectedTransaction()
+        }
+    }
+
+    LaunchedEffect(accountsResult) {
+        if (transactionId != null && accountsResult is Result.Success) {
+            val accountsList = (accountsResult as Result.Success).data
+            if (formState.selectedAccount == null) {
+                transactionsViewModel.loadTransactionById(transactionId, accountsList)
+            }
         }
     }
 
