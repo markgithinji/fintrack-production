@@ -11,9 +11,13 @@ import com.fintrack.shared.feature.core.util.FileSaver
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.transaction.domain.model.Transaction
 import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DatePeriod
@@ -32,9 +36,24 @@ class CustomAnalysisViewModel(
     private val _state = MutableStateFlow(CustomAnalysisState())
     val state: StateFlow<CustomAnalysisState> = _state.asStateFlow()
 
+    private val _searchQueryFlow = MutableStateFlow("")
+
     init {
         loadMetadata()
         applyDatePreset(DatePreset.THIS_MONTH)
+        setupSearchDebounce()
+    }
+
+    @OptIn(FlowPreview::class)
+    private fun setupSearchDebounce() {
+        viewModelScope.launch {
+            _searchQueryFlow
+                .debounce(300)
+                .distinctUntilChanged()
+                .collect {
+                    runAnalysis()
+                }
+        }
     }
 
     private fun loadMetadata() {
@@ -119,6 +138,12 @@ class CustomAnalysisViewModel(
         runAnalysis()
     }
 
+    private var searchJob: Job? = null
+    private var analysisJob: Job? = null
+
+    private var cachedQueryKey: String? = null
+    private var cachedRawTransactions: List<Transaction>? = null
+
     fun setTransactionTypeFilter(type: TransactionTypeFilter) {
         _state.update { it.copy(typeFilter = type) }
         runAnalysis()
@@ -126,7 +151,7 @@ class CustomAnalysisViewModel(
 
     fun onSearchQueryChange(query: String) {
         _state.update { it.copy(searchQuery = query) }
-        runAnalysis()
+        _searchQueryFlow.value = query
     }
 
     fun setAmountRange(min: Double?, max: Double?) {
@@ -151,27 +176,39 @@ class CustomAnalysisViewModel(
                 maxAmount = null
             )
         }
+        cachedQueryKey = null
+        cachedRawTransactions = null
         runAnalysis()
     }
 
     private fun runAnalysis() {
-        viewModelScope.launch {
+        analysisJob?.cancel()
+        analysisJob = viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
             val currentState = _state.value
-            // Fetch transactions across selected accounts or all accounts
-            val rawTransactionsResult = transactionRepository.getAllTransactions(
-                startDate = currentState.startDate,
-                endDate = currentState.endDate,
-                accountId = if (currentState.selectedAccountIds.size == 1) currentState.selectedAccountIds.first() else null
-            )
+            val queryKey = "${currentState.startDate}_${currentState.endDate}_${currentState.selectedAccountIds.sorted().joinToString(",")}"
 
-            if (rawTransactionsResult is Result.Error) {
-                _state.update { it.copy(isLoading = false, error = rawTransactionsResult.exception.message ?: "Error loading transactions") }
-                return@launch
+            // Reuse cached raw transactions when filtering by search query, amount, type, or category
+            val allFetched = if (cachedQueryKey == queryKey && cachedRawTransactions != null) {
+                cachedRawTransactions!!
+            } else {
+                val rawResult = transactionRepository.getAllTransactions(
+                    startDate = currentState.startDate,
+                    endDate = currentState.endDate,
+                    accountId = if (currentState.selectedAccountIds.size == 1) currentState.selectedAccountIds.first() else null
+                )
+
+                if (rawResult is Result.Error) {
+                    _state.update { it.copy(isLoading = false, error = rawResult.exception.message ?: "Error loading transactions") }
+                    return@launch
+                }
+
+                val fetched = (rawResult as? Result.Success)?.data ?: emptyList()
+                cachedQueryKey = queryKey
+                cachedRawTransactions = fetched
+                fetched
             }
-
-            val allFetched = (rawTransactionsResult as? Result.Success)?.data ?: emptyList()
 
             // Filter transactions in memory
             val filtered = allFetched.filter { tx ->
