@@ -204,14 +204,24 @@ class CustomAnalysisViewModel(
                 val matchMin = currentState.minAmount == null || txAmount >= currentState.minAmount
                 val matchMax = currentState.maxAmount == null || txAmount <= currentState.maxAmount
 
-                // Text search query (matches description, category, reference code, raw SMS message, and amount)
-                val query = currentState.searchQuery.trim().lowercase()
-                val matchQuery = query.isEmpty() ||
-                        (tx.description?.lowercase()?.contains(query) == true) ||
-                        (tx.category?.lowercase()?.contains(query) == true) ||
-                        (tx.externalId?.lowercase()?.contains(query) == true) ||
-                        (tx.rawMessage?.lowercase()?.contains(query) == true) ||
-                        txAmount.toString().contains(query)
+                // Text search query (tokenized multi-word search across description, category, reference code, raw SMS message, and amount)
+                val queryWords = currentState.searchQuery.trim().lowercase().split(Regex("""\s+""")).filter { it.isNotBlank() }
+
+                val searchTarget = buildString {
+                    append(tx.description ?: "")
+                    append(" ")
+                    append(tx.category ?: "")
+                    append(" ")
+                    append(tx.externalId ?: "")
+                    append(" ")
+                    append(tx.rawMessage ?: "")
+                    append(" ")
+                    append(txAmount.toString())
+                }.lowercase()
+
+                val matchQuery = queryWords.isEmpty() || queryWords.all { word ->
+                    searchTarget.contains(word)
+                }
 
                 matchDate && matchAccount && matchCategory && matchType && matchMin && matchMax && matchQuery
             }.map { tx ->

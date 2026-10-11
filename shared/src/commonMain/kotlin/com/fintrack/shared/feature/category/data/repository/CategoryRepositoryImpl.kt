@@ -144,11 +144,12 @@ class CategoryRepositoryImpl(
                 )
                 if (applyToExisting) {
                     val isIncomeLong = if (isExpense) 0L else 1L
+                    val sqlKeyword = keyword.trim().replace(Regex("""\s+"""), "%")
                     queries.updateTransactionsCategoryByKeyword(
                         newCategoryId = categoryId,
                         userId = offlineUserId,
                         isIncome = isIncomeLong,
-                        keyword = keyword
+                        keyword = sqlKeyword
                     )
                 }
             }
