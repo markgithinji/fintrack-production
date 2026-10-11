@@ -64,7 +64,7 @@ fun HomeScreen(
     onEditTransaction: (String) -> Unit,
     onCardClick: (accountId: String, isIncome: Boolean?) -> Unit
 ) {
-    SideEffect { println("[DEBUG_ANR] HomeScreen Recomposing") }
+    SideEffect { println("[RECOMP_LOG] HomeScreen recomposing (refreshTrigger=$refreshTrigger, selectedAccountId=$selectedAccountId)") }
 
     val accountsResult by accountsViewModel.accounts.collectAsStateWithLifecycle()
     val selectedAccountResult by accountsViewModel.selectedAccount.collectAsStateWithLifecycle()
@@ -205,7 +205,7 @@ fun HomeScreen(
 
     val bottomPadding = paddingValues.calculateBottomPadding()
     var lastBottomPadding by remember { mutableStateOf(80.dp) }
-    SideEffect {
+    LaunchedEffect(bottomPadding) {
         if (bottomPadding > 0.dp) {
             lastBottomPadding = bottomPadding
         }
@@ -224,6 +224,55 @@ fun HomeScreen(
         }
 
     val listState = rememberLazyListState()
+
+    val onToggleBalanceVisibility: (Boolean) -> Unit = remember(settingsViewModel) {
+        { hidden: Boolean -> settingsViewModel.setBalanceHidden(hidden) }
+    }
+    val onManualSyncClick: () -> Unit = remember(selectedAccountResult, transactionsViewModel) {
+        {
+            isManualSyncInProgress = true
+            val accId = (selectedAccountResult as? Result.Success)?.data?.id
+            transactionsViewModel.importTransactions(accId)
+        }
+    }
+    val onSyncErrorClick: (String) -> Unit = remember(onShowToast) {
+        { message: String -> onShowToast(message, true) }
+    }
+    val onRetryAccounts: () -> Unit = remember(accountsViewModel, selectedAccountId) {
+        {
+            accountsViewModel.reloadAccounts()
+            selectedAccountId?.let { accountsViewModel.selectAccount(it) }
+        }
+    }
+    val onIncomeExpenseCardClick: (Boolean) -> Unit = remember(selectedAccountResult, throttledOnCardClick) {
+        { isIncome: Boolean ->
+            val accId = (selectedAccountResult as? Result.Success)?.data?.id
+            accId?.let { throttledOnCardClick(it to isIncome) }
+        }
+    }
+    val onOverviewRetry: () -> Unit = remember(statsViewModel, accountId) {
+        { accountId?.let { statsViewModel.loadOverview(it, force = true) } }
+    }
+    val onCategoryComparisonRetry: () -> Unit = remember(statsViewModel, accountId) {
+        { accountId?.let { statsViewModel.loadCategoryComparisons(it, force = true) } }
+    }
+    val onViewAllTransactionsClick: () -> Unit = remember(selectedAccountResult, throttledOnCardClick) {
+        {
+            val accId = (selectedAccountResult as? Result.Success)?.data?.id
+            accId?.let { throttledOnCardClick(it to null) }
+        }
+    }
+    val onTransactionItemClick: (com.fintrack.shared.feature.transaction.domain.model.Transaction) -> Unit = remember(throttledOnEditTransaction) {
+        { transaction ->
+            transaction.id?.let { id -> throttledOnEditTransaction(id) }
+        }
+    }
+    val onRecentTransactionsRetry: () -> Unit = remember(transactionsViewModel, selectedAccountResult) {
+        {
+            val accId = (selectedAccountResult as? Result.Success)?.data?.id
+            accId?.let { transactionsViewModel.loadRecentTransactions(it, force = true) }
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -250,22 +299,11 @@ fun HomeScreen(
                     isEquityAutoSyncEnabled = isEquityListenerEnabled,
                     importState = importState,
                     syncProgress = importProgress,
-                    onAccountSelected = { accountId ->
-                        onAccountSelected(accountId)
-                    },
-                    onToggleBalanceVisibility = { settingsViewModel.setBalanceHidden(it) },
-                    onManualSync = {
-                        isManualSyncInProgress = true
-                        val accountId = (selectedAccountResult as? Result.Success)?.data?.id
-                        transactionsViewModel.importTransactions(accountId)
-                    },
-                    onSyncErrorClick = { message ->
-                        onShowToast(message, true)
-                    },
-                    onRetry = {
-                        accountsViewModel.reloadAccounts()
-                        selectedAccountId?.let { accountsViewModel.selectAccount(it) }
-                    }
+                    onAccountSelected = onAccountSelected,
+                    onToggleBalanceVisibility = onToggleBalanceVisibility,
+                    onManualSync = onManualSyncClick,
+                    onSyncErrorClick = onSyncErrorClick,
+                    onRetry = onRetryAccounts
                 )
             }
 
@@ -273,28 +311,21 @@ fun HomeScreen(
                 IncomeExpenseCards(
                     accountResult = selectedAccountResult,
                     animatedVisibilityScope = animatedVisibilityScope,
-                    onCardClick = { isIncome ->
-                        val accountId = (selectedAccountResult as? Result.Success)?.data?.id
-                        accountId?.let { throttledOnCardClick(it to isIncome) }
-                    }
+                    onCardClick = onIncomeExpenseCardClick
                 )
             }
 
             item { 
                 IncomeExpensesOverview(
                     overviewResult = overviewResult,
-                    onRetry = {
-                        accountId?.let { statsViewModel.loadOverview(it, force = true) }
-                    }
+                    onRetry = onOverviewRetry
                 ) 
             }
             item {
                 CategoryComparisonCard(
                     categoryComparisonResult = categoryComparisonResult,
                     accountId = accountId,
-                    onRetry = {
-                        accountId?.let { statsViewModel.loadCategoryComparisons(it, force = true) }
-                    },
+                    onRetry = onCategoryComparisonRetry,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -302,22 +333,9 @@ fun HomeScreen(
                 TransactionsListCard(
                     transactionsResult = transactionsResult,
                     animatedVisibilityScope = animatedVisibilityScope,
-                    onViewAllClick = {
-                        val accountId = (selectedAccountResult as? Result.Success)?.data?.id
-                        accountId?.let { throttledOnCardClick(it to null) }
-                    },
-                    onTransactionClick = { transaction ->
-                        transaction.id?.let { id -> throttledOnEditTransaction(id) }
-                    },
-                    onRetry = {
-                        val accountId = (selectedAccountResult as? Result.Success)?.data?.id
-                        accountId?.let {
-                            transactionsViewModel.loadRecentTransactions(
-                                it,
-                                force = true
-                            )
-                        }
-                    }
+                    onViewAllClick = onViewAllTransactionsClick,
+                    onTransactionClick = onTransactionItemClick,
+                    onRetry = onRecentTransactionsRetry
                 )
             }
         }
