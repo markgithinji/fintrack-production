@@ -79,17 +79,14 @@ fun MainNavigation(
             }
         },
         exitTransition = {
-            if (initialState.destination.isMorphScreen()) {
+            if (targetState.destination.isMorphScreen()) {
+                fadeOut(animationSpec = tween(250))
+            } else if (initialState.destination.isMorphScreen()) {
                 slideOutVertically(
                     targetOffsetY = { it },
                     animationSpec = tween(350, easing = FastOutSlowInEasing)
                 ) + fadeOut(animationSpec = tween(300))
             } else if (initialState.destination.isProfileDetailScreen()) {
-                slideOutHorizontally(
-                    targetOffsetX = { it },
-                    animationSpec = tween(300, easing = FastOutSlowInEasing)
-                )
-            } else if (targetState.destination.isProfileDetailScreen()) {
                 slideOutHorizontally(
                     targetOffsetX = { -it / 4 },
                     animationSpec = tween(300, easing = FastOutSlowInEasing)
@@ -99,7 +96,9 @@ fun MainNavigation(
             }
         },
         popEnterTransition = {
-            if (targetState.destination.isMorphScreen() || targetState.destination.isMainScreen()) {
+            if (initialState.destination.isMorphScreen()) {
+                fadeIn(animationSpec = tween(250))
+            } else if (targetState.destination.isMorphScreen() || targetState.destination.isMainScreen()) {
                 fadeIn(animationSpec = tween(250))
             } else if (targetState.destination.hasRoute<Screen.Profile>()) {
                 slideInHorizontally(
