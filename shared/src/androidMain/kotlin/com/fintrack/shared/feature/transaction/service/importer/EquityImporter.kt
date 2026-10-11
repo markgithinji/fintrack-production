@@ -14,6 +14,7 @@ import com.fintrack.shared.feature.category.domain.model.UncategorizedIncome
 import com.fintrack.shared.feature.category.domain.repository.CategoryRepository
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.transaction.domain.model.Transaction
+import com.fintrack.shared.feature.transaction.util.GeminiSmsParser
 import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository
 import com.fintrack.shared.feature.transaction.domain.service.TransactionImporter
 import com.fintrack.shared.feature.transaction.util.EquityParser
@@ -120,7 +121,9 @@ class EquityImporter(
                             latestBalance = EquityParser.parseBalance(body)
                         }
 
+                        val geminiParser = GeminiSmsParser(context)
                         val parsed = EquityParser.parse(body, accountId, smsInstant, rules, categories)
+                            ?: geminiParser.parseSmsWithGemini(body, accountId, smsInstant, rules, categories)
                         if (parsed != null) {
                             val categoryName = parsed.category
                             val isExpense = !parsed.isIncome

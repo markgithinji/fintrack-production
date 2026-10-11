@@ -50,6 +50,7 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core.ktx)
             implementation(libs.androidx.biometric)
+            api("com.google.mlkit:genai-prompt:1.0.0-beta4")
             implementation(libs.ktor.client.okhttp)
             implementation(libs.androidx.security.crypto.ktx)
             implementation(libs.androidx.datastore.preferences)

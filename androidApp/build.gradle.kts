@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "com.fintrack.android"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -68,6 +68,7 @@ android {
 
 dependencies {
     implementation(project(":shared"))
+    implementation("com.google.mlkit:genai-prompt:1.0.0-beta4")
     implementation(libs.androidx.lifecycle.viewmodelCompose)
     implementation(libs.kotlinx.datetime)
 
