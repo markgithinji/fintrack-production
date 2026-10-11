@@ -1,6 +1,7 @@
 package com.fintrack.shared.feature.summary.ui.custom
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -89,7 +90,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.viewmodel.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomAnalysisScreen(
     paddingValues: PaddingValues = PaddingValues(0.dp),
@@ -274,21 +275,29 @@ fun CustomAnalysisScreen(
                 )
             }
 
-            if (state.isLoading) {
-                CustomAnalysisShimmerLoading(
-                    bottomPadding = paddingValues.calculateBottomPadding()
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 8.dp,
-                        bottom = paddingValues.calculateBottomPadding() + 88.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Crossfade(
+                targetState = state.isLoading,
+                animationSpec = tween(durationMillis = 350),
+                modifier = Modifier.weight(1f),
+                label = "CustomAnalysisLoadingCrossfade"
+            ) { isLoading ->
+                if (isLoading) {
+                    CustomAnalysisShimmerLoading(
+                        bottomPadding = paddingValues.calculateBottomPadding()
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 8.dp,
+                            bottom = paddingValues.calculateBottomPadding() + 88.dp
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                     // Summary KPIs
                     item {
                         Card(
@@ -568,13 +577,6 @@ fun CustomAnalysisScreen(
                                         )
                                     }
 
-                                    Text(
-                                        text = (if (!tx.isIncome) "-" else "+") + tx.amount.doubleValue(false).toCurrencyString(),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (!tx.isIncome) PinkExpense else GreenIncome,
-                                        maxLines = 1
-                                    )
                                 }
                             }
                         }
@@ -582,8 +584,9 @@ fun CustomAnalysisScreen(
                 }
             }
         }
+    }
 
-        // Export CSV Floating Action Button
+    // Export CSV Floating Action Button
         FloatingActionButton(
             onClick = { viewModel.exportReportCsv() },
             containerColor = colorScheme.primary,
