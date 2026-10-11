@@ -65,6 +65,7 @@ fun TransactionsListCard(
     onRetry: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    androidx.compose.runtime.SideEffect { println("[RECOMP_LOG] TransactionsListCard recomposing") }
     val sharedTransitionScope = LocalSharedTransitionScope.current
 
     Card(

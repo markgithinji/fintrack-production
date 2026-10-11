@@ -60,6 +60,7 @@ fun IncomeExpenseCards(
     onCardClick: (isIncome: Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    androidx.compose.runtime.SideEffect { println("[RECOMP_LOG] IncomeExpenseCards recomposing") }
     AnimatedContent(
         targetState = accountResult,
         transitionSpec = {
