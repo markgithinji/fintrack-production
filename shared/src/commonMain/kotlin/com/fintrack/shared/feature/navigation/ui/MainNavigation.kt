@@ -267,7 +267,10 @@ fun MainNavigation(
         composable<Screen.CustomAnalysis> {
             CustomAnalysisScreen(
                 paddingValues = paddingValues,
-                onShowToast = { message, isError -> mainViewModel.showToast(message, isError) }
+                onShowToast = { message, isError -> mainViewModel.showToast(message, isError) },
+                onEditTransaction = { transactionId ->
+                    navController.navigateThrottled(Screen.AddTransaction(transactionId))
+                }
             )
         }
 

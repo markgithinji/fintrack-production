@@ -94,6 +94,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun CustomAnalysisScreen(
     paddingValues: PaddingValues = PaddingValues(0.dp),
     onShowToast: (String, Boolean) -> Unit,
+    onEditTransaction: (String) -> Unit = {},
     viewModel: CustomAnalysisViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -520,7 +521,11 @@ fun CustomAnalysisScreen(
                                     containerColor = colorScheme.surface
                                 ),
                                 border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.2f)),
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable(enabled = tx.id != null) {
+                                        tx.id?.let { onEditTransaction(it) }
+                                    }
                             ) {
                                 Row(
                                     modifier = Modifier
