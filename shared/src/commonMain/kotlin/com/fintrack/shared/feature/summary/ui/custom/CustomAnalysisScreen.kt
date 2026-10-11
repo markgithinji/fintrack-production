@@ -152,7 +152,7 @@ fun CustomAnalysisScreen(
                 onValueChange = { viewModel.onSearchQueryChange(it) },
                 placeholder = {
                     Text(
-                        "Search merchant, description...",
+                        "Search merchant, SMS text, ref...",
                         style = MaterialTheme.typography.bodyMedium,
                         color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )

@@ -204,12 +204,13 @@ class CustomAnalysisViewModel(
                 val matchMin = currentState.minAmount == null || txAmount >= currentState.minAmount
                 val matchMax = currentState.maxAmount == null || txAmount <= currentState.maxAmount
 
-                // Text search query
+                // Text search query (matches description, category, reference code, raw SMS message, and amount)
                 val query = currentState.searchQuery.trim().lowercase()
                 val matchQuery = query.isEmpty() ||
                         (tx.description?.lowercase()?.contains(query) == true) ||
                         (tx.category?.lowercase()?.contains(query) == true) ||
                         (tx.externalId?.lowercase()?.contains(query) == true) ||
+                        (tx.rawMessage?.lowercase()?.contains(query) == true) ||
                         txAmount.toString().contains(query)
 
                 matchDate && matchAccount && matchCategory && matchType && matchMin && matchMax && matchQuery

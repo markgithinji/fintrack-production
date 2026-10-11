@@ -230,7 +230,7 @@ class TransactionRepositoryImpl(
     ): Result<List<Transaction>> = withContext(Dispatchers.IO) {
         try {
             val transactions = if (accountId != null) {
-                queries.selectTransactionsByAccount(accountId).executeAsList().map { row ->
+                queries.selectTransactionsWithRawMessageByAccount(accountId).executeAsList().map { row ->
                     Transaction(
                         id = row.id,
                         accountId = row.accountId,
@@ -247,7 +247,7 @@ class TransactionRepositoryImpl(
                     )
                 }
             } else {
-                queries.selectAllTransactions(offlineUserId).executeAsList().map { row ->
+                queries.selectAllTransactionsWithRawMessage(offlineUserId).executeAsList().map { row ->
                     Transaction(
                         id = row.id,
                         accountId = row.accountId,

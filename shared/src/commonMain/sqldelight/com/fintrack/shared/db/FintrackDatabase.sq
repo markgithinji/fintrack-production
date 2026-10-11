@@ -162,6 +162,20 @@ LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.accountId = ?
 ORDER BY T.dateTime DESC;
 
+selectTransactionsWithRawMessageByAccount:
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
+FROM TransactionEntity T
+LEFT JOIN CategoryEntity C ON T.categoryId = C.id
+WHERE T.accountId = ?
+ORDER BY T.dateTime DESC;
+
+selectAllTransactionsWithRawMessage:
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
+FROM TransactionEntity T
+LEFT JOIN CategoryEntity C ON T.categoryId = C.id
+WHERE T.userId = ?
+ORDER BY T.dateTime DESC;
+
 selectRecentTransactionsByAccount:
 SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
 FROM TransactionEntity T
