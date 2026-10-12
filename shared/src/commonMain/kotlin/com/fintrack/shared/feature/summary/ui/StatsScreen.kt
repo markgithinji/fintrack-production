@@ -104,6 +104,9 @@ fun StatisticsScreen(
     LaunchedEffect(selectedAccountId, refreshTrigger) {
         if (selectedAccountId != null) {
             val force = refreshTrigger > lastProcessedRefreshTrigger && lastProcessedRefreshTrigger != -1
+            if (force) {
+                viewModel.resetStats()
+            }
             viewModel.loadAvailablePeriods(selectedAccountId, force = force)
             viewModel.loadOverview(selectedAccountId, force = force)
             lastProcessedRefreshTrigger = refreshTrigger

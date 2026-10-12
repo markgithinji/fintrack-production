@@ -144,6 +144,35 @@ class StatisticsViewModel(
     private var categoryComparisonsJob: Job? = null
     private var transactionCountsJob: Job? = null
 
+    fun resetStats() {
+        lastHighlightsAccountId = null
+        lastHighlightsPeriod = null
+        lastOverviewAccountId = null
+        lastCategoryComparisonAccountId = null
+        lastCategoryComparisonPeriod = null
+        lastTransactionCountsAccountId = null
+        lastTransactionCountsIsIncome = null
+        lastTransactionCountsCategoryId = null
+        lastTransactionCountsStart = null
+        lastTransactionCountsEnd = null
+        lastTransactionCountsHasCost = null
+        lastIncomeDistributionParams = null
+        lastExpenseDistributionParams = null
+        lastAvailablePeriodsAccountId = null
+
+        _highlights.value = Result.Loading
+        _overview.value = Result.Loading
+        _categoryComparisons.value = Result.Loading
+        _transactionCounts.value = Result.Loading
+        _incomeDistribution.value = Result.Loading
+        _expenseDistribution.value = Result.Loading
+        _availableWeeks.value = emptyList()
+        _availableMonths.value = emptyList()
+        _availableYears.value = emptyList()
+        _selectedPeriod.value = null
+        _metadataState.value = Result.Loading
+    }
+
     fun loadHighlights(accountId: String? = null, period: String? = null, force: Boolean = false) {
         val currentPeriod = period ?: DateTimeHelper.currentMonthCode()
 
