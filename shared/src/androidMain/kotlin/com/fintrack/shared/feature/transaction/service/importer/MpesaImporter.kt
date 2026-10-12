@@ -106,43 +106,50 @@ class MpesaImporter(
             val totalMessages = cursor?.count ?: 0
             Log.d(TAG, "M-Pesa SMS query returned $totalMessages messages.")
 
-            cursor?.use { smsCursor ->
-                val bodyIndex = smsCursor.getColumnIndex(Telephony.Sms.Inbox.BODY)
-                val dateIndex = smsCursor.getColumnIndex(Telephony.Sms.Inbox.DATE)
-                var loggedCount = 0
+            val geminiParser = GeminiSmsParser(context)
+            try {
+                cursor?.use { smsCursor ->
+                    val bodyIndex = smsCursor.getColumnIndex(Telephony.Sms.Inbox.BODY)
+                    val dateIndex = smsCursor.getColumnIndex(Telephony.Sms.Inbox.DATE)
+                    var loggedCount = 0
 
-                while (smsCursor.moveToNext()) {
-                    currentCoroutineContext().job.ensureActive()
-                    val body = smsCursor.getString(bodyIndex) ?: continue
-                    val timestamp = smsCursor.getLong(dateIndex)
-                    val smsInstant = Instant.fromEpochMilliseconds(timestamp)
+                    while (smsCursor.moveToNext()) {
+                        currentCoroutineContext().job.ensureActive()
+                        val body = smsCursor.getString(bodyIndex) ?: continue
+                        val timestamp = smsCursor.getLong(dateIndex)
+                        val smsInstant = Instant.fromEpochMilliseconds(timestamp)
 
-                    if (latestBalance == null) {
-                        latestBalance = MpesaParser.parseBalance(body)
-                    }
+                        if (latestBalance == null) {
+                            latestBalance = MpesaParser.parseBalance(body)
+                        }
 
-                    val geminiParser = GeminiSmsParser(context)
-                    val parsed = MpesaParser.parse(body, accountId, smsInstant, rules, categories)
-                        ?: geminiParser.parseSmsWithGemini(body, accountId, smsInstant, rules, categories)
-                    if (parsed != null) {
-                        val categoryName = parsed.category
-                        val isExpense = !parsed.isIncome
-                        val finalCategoryId = categories.find { cat ->
-                            cat.name.equals(categoryName, ignoreCase = true) && cat.isExpense == isExpense
-                        }?.id
-                            ?: categories.find { cat ->
-                                cat.name.contains("Other", ignoreCase = true) && cat.isExpense == isExpense
+                        var parsed = MpesaParser.parse(body, accountId, smsInstant, rules, categories)
+                        if (parsed == null && isFinancialCandidate(body)) {
+                            parsed = geminiParser.parseSmsWithGemini(body, accountId, smsInstant, rules, categories)
+                        }
+
+                        if (parsed != null) {
+                            val categoryName = parsed.category
+                            val isExpense = !parsed.isIncome
+                            val finalCategoryId = categories.find { cat ->
+                                cat.name.equals(categoryName, ignoreCase = true) && cat.isExpense == isExpense
                             }?.id
-                            ?: categories.find { cat -> cat.isExpense == isExpense }?.id
-                            ?: categories.firstOrNull()?.id
-                            ?: if (isExpense) Category.UncategorizedExpense.id else Category.UncategorizedIncome.id
+                                ?: categories.find { cat ->
+                                    cat.name.contains("Other", ignoreCase = true) && cat.isExpense == isExpense
+                                }?.id
+                                ?: categories.find { cat -> cat.isExpense == isExpense }?.id
+                                ?: categories.firstOrNull()?.id
+                                ?: if (isExpense) Category.UncategorizedExpense.id else Category.UncategorizedIncome.id
 
-                        transactions.add(parsed.copy(categoryId = finalCategoryId))
+                            transactions.add(parsed.copy(categoryId = finalCategoryId))
+                        }
+
+                        loggedCount++
+                        if (loggedCount % 500 == 0 && totalMessages > 0) onProgress(0.05f + (loggedCount.toFloat() / totalMessages) * 0.25f)
                     }
-
-                    loggedCount++
-                    if (loggedCount % 500 == 0 && totalMessages > 0) onProgress(0.05f + (loggedCount.toFloat() / totalMessages) * 0.25f)
                 }
+            } finally {
+                geminiParser.close()
             }
             Log.d(TAG, "M-Pesa SMS parsing complete: ${transactions.size} valid transactions parsed from $totalMessages SMS messages.")
         } else {
@@ -184,5 +191,14 @@ class MpesaImporter(
             if (updateResult is Result.Error) throw updateResult.exception
         }
         onProgress(1.0f)
+    }
+
+    private fun isFinancialCandidate(text: String): Boolean {
+        val lower = text.lowercase()
+        val hasCurrency = lower.contains("ksh") || lower.contains("kes") || lower.contains("usd") || lower.contains("amount")
+        val hasAction = lower.contains("sent") || lower.contains("paid") || lower.contains("received") || 
+                        lower.contains("transferred") || lower.contains("bought") || lower.contains("withdraw") || 
+                        lower.contains("deposited") || lower.contains("confirmed") || lower.contains("ref")
+        return hasCurrency && hasAction
     }
 }
