@@ -268,6 +268,7 @@ fun SettingsScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding() + paddingValues.calculateTopPadding(),
                     bottom = innerPadding.calculateBottomPadding() + paddingValues.calculateBottomPadding() + 24.dp,
@@ -275,7 +276,7 @@ fun SettingsScreen(
                     end = 16.dp
                 )
             ) {
-                item {
+                item(key = "section_general") {
                     SettingsSection(title = "General") {
                         SettingsItem(
                             title = "Theme",
@@ -364,7 +365,9 @@ fun SettingsScreen(
                             }
                         )
                     }
+                }
 
+                item(key = "section_mpesa") {
                     SettingsSection(title = "M-Pesa Tracking") {
                         SettingsToggleItem(
                             title = "M-Pesa Auto-tracking",
@@ -388,7 +391,9 @@ fun SettingsScreen(
                             }
                         )
                     }
+                }
 
+                item(key = "section_bank") {
                     SettingsSection(title = "Bank Tracking") {
                         SettingsToggleItem(
                             title = "Equity Auto-tracking",
@@ -412,7 +417,9 @@ fun SettingsScreen(
                             }
                         )
                     }
+                }
 
+                item(key = "section_notifications") {
                     SettingsSection(title = "Notifications") {
                         SettingsToggleItem(
                             title = "Daily Logging Nudge",
@@ -587,7 +594,9 @@ fun SettingsScreen(
                             }
                         }
                     }
+                }
 
+                item(key = "section_security") {
                     SettingsSection(title = "Security") {
                         SettingsToggleItem(
                             title = "Biometric Lock",
@@ -636,9 +645,10 @@ fun SettingsScreen(
                                 onClick = { showBiometricTimeoutDialog = true }
                             )
                         }
-
                     }
+                }
 
+                item(key = "section_backup") {
                     SettingsSection(title = "Data & Backup") {
                         SettingsItem(
                             title = "Export Transactions",
@@ -686,7 +696,9 @@ fun SettingsScreen(
                             onClick = { viewModel.restoreFromGoogleDrive() }
                         )
                     }
+                }
 
+                item(key = "section_seed") {
                     SettingsSection(title = "Portfolio Demo") {
                         val seedSubtitle = when (val state = seedState) {
                             is SaveState.Loading -> "Seeding... ${(seedProgress * 100).toInt()}%"
@@ -707,7 +719,9 @@ fun SettingsScreen(
                             onClick = { showSeedConfirmation = true }
                         )
                     }
+                }
 
+                item(key = "section_about") {
                     SettingsSection(title = "About") {
                         SettingsItem(
                             title = "Version",
@@ -729,7 +743,9 @@ fun SettingsScreen(
                             onClick = { }
                         )
                     }
+                }
 
+                item(key = "section_spacer") {
                     Spacer(modifier = Modifier.height(32.dp))
                 }
             }
@@ -2214,7 +2230,6 @@ fun SettingsSection(
             Column(
                 modifier = Modifier
                     .padding(vertical = 4.dp)
-                    .animateContentSize()
             ) {
                 content()
             }
