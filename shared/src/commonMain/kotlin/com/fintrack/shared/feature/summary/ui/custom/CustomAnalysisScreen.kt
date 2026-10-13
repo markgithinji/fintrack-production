@@ -1,7 +1,9 @@
 package com.fintrack.shared.feature.summary.ui.custom
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -131,19 +133,15 @@ fun CustomAnalysisScreen(
             ) {
                 DatePreset.entries.forEach { preset ->
                     val isSelected = state.datePreset == preset
-                    FilterChip(
+                    SelectableFilterChip(
                         selected = isSelected,
+                        label = preset.label,
                         onClick = {
                             viewModel.applyDatePreset(preset)
                             if (preset == DatePreset.CUSTOM) {
                                 showStartDatePicker = true
                             }
-                        },
-                        label = { Text(preset.label) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = colorScheme.primaryContainer,
-                            selectedLabelColor = colorScheme.onPrimaryContainer
-                        )
+                        }
                     )
                 }
             }
@@ -219,7 +217,9 @@ fun CustomAnalysisScreen(
                     Surface(
                         shape = RoundedCornerShape(20.dp),
                         color = colorScheme.surfaceVariant,
-                        modifier = Modifier.clickable { showFilterSheet = true }
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable { showFilterSheet = true }
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -245,7 +245,9 @@ fun CustomAnalysisScreen(
                         Surface(
                             shape = CircleShape,
                             color = colorScheme.errorContainer.copy(alpha = 0.4f),
-                            modifier = Modifier.clickable { viewModel.clearAllFilters() }
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .clickable { viewModel.clearAllFilters() }
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -751,36 +753,11 @@ fun CustomAnalysisScreen(
                             ) {
                                 state.allAccounts.forEach { acc ->
                                     val isSelected = state.selectedAccountIds.contains(acc.id)
-                                    Surface(
-                                        shape = RoundedCornerShape(12.dp),
-                                        color = if (isSelected) colorScheme.primaryContainer else colorScheme.surface,
-                                        border = BorderStroke(
-                                            width = if (isSelected) 2.dp else 1.dp,
-                                            color = if (isSelected) colorScheme.primary else colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                        ),
-                                        modifier = Modifier.clickable { viewModel.toggleAccountSelection(acc.id) }
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            Text(
-                                                text = acc.name,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface
-                                            )
-                                            if (isSelected) {
-                                                Icon(
-                                                    Icons.Default.Check,
-                                                    contentDescription = null,
-                                                    tint = colorScheme.primary,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                            }
-                                        }
-                                    }
+                                    SelectableFilterChip(
+                                        selected = isSelected,
+                                        label = acc.name,
+                                        onClick = { viewModel.toggleAccountSelection(acc.id) }
+                                    )
                                 }
                             }
                         }
@@ -821,42 +798,12 @@ fun CustomAnalysisScreen(
                             ) {
                                 state.allCategories.forEach { cat ->
                                     val isSelected = state.selectedCategoryIds.contains(cat.id)
-                                    Surface(
-                                        shape = RoundedCornerShape(12.dp),
-                                        color = if (isSelected) colorScheme.primaryContainer else colorScheme.surface,
-                                        border = BorderStroke(
-                                            width = if (isSelected) 2.dp else 1.dp,
-                                            color = if (isSelected) colorScheme.primary else colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                        ),
-                                        modifier = Modifier.clickable { viewModel.toggleCategorySelection(cat.id) }
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = cat.toIcon(),
-                                                contentDescription = null,
-                                                tint = if (isSelected) colorScheme.primary else colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                            Text(
-                                                text = cat.name,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface
-                                            )
-                                            if (isSelected) {
-                                                Icon(
-                                                    Icons.Default.Check,
-                                                    contentDescription = null,
-                                                    tint = colorScheme.primary,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                            }
-                                        }
-                                    }
+                                    SelectableFilterChip(
+                                        selected = isSelected,
+                                        label = cat.name,
+                                        leadingIcon = cat.toIcon(),
+                                        onClick = { viewModel.toggleCategorySelection(cat.id) }
+                                    )
                                 }
                             }
                         }
@@ -1162,6 +1109,70 @@ private fun CustomAnalysisShimmerLoading(
                     }
                     AnimatedShimmerBox(modifier = Modifier.width(70.dp).height(18.dp).clip(RoundedCornerShape(4.dp)))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelectableFilterChip(
+    selected: Boolean,
+    label: String,
+    onClick: () -> Unit,
+    leadingIcon: ImageVector? = null,
+    modifier: Modifier = Modifier
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val animatedBgColor by animateColorAsState(
+        targetValue = if (selected) colorScheme.primaryContainer else colorScheme.surface,
+        animationSpec = tween(150),
+        label = "chipBgColor"
+    )
+    val animatedContentColor by animateColorAsState(
+        targetValue = if (selected) colorScheme.onPrimaryContainer else colorScheme.onSurface,
+        animationSpec = tween(150),
+        label = "chipContentColor"
+    )
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = animatedBgColor,
+        border = BorderStroke(
+            width = if (selected) 1.5.dp else 1.dp,
+            color = if (selected) colorScheme.primary else colorScheme.outlineVariant.copy(alpha = 0.5f)
+        ),
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (leadingIcon != null) {
+                Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = null,
+                    tint = if (selected) colorScheme.primary else colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                color = animatedContentColor
+            )
+
+            if (selected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }
