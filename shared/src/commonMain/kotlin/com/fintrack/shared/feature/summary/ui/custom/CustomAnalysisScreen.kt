@@ -3,6 +3,7 @@ package com.fintrack.shared.feature.summary.ui.custom
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -691,29 +692,12 @@ fun CustomAnalysisScreen(
                         ) {
                             TransactionTypeFilter.entries.forEach { type ->
                                 val isSelected = state.typeFilter == type
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = if (isSelected) colorScheme.primaryContainer else colorScheme.surface,
-                                    border = BorderStroke(
-                                        1.dp,
-                                        if (isSelected) colorScheme.primary else colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                    ),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable { viewModel.setTransactionTypeFilter(type) }
-                                ) {
-                                    Box(
-                                        modifier = Modifier.padding(vertical = 10.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = type.label,
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                            color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface
-                                        )
-                                    }
-                                }
+                                SelectableFilterChip(
+                                    selected = isSelected,
+                                    label = type.label,
+                                    onClick = { viewModel.setTransactionTypeFilter(type) },
+                                    modifier = Modifier.weight(1f)
+                                )
                             }
                         }
                     }
@@ -1122,6 +1106,10 @@ private fun SelectableFilterChip(
     leadingIcon: ImageVector? = null,
     modifier: Modifier = Modifier
 ) {
+    SideEffect {
+        println("[FILTER_CHIP_DIAGNOSTIC] SelectableFilterChip composed/recomposed: label=$label, selected=$selected")
+    }
+
     val colorScheme = MaterialTheme.colorScheme
     val animatedBgColor by animateColorAsState(
         targetValue = if (selected) colorScheme.primaryContainer else colorScheme.surface,
@@ -1135,6 +1123,10 @@ private fun SelectableFilterChip(
     )
 
     Surface(
+        onClick = {
+            println("[FILTER_CHIP_DIAGNOSTIC] SelectableFilterChip clicked: label=$label, currentSelected=$selected")
+            onClick()
+        },
         shape = RoundedCornerShape(12.dp),
         color = animatedBgColor,
         border = BorderStroke(
@@ -1142,8 +1134,6 @@ private fun SelectableFilterChip(
             color = if (selected) colorScheme.primary else colorScheme.outlineVariant.copy(alpha = 0.5f)
         ),
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),

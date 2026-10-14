@@ -11,7 +11,9 @@ import com.fintrack.shared.feature.core.util.FileSaver
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.transaction.domain.model.Transaction
 import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -113,6 +115,8 @@ class CustomAnalysisViewModel(
     }
 
     fun toggleAccountSelection(accountId: String) {
+        val start = DateTimeHelper.now().toEpochMilliseconds()
+        println("[FILTER_CHIP_DIAGNOSTIC] toggleAccountSelection BEFORE update: accountId=$accountId, currentSelection=${_state.value.selectedAccountIds}")
         _state.update { current ->
             val updated = current.selectedAccountIds.toMutableSet()
             if (updated.contains(accountId)) {
@@ -122,10 +126,14 @@ class CustomAnalysisViewModel(
             }
             current.copy(selectedAccountIds = updated)
         }
+        val end = DateTimeHelper.now().toEpochMilliseconds()
+        println("[FILTER_CHIP_DIAGNOSTIC] toggleAccountSelection AFTER update: accountId=$accountId, newSelection=${_state.value.selectedAccountIds}, updateTime=${end - start}ms")
         runAnalysis()
     }
 
     fun toggleCategorySelection(categoryId: String) {
+        val start = DateTimeHelper.now().toEpochMilliseconds()
+        println("[FILTER_CHIP_DIAGNOSTIC] toggleCategorySelection BEFORE update: categoryId=$categoryId, currentSelection=${_state.value.selectedCategoryIds}")
         _state.update { current ->
             val updated = current.selectedCategoryIds.toMutableSet()
             if (updated.contains(categoryId)) {
@@ -135,6 +143,8 @@ class CustomAnalysisViewModel(
             }
             current.copy(selectedCategoryIds = updated)
         }
+        val end = DateTimeHelper.now().toEpochMilliseconds()
+        println("[FILTER_CHIP_DIAGNOSTIC] toggleCategorySelection AFTER update: categoryId=$categoryId, newSelection=${_state.value.selectedCategoryIds}, updateTime=${end - start}ms")
         runAnalysis()
     }
 
@@ -183,20 +193,26 @@ class CustomAnalysisViewModel(
 
     private fun runAnalysis() {
         analysisJob?.cancel()
-        analysisJob = viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
-
+        analysisJob = viewModelScope.launch(Dispatchers.IO) {
+            val startMs = DateTimeHelper.now().toEpochMilliseconds()
             val currentState = _state.value
-            val queryKey = "${currentState.startDate}_${currentState.endDate}_${currentState.selectedAccountIds.sorted().joinToString(",")}"
+            val queryKey = "${currentState.startDate}_${currentState.endDate}"
 
-            // Reuse cached raw transactions when filtering by search query, amount, type, or category
-            val allFetched = if (cachedQueryKey == queryKey && cachedRawTransactions != null) {
+            val isNewDateRange = cachedQueryKey != queryKey || cachedRawTransactions == null
+            if (isNewDateRange) {
+                _state.update { it.copy(isLoading = true, error = null) }
+            }
+
+            println("[FILTER_CHIP_DIAGNOSTIC] runAnalysis START: queryKey=$queryKey, isNewDateRange=$isNewDateRange")
+
+            // Reuse cached raw transactions across accounts, categories, types, amounts, and search queries
+            val allFetched = if (!isNewDateRange && cachedRawTransactions != null) {
                 cachedRawTransactions!!
             } else {
                 val rawResult = transactionRepository.getAllTransactions(
                     startDate = currentState.startDate,
                     endDate = currentState.endDate,
-                    accountId = if (currentState.selectedAccountIds.size == 1) currentState.selectedAccountIds.first() else null
+                    accountId = null
                 )
 
                 if (rawResult is Result.Error) {
