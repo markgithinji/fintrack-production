@@ -9,6 +9,7 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import com.fintrack.shared.feature.core.ui.util.buildHighlightedText
 import com.fintrack.shared.feature.core.ui.util.rememberHapticFeedback
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -570,8 +571,17 @@ fun CustomAnalysisScreen(
                                     Spacer(modifier = Modifier.width(10.dp))
 
                                     Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                        val descriptionText = tx.description ?: tx.category ?: "Transaction"
+                                        val highlightedDescription = remember(descriptionText, state.searchQuery, colorScheme.primary) {
+                                            buildHighlightedText(
+                                                text = descriptionText,
+                                                query = state.searchQuery,
+                                                highlightColor = colorScheme.primary
+                                            )
+                                        }
+
                                         Text(
-                                            text = tx.description ?: tx.category ?: "Transaction",
+                                            text = highlightedDescription,
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Bold,
                                             maxLines = 1,
@@ -585,6 +595,25 @@ fun CustomAnalysisScreen(
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
+
+                                        val rawSmsText = tx.rawMessage
+                                        if (!rawSmsText.isNullOrBlank() && state.searchQuery.isNotBlank() && rawSmsText.lowercase().contains(state.searchQuery.lowercase().trim())) {
+                                            val highlightedRaw = remember(rawSmsText, state.searchQuery, colorScheme.primary) {
+                                                buildHighlightedText(
+                                                    text = rawSmsText.take(80) + if (rawSmsText.length > 80) "..." else "",
+                                                    query = state.searchQuery,
+                                                    highlightColor = colorScheme.primary
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = highlightedRaw,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
                                     }
 
                                 }

@@ -24,6 +24,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.AnnotatedString
+import com.fintrack.shared.feature.core.ui.util.buildHighlightedText
 import com.fintrack.shared.feature.core.ui.util.rememberHapticFeedback
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -55,6 +57,7 @@ fun TransactionItem(
     transaction: Transaction,
     animatedVisibilityScope: AnimatedVisibilityScope,
     includeFees: Boolean = true,
+    searchQuery: String = "",
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
@@ -147,9 +150,22 @@ fun TransactionItem(
                         }
                     }
 
+                    val primaryColor = MaterialTheme.colorScheme.primary
+                    val highlightedText = remember(detailText, searchQuery, primaryColor) {
+                        if (searchQuery.isNotBlank()) {
+                            buildHighlightedText(
+                                text = detailText,
+                                query = searchQuery,
+                                highlightColor = primaryColor
+                            )
+                        } else {
+                            AnnotatedString(detailText)
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = detailText,
+                        text = highlightedText,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
