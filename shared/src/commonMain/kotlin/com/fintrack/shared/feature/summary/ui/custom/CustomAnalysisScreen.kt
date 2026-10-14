@@ -1,8 +1,14 @@
 package com.fintrack.shared.feature.summary.ui.custom
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.BorderStroke
@@ -686,8 +692,9 @@ fun CustomAnalysisScreen(
                             )
                         }
                         Spacer(Modifier.height(12.dp))
-                        Row(
+                        FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             TransactionTypeFilter.entries.forEach { type ->
@@ -695,8 +702,7 @@ fun CustomAnalysisScreen(
                                 SelectableFilterChip(
                                     selected = isSelected,
                                     label = type.label,
-                                    onClick = { viewModel.setTransactionTypeFilter(type) },
-                                    modifier = Modifier.weight(1f)
+                                    onClick = { viewModel.setTransactionTypeFilter(type) }
                                 )
                             }
                         }
@@ -1136,7 +1142,9 @@ private fun SelectableFilterChip(
         modifier = modifier
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .animateContentSize(animationSpec = tween(200)),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
@@ -1153,10 +1161,16 @@ private fun SelectableFilterChip(
                 text = label,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                color = animatedContentColor
+                color = animatedContentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
-            if (selected) {
+            AnimatedVisibility(
+                visible = selected,
+                enter = fadeIn(tween(150)) + expandHorizontally(tween(150)),
+                exit = fadeOut(tween(150)) + shrinkHorizontally(tween(150))
+            ) {
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
