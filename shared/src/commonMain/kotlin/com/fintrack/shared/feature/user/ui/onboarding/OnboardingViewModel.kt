@@ -21,11 +21,32 @@ class OnboardingViewModel(
     private val _nameError = MutableStateFlow<String?>(null)
     val nameError: StateFlow<String?> = _nameError.asStateFlow()
 
+    private val _isMpesaEnabled = MutableStateFlow(true)
+    val isMpesaEnabled: StateFlow<Boolean> = _isMpesaEnabled.asStateFlow()
+
+    private val _isEquityEnabled = MutableStateFlow(true)
+    val isEquityEnabled: StateFlow<Boolean> = _isEquityEnabled.asStateFlow()
+
+    private val _isBillRemindersEnabled = MutableStateFlow(true)
+    val isBillRemindersEnabled: StateFlow<Boolean> = _isBillRemindersEnabled.asStateFlow()
+
     fun onNameChange(newName: String) {
         _name.value = newName
         if (newName.isNotBlank()) {
             _nameError.value = null
         }
+    }
+
+    fun toggleMpesa(enabled: Boolean) {
+        _isMpesaEnabled.value = enabled
+    }
+
+    fun toggleEquity(enabled: Boolean) {
+        _isEquityEnabled.value = enabled
+    }
+
+    fun toggleBillReminders(enabled: Boolean) {
+        _isBillRemindersEnabled.value = enabled
     }
 
     fun completeOnboarding(onComplete: () -> Unit) {
@@ -37,6 +58,9 @@ class OnboardingViewModel(
 
         viewModelScope.launch {
             userRepository.updateProfile(userName, "user@fintrack.local")
+            settingsDataSource.setMpesaListenerEnabled(_isMpesaEnabled.value)
+            settingsDataSource.setEquityListenerEnabled(_isEquityEnabled.value)
+            settingsDataSource.setBillReminderEnabled(_isBillRemindersEnabled.value)
             settingsDataSource.setOnboardingCompleted(true)
             onComplete()
         }

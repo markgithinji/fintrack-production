@@ -66,7 +66,7 @@ class AppEndToEndTest {
             MaterialTheme {
                 when (step) {
                     0 -> OnboardingPageOne()
-                    1 -> OnboardingPageTwo()
+                    1 -> OnboardingPageTwo  ()
                     2 -> OnboardingPageThree(
                         name = completedName,
                         nameError = if (completedName.isBlank()) "Name required" else null,

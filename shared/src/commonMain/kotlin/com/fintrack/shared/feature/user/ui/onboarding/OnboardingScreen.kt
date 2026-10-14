@@ -5,7 +5,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,8 +22,12 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import com.fintrack.shared.ui.theme.GreenIncome
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
@@ -37,8 +43,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.fintrack.shared.feature.core.ui.util.rememberHapticFeedback
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -66,6 +75,9 @@ fun OnboardingScreen(
     var currentPage by remember { mutableIntStateOf(0) }
     val name by viewModel.name.collectAsStateWithLifecycle()
     val nameError by viewModel.nameError.collectAsStateWithLifecycle()
+    val isMpesaEnabled by viewModel.isMpesaEnabled.collectAsStateWithLifecycle()
+    val isEquityEnabled by viewModel.isEquityEnabled.collectAsStateWithLifecycle()
+    val isBillRemindersEnabled by viewModel.isBillRemindersEnabled.collectAsStateWithLifecycle()
     val colorScheme = MaterialTheme.colorScheme
 
     Box(
@@ -112,7 +124,14 @@ fun OnboardingScreen(
             ) {
                 when (currentPage) {
                     0 -> OnboardingPageOne()
-                    1 -> OnboardingPageTwo()
+                    1 -> OnboardingPageTwo(
+                        isMpesaEnabled = isMpesaEnabled,
+                        isEquityEnabled = isEquityEnabled,
+                        isBillRemindersEnabled = isBillRemindersEnabled,
+                        onToggleMpesa = viewModel::toggleMpesa,
+                        onToggleEquity = viewModel::toggleEquity,
+                        onToggleBillReminders = viewModel::toggleBillReminders
+                    )
                     2 -> OnboardingPageThree(
                         name = name,
                         nameError = nameError,
@@ -197,19 +216,19 @@ fun OnboardingPageOne() {
         Surface(
             shape = CircleShape,
             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-            modifier = Modifier.size(120.dp)
+            modifier = Modifier.size(90.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Default.AccountBalanceWallet,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(60.dp)
+                    modifier = Modifier.size(46.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
             text = "Master Your Money",
@@ -219,41 +238,16 @@ fun OnboardingPageOne() {
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "Track expenses, manage budgets, and take complete control of your financial freedom — 100% offline and private.",
-            style = MaterialTheme.typography.bodyLarge,
+            text = "Take complete control of your financial freedom with 100% offline intelligence.",
+            style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-    }
-}
 
-@Composable
-fun OnboardingPageTwo() {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text(
-            text = "Smart Automation",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        FeatureHighlightCard(
-            icon = Icons.Default.Sms,
-            title = "Automated SMS Tracking",
-            description = "Seamlessly parses M-Pesa & Bank SMS notifications in real-time."
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         FeatureHighlightCard(
             icon = Icons.Default.CameraAlt,
@@ -261,13 +255,161 @@ fun OnboardingPageTwo() {
             description = "Scan paper receipts with on-device AI to auto-fill amounts & dates."
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         FeatureHighlightCard(
             icon = Icons.Default.Security,
             title = "100% Private & Offline",
-            description = "Your financial data never leaves your device unless you back it up."
+            description = "Your financial data stays on your phone and never leaves your device."
         )
+    }
+}
+
+@Composable
+fun OnboardingPageTwo(
+    isMpesaEnabled: Boolean = true,
+    isEquityEnabled: Boolean = true,
+    isBillRemindersEnabled: Boolean = true,
+    onToggleMpesa: (Boolean) -> Unit = {},
+    onToggleEquity: (Boolean) -> Unit = {},
+    onToggleBillReminders: (Boolean) -> Unit = {}
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "Automated Tracking Setup",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Enable 100% private, real-time tracking from your SMS receipts.",
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        AutomationToggleCard(
+            icon = Icons.Default.Sms,
+            title = "M-Pesa Auto-Sync",
+            description = "Automatically log incoming M-Pesa payments & transfers in real-time.",
+            checked = isMpesaEnabled,
+            iconColor = GreenIncome,
+            onCheckedChange = onToggleMpesa
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        AutomationToggleCard(
+            icon = Icons.Default.AccountBalance,
+            title = "Equity Bank Auto-Sync",
+            description = "Automatically track Equity Bank transactions from SMS notifications.",
+            checked = isEquityEnabled,
+            iconColor = Color(0xFFA31D1D),
+            onCheckedChange = onToggleEquity
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        AutomationToggleCard(
+            icon = Icons.AutoMirrored.Filled.ReceiptLong,
+            title = "Smart Bill Reminders",
+            description = "Get notified 3 days before recurring bills & subscriptions are due.",
+            checked = isBillRemindersEnabled,
+            iconColor = MaterialTheme.colorScheme.primary,
+            onCheckedChange = onToggleBillReminders
+        )
+    }
+}
+
+@Composable
+fun AutomationToggleCard(
+    icon: ImageVector,
+    title: String,
+    description: String,
+    checked: Boolean,
+    iconColor: Color = MaterialTheme.colorScheme.primary,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val hapticFeedback = rememberHapticFeedback()
+    val colorScheme = MaterialTheme.colorScheme
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (checked) iconColor.copy(alpha = 0.12f) else colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        ),
+        border = BorderStroke(
+            1.dp,
+            if (checked) iconColor.copy(alpha = 0.5f) else colorScheme.outlineVariant.copy(alpha = 0.3f)
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable {
+                hapticFeedback()
+                onCheckedChange(!checked)
+            }
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = if (checked) iconColor.copy(alpha = 0.2f) else colorScheme.surfaceVariant,
+                modifier = Modifier.size(42.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = if (checked) iconColor else colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = colorScheme.onSurface
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorScheme.onSurfaceVariant,
+                    lineHeight = 15.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Switch(
+                checked = checked,
+                onCheckedChange = {
+                    hapticFeedback()
+                    onCheckedChange(it)
+                },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = iconColor
+                )
+            )
+        }
     }
 }
 
