@@ -24,8 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import com.fintrack.shared.feature.core.ui.util.rememberHapticFeedback
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,7 +58,7 @@ fun TransactionItem(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-    val haptic = LocalHapticFeedback.current
+    val hapticFeedback = rememberHapticFeedback()
     val category = remember(transaction.categoryId, transaction.category, transaction.isIncome) {
         Category.fromId(
             transaction.categoryId,
@@ -95,7 +94,7 @@ fun TransactionItem(
             )
             .clip(RoundedCornerShape(20.dp))
             .clickable {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                hapticFeedback()
                 onClick()
             },
         shape = RoundedCornerShape(20.dp),
