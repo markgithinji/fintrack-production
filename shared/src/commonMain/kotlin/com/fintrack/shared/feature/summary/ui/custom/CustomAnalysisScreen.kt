@@ -9,6 +9,7 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import com.fintrack.shared.feature.core.ui.FintrackEmptyState
 import com.fintrack.shared.feature.core.ui.util.buildHighlightedText
 import com.fintrack.shared.feature.core.ui.util.rememberHapticFeedback
 import androidx.compose.runtime.SideEffect
@@ -511,17 +512,15 @@ fun CustomAnalysisScreen(
 
                     if (state.matchingTransactions.isEmpty()) {
                         item {
-                            Box(
-                                modifier = Modifier.fillMaxWidth().padding(32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "No transactions match your custom filter criteria.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
+                            FintrackEmptyState(
+                                title = "No Matching Transactions",
+                                description = if (state.searchQuery.isNotBlank())
+                                    "No transactions found matching \"${state.searchQuery}\"."
+                                else
+                                    "No transactions match your selected filter criteria.",
+                                actionLabel = "Reset Search & Filters",
+                                onActionClick = { viewModel.clearAllFilters() }
+                            )
                         }
                     } else {
                         items(state.matchingTransactions) { tx ->
