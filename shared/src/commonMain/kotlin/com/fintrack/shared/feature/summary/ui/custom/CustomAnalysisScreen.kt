@@ -9,6 +9,8 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.BorderStroke
@@ -1128,9 +1130,10 @@ private fun SelectableFilterChip(
         label = "chipContentColor"
     )
 
+    val haptic = LocalHapticFeedback.current
     Surface(
         onClick = {
-            println("[FILTER_CHIP_DIAGNOSTIC] SelectableFilterChip clicked: label=$label, currentSelected=$selected")
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             onClick()
         },
         shape = RoundedCornerShape(12.dp),

@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -2247,8 +2249,12 @@ fun SettingsItem(
     description: String? = null,
     onClick: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     Surface(
-        onClick = onClick,
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onClick()
+        },
         modifier = Modifier.fillMaxWidth(),
         color = Color.Transparent
     ) {
@@ -2320,8 +2326,12 @@ fun SettingsToggleItem(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     Surface(
-        onClick = { onCheckedChange(!checked) },
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onCheckedChange(!checked)
+        },
         modifier = Modifier.fillMaxWidth(),
         color = Color.Transparent
     ) {
