@@ -111,7 +111,9 @@ object CategoryMatcher {
             
             r.contains("restaurant") || r.contains("cafe") || r.contains("kfc") || r.contains("java") || r.contains("lounge") || r.contains("chicken inn") || r.contains("pizza inn") || r.contains("creamy inn") || r.contains("choma place") || r.contains("nas n001") || r.contains("caterers") || r.contains("dishes") || r.contains("glovo") || r.contains("uber eats") || r.contains("bolt food") || r.contains("jumia food") || r.contains("eat") || r.contains("delivery") -> "Dining Out"
             
-            r.contains("equity") || r.contains("co-operative") || r.contains("bank") || r.contains("i&m") || r.contains("ncba") || r.contains("boa") || r.contains("family bank") || r.contains("stanbic") || r.contains("loop") || r.contains("sidian") -> "Bank"
+            r.contains("equity") || r.contains("co-operative") || r.contains("bank") || r.contains("i&m") || r.contains("ncba") || r.contains("boa") || r.contains("family bank") || r.contains("stanbic") || r.contains("loop") || r.contains("sidian") ||
+                    r.contains("skrill") || r.contains("paypal") || r.contains("neteller") || r.contains("wise.com") ||
+                    r.contains("remitly") || r.contains("worldremit") || r.contains("binance") -> "Transfer"
             
             r.contains("loan repayment") || r.contains("loan") || r.contains("fuliza") || r.contains("tala") || r.contains("branch") -> "Loans"
             

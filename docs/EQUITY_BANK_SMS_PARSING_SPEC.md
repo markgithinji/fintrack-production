@@ -21,12 +21,13 @@ Only official transaction notifications sent by `EquityBank` that represent real
 | Transaction Type | Example SMS Pattern | Parsed Behavior |
 | :--- | :--- | :--- |
 | **M-Pesa Phone Withdrawals** | `Your transaction of Kshs. 30,000.0 has been credited to 254729097750 MARK NGOTHI. Ref. EQADAC6A58F339E` | Expense (`isIncome = false`), Category `"Transfer"`, Description `"Withdrawal to M-Pesa"` |
+| **Online & Digital Wallets** | `CONFIRMED. USD 35.35, Auth for card 4478..4152 at skrill.com on 2019-01-15 14:59:47 Ref:901511735600.` | Expense, Merchant `"skrill.com"`, Category `"Transfer"` / `"Bank"` |
 | **Account Deposits** | `Dear MARK GITHINJI NGOTHI, Your transaction of KES. 15,000.00 has successfully been deposited to Equity Account in favor of PROCHIC SUPPLIES Ref. Number TJBCO740DU.` | Income (`isIncome = true`), Sender `"PROCHIC SUPPLIES"`, Category `"Other Income"` |
 | **Account Credits** | `Your transaction of Kshs. 37,000.0 has been credited to account 7770***4608. Ref: EQA0645E7D353D2` | Income (`isIncome = true`), Category `"Other Income"` |
 | **Merchant Payments** | `Confirmed. Payment of KES 1,500.00 to JAVA HOUSE on 14/10/2026 14:30. Ref: EQ12345.` | Expense, Merchant `"JAVA HOUSE"`, Category inferred via `CategoryMatcher` |
 | **Account Debits** | `Dear Customer, KES 2,500.00 has been debited from account... for payment to NAIVAS on 14-Oct-2026. Ref: EQ987654.` | Expense, Merchant `"NAIVAS"`, Category inferred via `CategoryMatcher` |
 | **Card Authorizations** | `CONFIRMED. KES 350.00, Auth for card 4000****1234 at JAVA HOUSE on 2026-10-14 12:00:00 Ref: EQ554433.` | Expense, Merchant `"JAVA HOUSE"`, Category inferred via `CategoryMatcher` |
-| **ATM Withdrawals** | `Withdrawal of KES 5,000.00 from ATM... Ref: EQ112233.` | Expense, Category `"Transfer"`, Description `"ATM Withdrawal"` |
+| **ATM Withdrawals** | `Withdrawal of KES 5,000.00 from ATM... Ref: EQ112233.` | Expense, Category `"Transfer"`, Description `"Cash ATM Withdrawal"` |
 
 ---
 
@@ -34,9 +35,9 @@ Only official transaction notifications sent by `EquityBank` that represent real
 In [`EquityParser.kt`](file:///C:/Users/Mark/AndroidStudioProjects/fintrack-production/shared/src/androidMain/kotlin/com/fintrack/shared/feature/transaction/util/EquityParser.kt):
 
 * **CategoryMatcher Resolution**: The merchant/sender name is passed to `CategoryMatcher.resolveCategory`.
+* **Digital Wallets & FX**: `skrill`, `paypal`, `neteller`, `wise.com`, `remitly`, `worldremit`, `binance` map directly to **`Transfer`**.
 * **Unmapped Expense Fallback**: Unmapped merchant expenses resolve to `Category.UncategorizedExpense` (`"Uncategorized"`).
 * **Unmapped Income Fallback**: Unmapped credits/deposits resolve to `Category.OtherIncome` (`"Other Income"`).
-* **Rule**: Unmapped merchant purchases **NEVER** default to `"Transfer"`. The `"Transfer"` category is reserved exclusively for ATM cash withdrawals and explicitly labeled bank transfers.
 
 ---
 
