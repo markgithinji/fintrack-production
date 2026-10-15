@@ -65,9 +65,7 @@ class SmsReceiver : BroadcastReceiver(), KoinComponent {
         val isMpesa = sender?.contains("MPESA", ignoreCase = true) == true || 
                      sender?.contains("M-PESA", ignoreCase = true) == true
         
-        val isEquity = sender?.contains("EquitBank", ignoreCase = true) == true || 
-                      sender?.contains("EquityBank", ignoreCase = true) == true ||
-                      sender?.equals("EQUITY", ignoreCase = true) == true
+        val isEquity = sender?.contains("EquityBank", ignoreCase = true) == true
 
         if (isMpesa || isEquity) {
             val pendingResult = goAsync()

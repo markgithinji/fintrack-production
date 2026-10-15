@@ -94,8 +94,8 @@ class EquityImporter(
                 context.contentResolver.query(
                     Telephony.Sms.Inbox.CONTENT_URI,
                     arrayOf(Telephony.Sms.Inbox.BODY, Telephony.Sms.Inbox.ADDRESS, Telephony.Sms.Inbox.DATE),
-                    "${Telephony.Sms.Inbox.ADDRESS} LIKE ? OR ${Telephony.Sms.Inbox.ADDRESS} LIKE ? OR ${Telephony.Sms.Inbox.ADDRESS} LIKE ?",
-                    arrayOf("%EQUITY%", "%EQUIT%", "%BANK%"),
+                    "${Telephony.Sms.Inbox.ADDRESS} = ? OR ${Telephony.Sms.Inbox.ADDRESS} LIKE ?",
+                    arrayOf("EquityBank", "%EquityBank%"),
                     "${Telephony.Sms.Inbox.DATE} DESC"
                 )
             } catch (e: SecurityException) {
