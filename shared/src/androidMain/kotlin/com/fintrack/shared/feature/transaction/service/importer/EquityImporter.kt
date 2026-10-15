@@ -8,7 +8,9 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.fintrack.shared.feature.account.domain.repository.AccountRepository
 import com.fintrack.shared.feature.category.domain.model.Category
+import com.fintrack.shared.feature.category.domain.model.CategoryPresets
 import com.fintrack.shared.feature.category.domain.model.CategoryRule
+import com.fintrack.shared.feature.category.domain.model.OtherIncome
 import com.fintrack.shared.feature.category.domain.model.UncategorizedExpense
 import com.fintrack.shared.feature.category.domain.model.UncategorizedIncome
 import com.fintrack.shared.feature.category.domain.repository.CategoryRepository
@@ -142,17 +144,15 @@ class EquityImporter(
                             if (parsed != null) {
                                 val categoryName = parsed.category
                                 val isExpense = !parsed.isIncome
-                                val finalCategoryId = categories.find { cat ->
-                                    cat.name.equals(categoryName, ignoreCase = true) && cat.isExpense == isExpense
-                                }?.id
-                                    ?: categories.find { cat ->
-                                        cat.name.contains("Other", ignoreCase = true) && cat.isExpense == isExpense
-                                    }?.id
-                                    ?: categories.find { cat -> cat.isExpense == isExpense }?.id
-                                    ?: categories.firstOrNull()?.id
-                                    ?: if (isExpense) Category.UncategorizedExpense.id else Category.UncategorizedIncome.id
 
-                                transactions.add(parsed.copy(categoryId = finalCategoryId))
+                                val matchedCategory = categories.find { cat -> cat.name.equals(categoryName, ignoreCase = true) && cat.isExpense == isExpense }
+                                    ?: CategoryPresets.allCategories.find { cat -> cat.name.equals(categoryName, ignoreCase = true) && cat.isExpense == isExpense }
+
+                                val finalCategoryId = matchedCategory?.id
+                                    ?: if (isExpense) Category.UncategorizedExpense.id else Category.OtherIncome.id
+                                val finalCategoryName = matchedCategory?.name ?: categoryName
+
+                                transactions.add(parsed.copy(category = finalCategoryName, categoryId = finalCategoryId))
                             }
 
                             loggedCount++

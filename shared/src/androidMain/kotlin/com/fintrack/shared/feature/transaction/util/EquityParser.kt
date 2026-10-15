@@ -3,6 +3,7 @@ package com.fintrack.shared.feature.transaction.util
 import android.util.Log
 import com.fintrack.shared.feature.category.domain.model.Category
 import com.fintrack.shared.feature.category.domain.model.CategoryRule
+import com.fintrack.shared.feature.category.domain.model.OtherIncome
 import com.fintrack.shared.feature.category.domain.model.UncategorizedExpense
 import com.fintrack.shared.feature.category.domain.model.UncategorizedIncome
 import com.fintrack.shared.feature.category.util.CategoryMatcher
@@ -98,6 +99,9 @@ object EquityParser {
             return null
         }
 
+        // 5. Skip M-Pesa Till / Paybill confirmations (handled by MpesaParser under M-Pesa account)
+        if (message.contains("Till No", ignoreCase = true) || message.contains("Till No.", ignoreCase = true)) return null
+
         val balance = parseBalance(message)
 
         fun wrap(transaction: Transaction?): Transaction? {
@@ -156,16 +160,22 @@ object EquityParser {
             return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, category, dateTime, "Received from $sender", accountId, true, allCategories))
         }
 
-        // 5. Sent Money (Expense)
+        // 5. Sent Money (Expense) - Skip intra-account transfers to masked numbers (e.g. 7********4608 / 1********9426)
         sentRegex.find(message)?.let {
             val rawAmt = if ((it.groupValues.getOrNull(1) ?: "").isNotBlank()) it.groupValues[1] else (it.groupValues.getOrNull(3) ?: "")
             val currency = if ((it.groupValues.getOrNull(2) ?: "").isNotBlank()) it.groupValues[2] else "KES"
             val amount = resolveAmount(currency, parseAmount(rawAmt))
             val recipient = (it.groupValues.getOrNull(4) ?: "Recipient").trim()
+
+            // Skip intra-account self-transfers between masked account numbers
+            if (recipient.contains(Regex("""\d+[*.]+\d+"""))) {
+                return@let null
+            }
+
             val code = it.groupValues.getOrNull(5) ?: "EQUITY"
             val dateStr = (it.groupValues.getOrNull(6) ?: "").trim()
             val dateTime = parseDateTime(dateStr, smsTimestamp)
-            val category = inferCategory(recipient, isIncome = false, rules = rules, allCategories = allCategories)
+            val category = inferCategory(recipient, isIncome = false, defaultCategoryName = "Transfer", rules = rules, allCategories = allCategories)
             return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, category, dateTime, "Sent to $recipient", accountId, false, allCategories))
         }
 
@@ -179,16 +189,9 @@ object EquityParser {
             return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, "Transfer", dateTime, "ATM Withdrawal", accountId, false, allCategories))
         }
 
-        // 7. Bill Payment
-        billPaymentRegex.find(message)?.let {
-            val merchant = (it.groupValues.getOrNull(1) ?: "Merchant").trim()
-            val currency = it.groupValues.getOrNull(2) ?: "KES"
-            val amount = resolveAmount(currency, parseAmount(it.groupValues.getOrNull(3)))
-            val code = it.groupValues.getOrNull(4) ?: "EQUITY"
-            val dateStr = (it.groupValues.getOrNull(5) ?: "").trim()
-            val dateTime = parseDateTime(dateStr, smsTimestamp)
-            val category = inferCategory(merchant, isIncome = false, rules = rules, allCategories = allCategories)
-            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, category, dateTime, "Bill payment to $merchant", accountId, false, allCategories))
+        // 7. Bill Payment / Paybill Confirmations (Skipped: These are M-Pesa Paybill confirmations, not Equity Bank account transactions)
+        if (billPaymentRegex.containsMatchIn(message)) {
+            return null
         }
 
         // 8. Deposited to Equity Account
@@ -213,7 +216,7 @@ object EquityParser {
             val code = it.groupValues.getOrNull(4) ?: "EQUITY"
             val dateStr = (it.groupValues.getOrNull(5) ?: "").trim()
             val dateTime = parseDateTime(dateStr, smsTimestamp)
-            val category = if (isIncome) Category.UncategorizedIncome.name else Category.UncategorizedExpense.name
+            val category = if (isIncome) "Other Income" else "Transfer"
             val description = if (isIncome) "Bank Credit" else "Bank Debit"
             return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, category, dateTime, description, accountId, isIncome, allCategories))
         }
@@ -248,7 +251,13 @@ object EquityParser {
         return smsTimestamp ?: Clock.System.now()
     }
 
-    private fun inferCategory(description: String, isIncome: Boolean = false, rules: List<CategoryRule> = emptyList(), allCategories: List<Category> = emptyList()): String {
+    private fun inferCategory(
+        description: String,
+        isIncome: Boolean = false,
+        defaultCategoryName: String? = null,
+        rules: List<CategoryRule> = emptyList(),
+        allCategories: List<Category> = emptyList()
+    ): String {
         val resolvedId = CategoryMatcher.resolveCategory(
             inputCategoryId = null,
             inputCategoryName = null,
@@ -260,10 +269,11 @@ object EquityParser {
         )
 
         return if (resolvedId == "pending") {
-            if (isIncome) Category.UncategorizedIncome.name else Category.UncategorizedExpense.name
+            defaultCategoryName ?: if (isIncome) "Other Income" else Category.UncategorizedExpense.name
         } else {
             allCategories.find { it.id == resolvedId }?.name
-                ?: if (isIncome) Category.UncategorizedIncome.name else Category.UncategorizedExpense.name
+                ?: defaultCategoryName
+                ?: if (isIncome) "Other Income" else Category.UncategorizedExpense.name
         }
     }
 
@@ -281,8 +291,8 @@ object EquityParser {
         rawMessage: String? = null
     ): Transaction {
         val matched = allCategories.find { it.name.equals(category, ignoreCase = true) && it.isExpense == !isIncome }
-        val categoryId = matched?.id ?: if (isIncome) Category.UncategorizedIncome.id else Category.UncategorizedExpense.id
-        val categoryName = matched?.name ?: if (isIncome) Category.UncategorizedIncome.name else Category.UncategorizedExpense.name
+        val categoryId = matched?.id ?: if (isIncome) Category.OtherIncome.id else Category.UncategorizedExpense.id
+        val categoryName = matched?.name ?: category
 
         return Transaction(
             accountId = accountId,
