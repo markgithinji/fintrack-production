@@ -43,3 +43,18 @@ All component regex constants (`CURRENCY`, `AMOUNT_VAL`, `DATE_TEXT`, `DATE_DASH
 
 * Reference codes match both colon (`Ref: EQ12345`) and dot (`Ref. EQ12345`) variants: `Ref[:.]?\s*(\w+)`.
 * Unit Test Suite: [`EquityParserTest.kt`](file:///C:/Users/Mark/AndroidStudioProjects/fintrack-production/shared/src/androidUnitTest/kotlin/com/fintrack/shared/feature/transaction/util/EquityParserTest.kt).
+
+---
+
+## 5. Explicitly Ignored Messages & System Boundaries
+
+To prevent duplicate entries, false financial expenses, or internal movement pollution, the parser explicitly rejects these non-transactional SMS types:
+
+| Message Type | Ignored Pattern Example | Reason for Ignoring |
+| :--- | :--- | :--- |
+| **Intra-Account Masked Self-Transfers** | `200.00 KES has been successfully sent from 1********9426 to 7********4608. Ref. AA20AF904B36B...` | Internal transfer between user's own masked bank accounts; neither income nor expense |
+| **Failed Transactions** | `Your card no... payment to NETFLIX.COM of KES 700.00 has failed due to insufficient funds.` | Prevent failed/aborted card or bank purchases from recording as real expenses |
+| **M-Pesa Relay Notifications** | `EQUITY BANK has sent Ksh10,000.00 to your MPESA. The MPESA receipt number is...` | Handled exclusively by `MpesaParser` under M-Pesa account to prevent double-counting |
+| **Feedback & Experience Surveys** | `Dear Member, we value your feedback! Please share your experience...` | Informational survey link, non-transactional |
+| **Marketing & Loan Promos** | `Dial *247*6#, use Equitel or Equity Mobile App to get an instant loan...` | Marketing promotion, non-transactional |
+| **Bill Payment Due Notices** | `Your bill for account... is due in 3 days.` | Due notice, non-transactional |

@@ -72,7 +72,7 @@ object CategoryMatcher {
         if (hardcodedId != null) return hardcodedId
 
         // 8. Final Fallback
-        val fallbackName = if (isExpense) "Transfer" else "Other Income"
+        val fallbackName = if (isExpense) "Uncategorized" else "Uncategorized"
         return allCategories.find { it.name.equals(fallbackName, ignoreCase = true) }?.id
             ?: allCategories.find { it.isExpense == isExpense }?.id
             ?: allCategories.firstOrNull { it.isDefault }?.id
@@ -101,6 +101,11 @@ object CategoryMatcher {
                     r.contains("internet") || r.contains("bundles") -> "Internet"
             
             r.contains("airtime") || r.contains("tingg") || r.contains("top up") -> "Airtime"
+
+            r.contains("google") || r.contains("cloud") || r.contains("bebee") || r.contains("skillshare") ||
+                    r.contains("netflix") || r.contains("spotify") || r.contains("chatgpt") || r.contains("openai") ||
+                    r.contains("github") || r.contains("adobe") || r.contains("aws") || r.contains("apple.com") ||
+                    r.contains("microsoft") || r.contains("subscription") -> "Subscriptions"
             
             r.contains("supermarket") || r.contains("naivas") || r.contains("carrefour") || r.contains("quickmart") || r.contains("butchery") || r.contains("quick mart") || r.contains("friendly 5") || r.contains("slice city") || r.contains("memento butchery") -> "Groceries"
             
@@ -134,6 +139,10 @@ object CategoryMatcher {
             r.contains("hardware") || r.contains("timber") || r.contains("maintenance") || r.contains("repair") -> "Maintenance"
             
             r.contains("e-citizen") || r.contains("kra") || r.contains("county") -> "Government"
+            
+            r.contains("rent") || r.contains("house rent") || r.contains("apartment") || r.contains("landlord") || r.contains("estate") -> "Rent"
+            
+            r.contains("school") || r.contains("academy") || r.contains("university") || r.contains("college") || r.contains("kindergarten") || r.contains("school fees") -> "Education"
             
             r.contains("britam") || r.contains("nhif") || r.contains("shif") || r.contains("insurance") || r.contains("apa") ||
                     r.contains("jubilee") || r.contains("sanlam") || r.contains("cic") || r.contains("old mutual") ||

@@ -43,7 +43,7 @@ object EquityParser {
     private val billPaymentRegex = """Confirmed,?\s+Bill payment to\s+(.*?)\s+of ($CURRENCY)\.?\s*($AMOUNT_VAL).*?\bRef[:.]?\s*(\w+)\s+on\s+($DATE_TIME_VAL)""".toRegex(RegexOption.IGNORE_CASE)
 
     // 8. Deposited to Equity Account (Income)
-    private val depositedRegex = """(?:Dear (.*?), )?Your transaction of ($CURRENCY)\.?\s*($AMOUNT_VAL)\s+has successfully been deposited to Equity Account in favor of (.*?)\s+Ref[:.]?\s*(?:Number|No\.?)?\s*(\w+)\s+on\s+($DATE_TIME_VAL)""".toRegex(RegexOption.IGNORE_CASE)
+    private val depositedRegex = """(?:Dear\s+.*?,?\s*)?Your transaction of ($CURRENCY)\.?\s*($AMOUNT_VAL)\s+has successfully been deposited to Equity Account in favor of (.*?)\s+Ref[:.]?\s*(?:Number|No\.?)?\s*(\w+)(?:\s+on\s+($DATE_TIME_VAL))?""".toRegex(RegexOption.IGNORE_CASE)
 
     // 9. Generic Transfer (Fallback)
     private val transferRegex = """Your transaction of ($CURRENCY)\.?\s*($AMOUNT_VAL)\s+has been (credited to|debited from)\s+.*?\.\s+Ref[:.]?\s*(EQ\w+|\d+)\.?(?:\s+MPESA Ref\.\s+\w+)?\s+on\s+($DATE_TIME_VAL)""".toRegex(RegexOption.IGNORE_CASE)
@@ -74,9 +74,29 @@ object EquityParser {
         rules: List<CategoryRule> = emptyList(),
         allCategories: List<Category> = emptyList()
     ): Transaction? {
-        // Skip failed alerts
-        if (message.contains("failed due to insufficient funds", ignoreCase = true)) return null
+        // 1. Skip failed transaction notices
+        if (message.contains("has failed", ignoreCase = true)) return null
+        if (message.contains("failed due to", ignoreCase = true)) return null
+        if (message.contains("transaction failed", ignoreCase = true)) return null
+        if (message.contains("insufficient funds", ignoreCase = true)) return null
+
+        // 2. Skip M-Pesa relay / confirmatory notifications (handled by MpesaParser under M-Pesa account)
+        if (message.contains("MPESA receipt number", ignoreCase = true)) return null
+        if (message.contains("sent to EQUITY BANK", ignoreCase = true) && message.contains("MPESA", ignoreCase = true)) return null
+        if (message.contains("to your MPESA", ignoreCase = true) && message.contains("has sent", ignoreCase = true)) return null
+
+        // 3. Skip informational, surveys, and promotional ads
         if (message.contains("is due in", ignoreCase = true)) return null
+        if (message.contains("value your feedback", ignoreCase = true)) return null
+        if (message.contains("survey", ignoreCase = true)) return null
+        if (message.contains("Dial *247*", ignoreCase = true) && !message.contains("Ref", ignoreCase = true)) return null
+
+        // 4. Skip intra-account transfers between two masked bank account numbers (e.g. sent from 1********9426 to 7********4608)
+        val maskedAcc = """\d+[*.]+\d+"""
+        if (message.contains(Regex("""sent from $maskedAcc to $maskedAcc""", RegexOption.IGNORE_CASE)) ||
+            message.contains(Regex("""received .* from $maskedAcc to .* $maskedAcc""", RegexOption.IGNORE_CASE))) {
+            return null
+        }
 
         val balance = parseBalance(message)
 
@@ -173,11 +193,11 @@ object EquityParser {
 
         // 8. Deposited to Equity Account
         depositedRegex.find(message)?.let {
-            val currency = it.groupValues.getOrNull(2) ?: "KES"
-            val amount = resolveAmount(currency, parseAmount(it.groupValues.getOrNull(3)))
-            val recipient = (it.groupValues.getOrNull(4) ?: "Recipient").trim()
-            val code = it.groupValues.getOrNull(5) ?: "EQUITY"
-            val dateStr = (it.groupValues.getOrNull(6) ?: "").trim()
+            val currency = it.groupValues.getOrNull(1) ?: "KES"
+            val amount = resolveAmount(currency, parseAmount(it.groupValues.getOrNull(2)))
+            val recipient = (it.groupValues.getOrNull(3) ?: "Recipient").trim()
+            val code = it.groupValues.getOrNull(4) ?: "EQUITY"
+            val dateStr = (it.groupValues.getOrNull(5) ?: "").trim()
             val dateTime = parseDateTime(dateStr, smsTimestamp)
             val isIncome = true
             val category = inferCategory(recipient, isIncome = true, rules = rules, allCategories = allCategories)
