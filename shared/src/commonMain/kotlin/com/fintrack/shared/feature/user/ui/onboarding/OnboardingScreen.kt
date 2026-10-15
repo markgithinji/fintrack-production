@@ -1,10 +1,21 @@
 package com.fintrack.shared.feature.user.ui.onboarding
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,6 +42,7 @@ import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Security
@@ -115,29 +127,50 @@ fun OnboardingScreen(
                 }
             }
 
-            // Page Content with Smooth Transition
+            // Page Content with Pure Horizontal Slide & Fade Transition
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                when (currentPage) {
-                    0 -> OnboardingPageOne()
-                    1 -> OnboardingPageTwo(
-                        isMpesaEnabled = isMpesaEnabled,
-                        isEquityEnabled = isEquityEnabled,
-                        isBillRemindersEnabled = isBillRemindersEnabled,
-                        onToggleMpesa = viewModel::toggleMpesa,
-                        onToggleEquity = viewModel::toggleEquity,
-                        onToggleBillReminders = viewModel::toggleBillReminders
-                    )
-                    2 -> OnboardingPageThree(
-                        name = name,
-                        nameError = nameError,
-                        onNameChange = viewModel::onNameChange,
-                        onDone = { viewModel.completeOnboarding(onOnboardingComplete) }
-                    )
+                AnimatedContent(
+                    targetState = currentPage,
+                    modifier = Modifier.fillMaxSize(),
+                    transitionSpec = {
+                        if (targetState > initialState) {
+                            (slideInHorizontally(initialOffsetX = { width -> width }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeIn(tween(250))) togetherWith
+                                    (slideOutHorizontally(targetOffsetX = { width -> -width }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(tween(250)))
+                        } else {
+                            (slideInHorizontally(initialOffsetX = { width -> -width }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeIn(tween(250))) togetherWith
+                                    (slideOutHorizontally(targetOffsetX = { width -> width }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(tween(250)))
+                        }
+                    },
+                    contentAlignment = Alignment.Center,
+                    label = "OnboardingPageTransition"
+                ) { page ->
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when (page) {
+                            0 -> OnboardingPageOne()
+                            1 -> OnboardingPageTwo(
+                                isMpesaEnabled = isMpesaEnabled,
+                                isEquityEnabled = isEquityEnabled,
+                                isBillRemindersEnabled = isBillRemindersEnabled,
+                                onToggleMpesa = viewModel::toggleMpesa,
+                                onToggleEquity = viewModel::toggleEquity,
+                                onToggleBillReminders = viewModel::toggleBillReminders
+                            )
+                            2 -> OnboardingPageThree(
+                                name = name,
+                                nameError = nameError,
+                                onNameChange = viewModel::onNameChange,
+                                onDone = { viewModel.completeOnboarding(onOnboardingComplete) }
+                            )
+                        }
+                    }
                 }
             }
 
@@ -147,38 +180,50 @@ fun OnboardingScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Page Indicator Dots
+                // Animated Page Indicator Dots
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     repeat(3) { index ->
                         val isSelected = index == currentPage
+                        val dotWidth by animateDpAsState(
+                            targetValue = if (isSelected) 28.dp else 8.dp,
+                            animationSpec = spring(stiffness = Spring.StiffnessLow),
+                            label = "dotWidth"
+                        )
+                        val dotColor by animateColorAsState(
+                            targetValue = if (isSelected) colorScheme.primary else colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            animationSpec = tween(250),
+                            label = "dotColor"
+                        )
                         Box(
                             modifier = Modifier
-                                .size(if (isSelected) 24.dp else 8.dp, 8.dp)
+                                .size(dotWidth, 8.dp)
                                 .clip(CircleShape)
-                                .background(
-                                    if (isSelected) colorScheme.primary else colorScheme.outlineVariant
-                                )
+                                .background(dotColor)
                         )
                     }
                 }
 
-                // Action Buttons
+                // Action Buttons with Smooth Width Resizing & 16dp Spacing
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateContentSize(animationSpec = spring(stiffness = Spring.StiffnessLow)),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (currentPage > 0) {
                         OutlinedButton(
-                            onClick = { currentPage-- },
-                            modifier = Modifier.weight(1f).height(50.dp),
+                            onClick = { if (currentPage > 0) currentPage-- },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(50.dp),
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             Text("Back")
                         }
-                        Spacer(modifier = Modifier.width(12.dp))
                     }
 
                     Button(
@@ -189,16 +234,26 @@ fun OnboardingScreen(
                                 viewModel.completeOnboarding(onOnboardingComplete)
                             }
                         },
-                        modifier = Modifier.weight(1f).height(50.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        Text(if (currentPage == 2) "Get Started" else "Next")
-                        Spacer(Modifier.width(8.dp))
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        AnimatedContent(
+                            targetState = currentPage == 2,
+                            transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
+                            label = "ButtonContentTransition"
+                        ) { isLastPage ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(if (isLastPage) "Get Started" else "Next")
+                                Spacer(Modifier.width(8.dp))
+                                Icon(
+                                    imageVector = if (isLastPage) Icons.Default.Check else Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
