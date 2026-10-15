@@ -696,6 +696,19 @@ fun SettingsScreen(
                             icon = Icons.Default.CloudDone,
                             onClick = { viewModel.restoreFromGoogleDrive() }
                         )
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+
+                        SettingsItem(
+                            title = "Export Equity SMS Log",
+                            subtitle = "Generate raw SMS vs parsed result comparison log",
+                            icon = Icons.Default.Sms,
+                            onClick = { viewModel.exportEquityParsingLog() }
+                        )
                     }
                 }
 

@@ -433,6 +433,36 @@ class SettingsViewModel(
         }
     }
 
+    fun exportEquityParsingLog() {
+        viewModelScope.launch {
+            _exportResult.value = null
+            _isLoading.value = true
+            try {
+                val accounts = accountRepository.getAccounts().let { (it as? Result.Success)?.data ?: emptyList() }
+                var equityAccount = accounts.find { it.linkedSources.contains("equity") || it.name.contains("equity", ignoreCase = true) }
+
+                if (equityAccount == null) {
+                    val defaultAccount = Account(
+                        id = "account_equity_default",
+                        name = "Equity Bank",
+                        type = AccountType.BANK,
+                        balance = com.ionspin.kotlin.bignum.decimal.BigDecimal.ZERO,
+                        linkedSources = listOf("equity")
+                    )
+                    accountRepository.addOrUpdateAccount(defaultAccount)
+                    equityAccount = defaultAccount
+                }
+
+                transactionImporter.importHistory(equityAccount.id, isPortfolioSeed = false) { }
+                _exportResult.value = "Equity SMS log generated! File saved to storage/equity_sms_parsing_log.txt"
+            } catch (e: Exception) {
+                _error.value = "Error generating Equity SMS log: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun deleteAccount() {
         viewModelScope.launch {
             _deleteAccountState.value = SaveState.Loading

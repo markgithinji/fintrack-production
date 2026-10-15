@@ -18,6 +18,7 @@ import com.fintrack.shared.feature.transaction.util.GeminiSmsParser
 import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository
 import com.fintrack.shared.feature.transaction.domain.service.TransactionImporter
 import com.fintrack.shared.feature.transaction.util.EquityParser
+import java.io.File
 import com.fintrack.shared.feature.transaction.util.PortfolioSeeder
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.Dispatchers
@@ -128,6 +129,8 @@ class EquityImporter(
                                 parsed = geminiParser.parseSmsWithGemini(body, accountId, smsInstant, rules, categories)
                             }
 
+                            logEquitySmsComparison(body, parsed)
+
                             if (parsed != null) {
                                 val categoryName = parsed.category
                                 val isExpense = !parsed.isIncome
@@ -201,5 +204,39 @@ class EquityImporter(
                         lower.contains("transferred") || lower.contains("bought") || lower.contains("withdraw") || 
                         lower.contains("deposited") || lower.contains("confirmed") || lower.contains("ref")
         return hasCurrency && hasAction
+    }
+
+    private fun logEquitySmsComparison(rawSms: String, parsedTx: Transaction?) {
+        try {
+            val logEntry = buildString {
+                appendLine("==================================================")
+                appendLine("[RAW_EQUITY_SMS]: $rawSms")
+                if (parsedTx != null) {
+                    appendLine("[PARSED_RESULT]: SUCCESS")
+                    appendLine(" - Ref: ${parsedTx.externalId}")
+                    appendLine(" - Amount: ${parsedTx.amount}")
+                    appendLine(" - Category: ${parsedTx.category}")
+                    appendLine(" - Description: ${parsedTx.description}")
+                    appendLine(" - IsIncome: ${parsedTx.isIncome}")
+                    appendLine(" - Balance: ${parsedTx.balance}")
+                } else {
+                    appendLine("[PARSED_RESULT]: FAILED (Regex Returned NULL)")
+                }
+                appendLine("==================================================")
+                appendLine()
+            }
+
+            Log.d("EQUITY_LOG", logEntry)
+            val file = File(context.cacheDir, "equity_sms_parsing_log.txt")
+            file.appendText(logEntry)
+
+            val externalDir = context.getExternalFilesDir(null)
+            if (externalDir != null) {
+                val externalFile = File(externalDir, "equity_sms_parsing_log.txt")
+                externalFile.appendText(logEntry)
+            }
+        } catch (e: Exception) {
+            Log.e("EQUITY_LOG", "Error writing Equity SMS comparison log", e)
+        }
     }
 }
