@@ -57,7 +57,12 @@ class EquityImporter(
         val accountsResult = accountRepository.getAccounts()
         val accounts = (accountsResult as? Result.Success)?.data ?: emptyList()
         
-        val accountId = targetAccountId ?: accounts.find { it.linkedSources.contains("equity") }?.id ?: accounts.firstOrNull()?.id
+        val equityAccount = accounts.find {
+            it.linkedSources.contains("equity") ||
+                    it.type == com.fintrack.shared.feature.account.domain.model.AccountType.BANK ||
+                    it.name.contains("equity", ignoreCase = true)
+        }
+        val accountId = equityAccount?.id ?: targetAccountId ?: accounts.firstOrNull()?.id
 
         if (accountId == null) {
             if (isPortfolioSeed) {
@@ -97,8 +102,8 @@ class EquityImporter(
                 context.contentResolver.query(
                     Telephony.Sms.Inbox.CONTENT_URI,
                     arrayOf(Telephony.Sms.Inbox.BODY, Telephony.Sms.Inbox.ADDRESS, Telephony.Sms.Inbox.DATE),
-                    "${Telephony.Sms.Inbox.ADDRESS} = ? OR ${Telephony.Sms.Inbox.ADDRESS} LIKE ?",
-                    arrayOf("EquityBank", "%EquityBank%"),
+                    "${Telephony.Sms.Inbox.ADDRESS} LIKE ? OR ${Telephony.Sms.Inbox.ADDRESS} LIKE ? OR ${Telephony.Sms.Inbox.ADDRESS} LIKE ?",
+                    arrayOf("%Equity%", "%Equit%", "%EQUITY%"),
                     "${Telephony.Sms.Inbox.DATE} DESC"
                 )
             } catch (e: SecurityException) {

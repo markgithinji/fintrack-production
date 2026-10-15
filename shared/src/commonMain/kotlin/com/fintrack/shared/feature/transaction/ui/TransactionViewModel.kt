@@ -183,9 +183,14 @@ class TransactionViewModel(
         importJobs[accountId] = job
     }
 
-    fun autoSyncTransactions(accountId: String? = null, lastSyncedAt: Instant? = null) {
+    fun autoSyncTransactions(accountId: String? = null, lastSyncedAt: Instant? = null, force: Boolean = false) {
+        if (force) {
+            importTransactions(accountId)
+            return
+        }
+
         val now = Clock.System.now()
-        val cooldown = 15.minutes
+        val cooldown = 1.minutes
 
         // 1. Check against the persistent last successful sync time (from DB)
         if (lastSyncedAt != null && (now - lastSyncedAt) < cooldown) {

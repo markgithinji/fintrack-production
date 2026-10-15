@@ -19,37 +19,34 @@ object EquityParser {
     // Non-capturing regex components
     private const val AMOUNT_VAL = """[\d,]+\.\d{1,2}"""
     private const val CURRENCY = """KES|USD|KSH|Ksh|Kshs"""
-    private const val DATE_DASH = """\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}"""
-    private const val DATE_TEXT = """\d{1,2}[-\s]\w{3}[-\s]\d{2,4}|\d{1,2}\s+\w{3}\s+\d{2,4}"""
-    private const val TIME = """\d{1,2}:\d{2}(?::\d{2})?"""
-    private const val TIME_AMPM = """\d{1,2}:\d{2}(?::\d{2})?\s*[AP]M"""
+    private const val DATE_TIME_VAL = """(?:(?:\d{1,2}[-\s/.]\w{1,3}[-\s/.]\d{2,4}|\d{4}-\d{2}-\d{2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})(?:\s+(?:at\s+)?(?:\d{1,2}:\d{2}(?::\d{2})?\s*[AP]M|\d{1,2}:\d{2}(?::\d{2})?))?)"""
 
     // 1. Confirmed Payment of KES X to MERCHANT (Expense)
-    private val paymentToMerchantRegex = """Confirmed\.?\s+Payment of ($CURRENCY)\.?\s*($AMOUNT_VAL)\s+to\s+(.+?)\s+on\s+($DATE_TEXT|$DATE_DASH)(?:\s+(?:at\s+)?($TIME_AMPM|$TIME))?.*?\bRef:\s*(\w+)""".toRegex(RegexOption.IGNORE_CASE)
+    private val paymentToMerchantRegex = """Confirmed\.?\s+Payment of ($CURRENCY)\.?\s*($AMOUNT_VAL)\s+to\s+(.+?)\s+on\s+($DATE_TIME_VAL).*?\bRef[:.]?\s*(\w+)""".toRegex(RegexOption.IGNORE_CASE)
 
     // 2. Debited for payment to MERCHANT (Expense)
-    private val debitedPaymentRegex = """(?:Dear\s+.*?,?\s*)?($CURRENCY)\.?\s*($AMOUNT_VAL)\s+has been debited from (?:your )?account.*?\s+for payment to\s+(.+?)\s+on\s+($DATE_TEXT|$DATE_DASH)(?:\s+(?:at\s+)?($TIME_AMPM|$TIME))?.*?\bRef:\s*(\w+)""".toRegex(RegexOption.IGNORE_CASE)
+    private val debitedPaymentRegex = """(?:Dear\s+.*?,?\s*)?($CURRENCY)\.?\s*($AMOUNT_VAL)\s+has been debited from (?:your )?account.*?\s+for payment to\s+(.+?)\s+on\s+($DATE_TIME_VAL).*?\bRef[:.]?\s*(\w+)""".toRegex(RegexOption.IGNORE_CASE)
 
     // 3. Card Auth (Expense)
-    private val cardAuthRegex = """CONFIRMED\.?\s+($CURRENCY)\.?\s*($AMOUNT_VAL),?\s+Auth for card\s+.*?\s+at\s+(.*?)\s+on\s+(\d{4}-\d{2}-\d{2}\s+$TIME)\s+Ref:\s*(\w+)""".toRegex(RegexOption.IGNORE_CASE)
+    private val cardAuthRegex = """CONFIRMED\.?\s+($CURRENCY)\.?\s*($AMOUNT_VAL),?\s+Auth for card\s+.*?\s+at\s+(.*?)\s+on\s+($DATE_TIME_VAL).*?\bRef[:.]?\s*(\w+)""".toRegex(RegexOption.IGNORE_CASE)
 
-    // 4. Sent Money / You have sent KES X to RECIPIENT (Expense)
-    private val sentRegex = """(?:You have sent|($AMOUNT_VAL)\s+($CURRENCY)\.?)\s*(?:KES|USD)?\.?\s*($AMOUNT_VAL)?\s+(?:has been successfully sent )?(?:from\s+[\d*.]+\s+)?to\s+(.+?)\.\s+Ref\.\s*(\w+)\s+on\s+($DATE_TEXT|$DATE_DASH)(?:\s+(?:at\s+)?($TIME_AMPM|$TIME))?""".toRegex(RegexOption.IGNORE_CASE)
+    // 4. Credited / Received (Income)
+    private val creditedReceivedRegex = """(?:Your account.*?has been credited with|You have received)\s+($CURRENCY)\.?\s*($AMOUNT_VAL)\s+from\s+(.+?)\s+on\s+($DATE_TIME_VAL).*?\bRef[:.]?\s*(\w+)""".toRegex(RegexOption.IGNORE_CASE)
 
-    // 5. Drawn / ATM Withdrawal (Expense)
-    private val drawnRegex = """(?:Dear (.*?),?\s*)?(?:Withdrawal of|drawn from your account).*?($CURRENCY)\.?\s*($AMOUNT_VAL).*?\bRef:\s*(\w+)\s+on\s+($DATE_TEXT|$DATE_DASH)(?:\s+(?:at\s+)?($TIME_AMPM|$TIME))?""".toRegex(RegexOption.IGNORE_CASE)
+    // 5. Sent Money / You have sent KES X to RECIPIENT (Expense)
+    private val sentRegex = """(?:You have sent|($AMOUNT_VAL)\s+($CURRENCY)\.?)\s*(?:KES|USD)?\.?\s*($AMOUNT_VAL)?\s+(?:has been successfully sent )?(?:from\s+[\d*.]+\s+)?to\s+(.+?)\.\s+Ref[:.]?\s*(\w+)\s+on\s+($DATE_TIME_VAL)""".toRegex(RegexOption.IGNORE_CASE)
 
-    // 6. Bill Payment (Expense)
-    private val billPaymentRegex = """Confirmed,?\s+Bill payment to\s+(.*?)\s+of ($CURRENCY)\.?\s*($AMOUNT_VAL).*?\bRef\.\s*(\w+)\s+on\s+($DATE_DASH|$DATE_TEXT)(?:\s+(?:at\s+)?($TIME))?""".toRegex(RegexOption.IGNORE_CASE)
+    // 6. Drawn / ATM Withdrawal (Expense)
+    private val drawnRegex = """(?:Dear (.*?),?\s*)?(?:Withdrawal of|drawn from your account).*?($CURRENCY)\.?\s*($AMOUNT_VAL).*?\bRef[:.]?\s*(\w+)\s+on\s+($DATE_TIME_VAL)""".toRegex(RegexOption.IGNORE_CASE)
 
-    // 7. Credited / Received (Income)
-    private val creditedReceivedRegex = """(?:Your account.*?has been credited with|You have received)\s+($CURRENCY)\.?\s*($AMOUNT_VAL)\s+from\s+(.+?)\s+on\s+($DATE_TEXT|$DATE_DASH)(?:\s+(?:at\s+)?($TIME_AMPM|$TIME))?.*?\bRef[:.]?\s*(\w+)""".toRegex(RegexOption.IGNORE_CASE)
+    // 7. Bill Payment (Expense)
+    private val billPaymentRegex = """Confirmed,?\s+Bill payment to\s+(.*?)\s+of ($CURRENCY)\.?\s*($AMOUNT_VAL).*?\bRef[:.]?\s*(\w+)\s+on\s+($DATE_TIME_VAL)""".toRegex(RegexOption.IGNORE_CASE)
 
     // 8. Deposited to Equity Account (Income)
-    private val depositedRegex = """(?:Dear (.*?), )?Your transaction of ($CURRENCY)\.?\s*($AMOUNT_VAL)\s+has successfully been deposited to Equity Account in favor of (.*?)\s+Ref\.\s*(?:Number|No\.?)?\s*(\w+)\s+on\s+($DATE_DASH|$DATE_TEXT)(?:\s+(?:at\s+)?($TIME))?""".toRegex(RegexOption.IGNORE_CASE)
+    private val depositedRegex = """(?:Dear (.*?), )?Your transaction of ($CURRENCY)\.?\s*($AMOUNT_VAL)\s+has successfully been deposited to Equity Account in favor of (.*?)\s+Ref[:.]?\s*(?:Number|No\.?)?\s*(\w+)\s+on\s+($DATE_TIME_VAL)""".toRegex(RegexOption.IGNORE_CASE)
 
     // 9. Generic Transfer (Fallback)
-    private val transferRegex = """Your transaction of ($CURRENCY)\.?\s*($AMOUNT_VAL)\s+has been (credited to|debited from)\s+.*?\.\s+Ref\.\s*(EQ\w+|\d+)\.?(?:\s+MPESA Ref\.\s+\w+)?\s+on\s+($DATE_DASH|$DATE_TEXT)(?:\s+at\s+$TIME)?""".toRegex(RegexOption.IGNORE_CASE)
+    private val transferRegex = """Your transaction of ($CURRENCY)\.?\s*($AMOUNT_VAL)\s+has been (credited to|debited from)\s+.*?\.\s+Ref[:.]?\s*(EQ\w+|\d+)\.?(?:\s+MPESA Ref\.\s+\w+)?\s+on\s+($DATE_TIME_VAL)""".toRegex(RegexOption.IGNORE_CASE)
 
     private val formats = listOf(
         SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH),
@@ -77,8 +74,7 @@ object EquityParser {
         rules: List<CategoryRule> = emptyList(),
         allCategories: List<Category> = emptyList()
     ): Transaction? {
-        // Skip relay messages or failed alerts
-        if (message.contains("has sent", ignoreCase = true) && message.contains("to your MPESA", ignoreCase = true)) return null
+        // Skip failed alerts
         if (message.contains("failed due to insufficient funds", ignoreCase = true)) return null
         if (message.contains("is due in", ignoreCase = true)) return null
 
@@ -94,11 +90,11 @@ object EquityParser {
 
         // 1. Confirmed Payment of KES X to MERCHANT
         paymentToMerchantRegex.find(message)?.let {
-            val currency = it.groupValues[1]
-            val amount = resolveAmount(currency, parseAmount(it.groupValues[2]))
-            val merchant = it.groupValues[3].trim()
-            val dateStr = "${it.groupValues[4]} ${it.groupValues[5]}".trim()
-            val code = it.groupValues[6]
+            val currency = it.groupValues.getOrNull(1) ?: "KES"
+            val amount = resolveAmount(currency, parseAmount(it.groupValues.getOrNull(2)))
+            val merchant = (it.groupValues.getOrNull(3) ?: "Merchant").trim()
+            val dateStr = (it.groupValues.getOrNull(4) ?: "").trim()
+            val code = it.groupValues.getOrNull(5) ?: "EQUITY"
             val dateTime = parseDateTime(dateStr, smsTimestamp)
             val category = inferCategory(merchant, isIncome = false, rules = rules, allCategories = allCategories)
             return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, category, dateTime, "Paid to $merchant", accountId, false, allCategories))
@@ -106,11 +102,11 @@ object EquityParser {
 
         // 2. Debited for payment to MERCHANT
         debitedPaymentRegex.find(message)?.let {
-            val currency = it.groupValues[1]
-            val amount = resolveAmount(currency, parseAmount(it.groupValues[2]))
-            val merchant = it.groupValues[3].trim()
-            val dateStr = "${it.groupValues[4]} ${it.groupValues[5]}".trim()
-            val code = it.groupValues[6]
+            val currency = it.groupValues.getOrNull(1) ?: "KES"
+            val amount = resolveAmount(currency, parseAmount(it.groupValues.getOrNull(2)))
+            val merchant = (it.groupValues.getOrNull(3) ?: "Merchant").trim()
+            val dateStr = (it.groupValues.getOrNull(4) ?: "").trim()
+            val code = it.groupValues.getOrNull(5) ?: "EQUITY"
             val dateTime = parseDateTime(dateStr, smsTimestamp)
             val category = inferCategory(merchant, isIncome = false, rules = rules, allCategories = allCategories)
             return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, category, dateTime, "Payment to $merchant", accountId, false, allCategories))
@@ -118,22 +114,23 @@ object EquityParser {
 
         // 3. Card Auth
         cardAuthRegex.find(message)?.let {
-            val currency = it.groupValues[1]
-            val amount = resolveAmount(currency, parseAmount(it.groupValues[2]))
-            val merchant = it.groupValues[3].trim()
-            val dateTime = parseDateTime(it.groupValues[4], smsTimestamp)
-            val code = it.groupValues[5]
+            val currency = it.groupValues.getOrNull(1) ?: "KES"
+            val amount = resolveAmount(currency, parseAmount(it.groupValues.getOrNull(2)))
+            val merchant = (it.groupValues.getOrNull(3) ?: "Merchant").trim()
+            val dateStr = (it.groupValues.getOrNull(4) ?: "").trim()
+            val code = it.groupValues.getOrNull(5) ?: "EQUITY"
+            val dateTime = parseDateTime(dateStr, smsTimestamp)
             val category = inferCategory(merchant, isIncome = false, rules = rules, allCategories = allCategories)
             return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, category, dateTime, "Card payment at $merchant", accountId, false, allCategories))
         }
 
         // 4. Credited / Received (Income)
         creditedReceivedRegex.find(message)?.let {
-            val currency = it.groupValues[1]
-            val amount = resolveAmount(currency, parseAmount(it.groupValues[2]))
-            val sender = it.groupValues[3].trim()
-            val dateStr = "${it.groupValues[4]} ${it.groupValues[5]}".trim()
-            val code = it.groupValues[6]
+            val currency = it.groupValues.getOrNull(1) ?: "KES"
+            val amount = resolveAmount(currency, parseAmount(it.groupValues.getOrNull(2)))
+            val sender = (it.groupValues.getOrNull(3) ?: "Sender").trim()
+            val dateStr = (it.groupValues.getOrNull(4) ?: "").trim()
+            val code = it.groupValues.getOrNull(5) ?: "EQUITY"
             val dateTime = parseDateTime(dateStr, smsTimestamp)
             val category = inferCategory(sender, isIncome = true, rules = rules, allCategories = allCategories)
             return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, category, dateTime, "Received from $sender", accountId, true, allCategories))
@@ -141,12 +138,12 @@ object EquityParser {
 
         // 5. Sent Money (Expense)
         sentRegex.find(message)?.let {
-            val rawAmt = if (it.groupValues[1].isNotBlank()) it.groupValues[1] else it.groupValues[3]
-            val currency = if (it.groupValues[2].isNotBlank()) it.groupValues[2] else "KES"
+            val rawAmt = if ((it.groupValues.getOrNull(1) ?: "").isNotBlank()) it.groupValues[1] else (it.groupValues.getOrNull(3) ?: "")
+            val currency = if ((it.groupValues.getOrNull(2) ?: "").isNotBlank()) it.groupValues[2] else "KES"
             val amount = resolveAmount(currency, parseAmount(rawAmt))
-            val recipient = it.groupValues[4].trim()
-            val code = it.groupValues[5]
-            val dateStr = "${it.groupValues[6]} ${it.groupValues[7]}".trim()
+            val recipient = (it.groupValues.getOrNull(4) ?: "Recipient").trim()
+            val code = it.groupValues.getOrNull(5) ?: "EQUITY"
+            val dateStr = (it.groupValues.getOrNull(6) ?: "").trim()
             val dateTime = parseDateTime(dateStr, smsTimestamp)
             val category = inferCategory(recipient, isIncome = false, rules = rules, allCategories = allCategories)
             return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, category, dateTime, "Sent to $recipient", accountId, false, allCategories))
@@ -154,21 +151,21 @@ object EquityParser {
 
         // 6. Drawn / ATM Withdrawal
         drawnRegex.find(message)?.let {
-            val currency = it.groupValues[2]
-            val amount = resolveAmount(currency, parseAmount(it.groupValues[3]))
-            val code = it.groupValues[4]
-            val dateStr = "${it.groupValues[5]} ${it.groupValues[6]}".trim()
+            val currency = it.groupValues.getOrNull(2) ?: "KES"
+            val amount = resolveAmount(currency, parseAmount(it.groupValues.getOrNull(3)))
+            val code = it.groupValues.getOrNull(4) ?: "EQUITY"
+            val dateStr = (it.groupValues.getOrNull(5) ?: "").trim()
             val dateTime = parseDateTime(dateStr, smsTimestamp)
             return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, "Transfer", dateTime, "ATM Withdrawal", accountId, false, allCategories))
         }
 
         // 7. Bill Payment
         billPaymentRegex.find(message)?.let {
-            val merchant = it.groupValues[1].trim()
-            val currency = it.groupValues[2]
-            val amount = resolveAmount(currency, parseAmount(it.groupValues[3]))
-            val code = it.groupValues[4]
-            val dateStr = "${it.groupValues[5]} ${it.groupValues[6]}".trim()
+            val merchant = (it.groupValues.getOrNull(1) ?: "Merchant").trim()
+            val currency = it.groupValues.getOrNull(2) ?: "KES"
+            val amount = resolveAmount(currency, parseAmount(it.groupValues.getOrNull(3)))
+            val code = it.groupValues.getOrNull(4) ?: "EQUITY"
+            val dateStr = (it.groupValues.getOrNull(5) ?: "").trim()
             val dateTime = parseDateTime(dateStr, smsTimestamp)
             val category = inferCategory(merchant, isIncome = false, rules = rules, allCategories = allCategories)
             return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, category, dateTime, "Bill payment to $merchant", accountId, false, allCategories))
@@ -176,11 +173,11 @@ object EquityParser {
 
         // 8. Deposited to Equity Account
         depositedRegex.find(message)?.let {
-            val currency = it.groupValues[2]
-            val amount = resolveAmount(currency, parseAmount(it.groupValues[3]))
-            val recipient = it.groupValues[4].trim()
-            val code = it.groupValues[5]
-            val dateStr = "${it.groupValues[6]} ${it.groupValues[7]}".trim()
+            val currency = it.groupValues.getOrNull(2) ?: "KES"
+            val amount = resolveAmount(currency, parseAmount(it.groupValues.getOrNull(3)))
+            val recipient = (it.groupValues.getOrNull(4) ?: "Recipient").trim()
+            val code = it.groupValues.getOrNull(5) ?: "EQUITY"
+            val dateStr = (it.groupValues.getOrNull(6) ?: "").trim()
             val dateTime = parseDateTime(dateStr, smsTimestamp)
             val isIncome = true
             val category = inferCategory(recipient, isIncome = true, rules = rules, allCategories = allCategories)
@@ -189,12 +186,12 @@ object EquityParser {
 
         // 9. Generic Transfer Fallback
         transferRegex.find(message)?.let {
-            val currency = it.groupValues[1]
-            val amount = resolveAmount(currency, parseAmount(it.groupValues[2]))
-            val type = it.groupValues[3]
+            val currency = it.groupValues.getOrNull(1) ?: "KES"
+            val amount = resolveAmount(currency, parseAmount(it.groupValues.getOrNull(2)))
+            val type = it.groupValues.getOrNull(3) ?: ""
             val isIncome = type.equals("credited to", ignoreCase = true)
-            val code = it.groupValues[4]
-            val dateStr = "${it.groupValues[5]} ${it.groupValues[6]}".trim()
+            val code = it.groupValues.getOrNull(4) ?: "EQUITY"
+            val dateStr = (it.groupValues.getOrNull(5) ?: "").trim()
             val dateTime = parseDateTime(dateStr, smsTimestamp)
             val category = if (isIncome) Category.UncategorizedIncome.name else Category.UncategorizedExpense.name
             val description = if (isIncome) "Bank Credit" else "Bank Debit"
@@ -285,12 +282,12 @@ object EquityParser {
     fun parseBalance(message: String): BigDecimal? {
         val balanceRegex = """(?:(?:account|available|new|your)\s+)?bal(?:ance)?\s*(?:is|was|:)?\s*($CURRENCY)\.?\s*($AMOUNT_VAL)""".toRegex(RegexOption.IGNORE_CASE)
         balanceRegex.find(message)?.let {
-            return resolveAmount(it.groupValues[1], parseAmount(it.groupValues[2]))
+            return resolveAmount(it.groupValues.getOrNull(1) ?: "KES", parseAmount(it.groupValues.getOrNull(2)))
         }
 
         val altBalanceRegex = """balance\s+for\s+[\d*.]+\s+is\s+($CURRENCY)\.?\s*($AMOUNT_VAL)""".toRegex(RegexOption.IGNORE_CASE)
         altBalanceRegex.find(message)?.let {
-            return resolveAmount(it.groupValues[1], parseAmount(it.groupValues[2]))
+            return resolveAmount(it.groupValues.getOrNull(1) ?: "KES", parseAmount(it.groupValues.getOrNull(2)))
         }
 
         return null
