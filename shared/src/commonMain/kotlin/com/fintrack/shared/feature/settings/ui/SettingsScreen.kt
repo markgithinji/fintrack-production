@@ -709,6 +709,19 @@ fun SettingsScreen(
                             icon = Icons.Default.Sms,
                             onClick = { viewModel.exportEquityParsingLog() }
                         )
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+
+                        SettingsItem(
+                            title = "Export M-Pesa SMS Log",
+                            subtitle = "Generate M-Pesa raw SMS vs parsed result comparison log",
+                            icon = Icons.Default.Sms,
+                            onClick = { viewModel.exportMpesaParsingLog() }
+                        )
                     }
                 }
 

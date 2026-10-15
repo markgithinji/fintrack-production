@@ -18,6 +18,7 @@ import com.fintrack.shared.feature.transaction.util.GeminiSmsParser
 import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository
 import com.fintrack.shared.feature.transaction.domain.service.TransactionImporter
 import com.fintrack.shared.feature.transaction.util.MpesaParser
+import java.io.File
 import com.fintrack.shared.feature.transaction.util.PortfolioSeeder
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.Dispatchers
@@ -128,6 +129,8 @@ class MpesaImporter(
                             parsed = geminiParser.parseSmsWithGemini(body, accountId, smsInstant, rules, categories)
                         }
 
+                        logMpesaSmsComparison(body, parsed)
+
                         if (parsed != null) {
                             val categoryName = parsed.category
                             val isExpense = !parsed.isIncome
@@ -200,5 +203,40 @@ class MpesaImporter(
                         lower.contains("transferred") || lower.contains("bought") || lower.contains("withdraw") || 
                         lower.contains("deposited") || lower.contains("confirmed") || lower.contains("ref")
         return hasCurrency && hasAction
+    }
+
+    private fun logMpesaSmsComparison(rawSms: String, parsedTx: Transaction?) {
+        try {
+            val logEntry = buildString {
+                appendLine("==================================================")
+                appendLine("[RAW_MPESA_SMS]: $rawSms")
+                if (parsedTx != null) {
+                    appendLine("[PARSED_RESULT]: KEPT (SUCCESS)")
+                    appendLine(" - Ref: ${parsedTx.externalId}")
+                    appendLine(" - Amount: ${parsedTx.amount}")
+                    appendLine(" - Cost: ${parsedTx.transactionCost}")
+                    appendLine(" - Category: ${parsedTx.category}")
+                    appendLine(" - Description: ${parsedTx.description}")
+                    appendLine(" - IsIncome: ${parsedTx.isIncome}")
+                    appendLine(" - Balance: ${parsedTx.balance}")
+                } else {
+                    appendLine("[PARSED_RESULT]: IGNORED (Regex Returned NULL)")
+                }
+                appendLine("==================================================")
+                appendLine()
+            }
+
+            Log.d("MPESA_LOG", logEntry)
+            val cacheFile = File(context.cacheDir, "mpesa_sms_parsing_log.txt")
+            cacheFile.appendText(logEntry)
+
+            val externalDir = context.getExternalFilesDir(null)
+            if (externalDir != null) {
+                val externalFile = File(externalDir, "mpesa_sms_parsing_log.txt")
+                externalFile.appendText(logEntry)
+            }
+        } catch (e: Exception) {
+            Log.e("MPESA_LOG", "Error writing M-Pesa SMS comparison log", e)
+        }
     }
 }

@@ -90,6 +90,9 @@ class EquityImporter(
                 throw Exception("Permission denied: READ_SMS is required for Equity sync")
             }
 
+            // STRICT SENDER FILTER: Query ONLY official 'EquityBank' sender ID.
+            // Do NOT query generic '%EQUIT%' or '%BANK%' to avoid importing M-Pesa relay texts
+            // or third-party SMS notifications into Equity Bank accounts.
             val cursor = try {
                 context.contentResolver.query(
                     Telephony.Sms.Inbox.CONTENT_URI,

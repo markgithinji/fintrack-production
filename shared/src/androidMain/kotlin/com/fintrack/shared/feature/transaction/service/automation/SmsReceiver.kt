@@ -65,6 +65,8 @@ class SmsReceiver : BroadcastReceiver(), KoinComponent {
         val isMpesa = sender?.contains("MPESA", ignoreCase = true) == true || 
                      sender?.contains("M-PESA", ignoreCase = true) == true
         
+        // STRICT SENDER FILTER: Match ONLY official 'EquityBank' sender ID.
+        // Ignore M-Pesa confirmatory texts that mention Equity Bank to avoid misassigning M-Pesa transactions.
         val isEquity = sender?.contains("EquityBank", ignoreCase = true) == true
 
         if (isMpesa || isEquity) {

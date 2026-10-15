@@ -463,6 +463,36 @@ class SettingsViewModel(
         }
     }
 
+    fun exportMpesaParsingLog() {
+        viewModelScope.launch {
+            _exportResult.value = null
+            _isLoading.value = true
+            try {
+                val accounts = accountRepository.getAccounts().let { (it as? Result.Success)?.data ?: emptyList() }
+                var mpesaAccount = accounts.find { it.linkedSources.contains("mpesa") || it.type == AccountType.MPESA || it.name.contains("mpesa", ignoreCase = true) }
+
+                if (mpesaAccount == null) {
+                    val defaultAccount = Account(
+                        id = "account_mpesa_default",
+                        name = "M-Pesa",
+                        type = AccountType.MPESA,
+                        balance = com.ionspin.kotlin.bignum.decimal.BigDecimal.ZERO,
+                        linkedSources = listOf("mpesa")
+                    )
+                    accountRepository.addOrUpdateAccount(defaultAccount)
+                    mpesaAccount = defaultAccount
+                }
+
+                transactionImporter.importHistory(mpesaAccount.id, isPortfolioSeed = false) { }
+                _exportResult.value = "M-Pesa SMS log generated! File saved to storage/mpesa_sms_parsing_log.txt"
+            } catch (e: Exception) {
+                _error.value = "Error generating M-Pesa SMS log: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun deleteAccount() {
         viewModelScope.launch {
             _deleteAccountState.value = SaveState.Loading
