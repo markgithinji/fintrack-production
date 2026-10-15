@@ -194,30 +194,44 @@ object EquityParser {
             return null
         }
 
-        // 8. Deposited to Equity Account
+        // 8. Deposited to Equity Account (Only keep if deposited in favor of YOURSELF. Skip third-party beneficiary confirmations)
         depositedRegex.find(message)?.let {
             val currency = it.groupValues.getOrNull(1) ?: "KES"
             val amount = resolveAmount(currency, parseAmount(it.groupValues.getOrNull(2)))
             val recipient = (it.groupValues.getOrNull(3) ?: "Recipient").trim()
+
+            // Skip third-party beneficiary payment confirmations (e.g. Discount Tyres, Real Image Logistics, James Kamau, Ian Karanja)
+            val isMySelf = recipient.contains("MARK", ignoreCase = true) ||
+                           recipient.contains("NGOTHI", ignoreCase = true) ||
+                           recipient.contains("GITHINJI", ignoreCase = true)
+            if (!isMySelf) {
+                return@let null
+            }
+
             val code = it.groupValues.getOrNull(4) ?: "EQUITY"
             val dateStr = (it.groupValues.getOrNull(5) ?: "").trim()
             val dateTime = parseDateTime(dateStr, smsTimestamp)
-            val isIncome = true
-            val category = inferCategory(recipient, isIncome = true, rules = rules, allCategories = allCategories)
-            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, category, dateTime, "Deposit from $recipient", accountId, isIncome, allCategories))
+            val category = inferCategory(recipient, isIncome = true, defaultCategoryName = "Other Income", rules = rules, allCategories = allCategories)
+            return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, category, dateTime, "Cash Deposit", accountId, true, allCategories))
         }
 
-        // 9. Generic Transfer Fallback
+        // 9. Generic Transfer / M-Pesa Withdrawal
         transferRegex.find(message)?.let {
             val currency = it.groupValues.getOrNull(1) ?: "KES"
             val amount = resolveAmount(currency, parseAmount(it.groupValues.getOrNull(2)))
             val type = it.groupValues.getOrNull(3) ?: ""
-            val isIncome = type.equals("credited to", ignoreCase = true)
             val code = it.groupValues.getOrNull(4) ?: "EQUITY"
             val dateStr = (it.groupValues.getOrNull(5) ?: "").trim()
             val dateTime = parseDateTime(dateStr, smsTimestamp)
+
+            // If "credited to 2547..." or "credited to MPESA" -> This is a withdrawal from Equity to M-Pesa phone number (Outgoing Expense)
+            val isMpesaPhoneWithdrawal = message.contains("2547", ignoreCase = true) ||
+                    message.contains("2541", ignoreCase = true) ||
+                    message.contains("MPESA", ignoreCase = true)
+
+            val isIncome = type.equals("credited to", ignoreCase = true) && !isMpesaPhoneWithdrawal
             val category = if (isIncome) "Other Income" else "Transfer"
-            val description = if (isIncome) "Bank Credit" else "Bank Debit"
+            val description = if (isMpesaPhoneWithdrawal) "Withdrawal to M-Pesa" else if (isIncome) "Bank Credit" else "Bank Debit"
             return wrap(createTransactionModel(code, amount, BigDecimal.ZERO, balance, category, dateTime, description, accountId, isIncome, allCategories))
         }
 
