@@ -249,7 +249,7 @@ fun StatisticsScreen(
                     loadHighlights = {
                         val yearCode =
                             selectedPeriod?.code?.split("-")?.firstOrNull() ?: selectedPeriod?.code
-                        viewModel.loadHighlights(selectedAccountId, yearCode, force = true)
+                        viewModel.loadHighlights(activeAccountId, yearCode, force = true)
                     }
                 )
             }
@@ -264,28 +264,28 @@ fun StatisticsScreen(
                     availableYears = availableYears,
                     animatedVisibilityScope = animatedVisibilityScope,
                     onWeekSelected = { week ->
-                        viewModel.onPeriodChanged(Period.Week(week), selectedAccountId)
+                        viewModel.onPeriodChanged(Period.Week(week), activeAccountId)
                     },
                     onMonthSelected = { month ->
-                        viewModel.onPeriodChanged(Period.Month(month), selectedAccountId)
+                        viewModel.onPeriodChanged(Period.Month(month), activeAccountId)
                     },
                     onYearSelected = { year ->
-                        viewModel.onPeriodChanged(Period.Year(year), selectedAccountId)
+                        viewModel.onPeriodChanged(Period.Year(year), activeAccountId)
                     },
                     onPeriodSelected = { period ->
-                        viewModel.onPeriodChanged(period, selectedAccountId)
+                        viewModel.onPeriodChanged(period, activeAccountId)
                     },
                     onPreviousPeriod = {
-                        viewModel.navigateToPreviousPeriod(selectedAccountId)
+                        viewModel.navigateToPreviousPeriod(activeAccountId)
                     },
                     onNextPeriod = {
-                        viewModel.navigateToNextPeriod(selectedAccountId)
+                        viewModel.navigateToNextPeriod(activeAccountId)
                     },
                     hasNext = hasNextPeriod,
                     hasPrevious = hasPreviousPeriod,
                     onRetry = {
                         viewModel.reloadDistributionForCurrentSelection(
-                            selectedAccountId,
+                            activeAccountId,
                             force = true
                         )
                     },

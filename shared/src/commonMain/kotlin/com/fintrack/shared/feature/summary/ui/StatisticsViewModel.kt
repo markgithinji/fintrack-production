@@ -59,12 +59,14 @@ class StatisticsViewModel(
     }
 
     fun selectAccountFilter(accountId: String?) {
-        if (_selectedAccountFilter.value == accountId) return
         _selectedAccountFilter.value = accountId
         resetStats()
         loadAvailablePeriods(accountId, force = true)
         loadOverview(accountId, force = true)
         loadCashflowRunway(accountId, force = true)
+        val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
+        loadHighlights(accountId, yearCode, force = true)
+        reloadDistributionForCurrentSelection(accountId, force = true)
     }
 
     private val _highlights = MutableStateFlow<Result<StatisticsSummary>>(Result.Loading)
