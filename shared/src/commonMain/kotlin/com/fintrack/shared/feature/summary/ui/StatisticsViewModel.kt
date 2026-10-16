@@ -43,8 +43,12 @@ class StatisticsViewModel(
     private val _availableAccounts = MutableStateFlow<List<Account>>(emptyList())
     val availableAccounts: StateFlow<List<Account>> = _availableAccounts.asStateFlow()
 
-    private val _selectedAccountFilter = MutableStateFlow<String?>(null)
-    val selectedAccountFilter: StateFlow<String?> = _selectedAccountFilter.asStateFlow()
+    private val _selectedAccountIds = MutableStateFlow<Set<String>>(emptySet())
+    val selectedAccountIds: StateFlow<Set<String>> = _selectedAccountIds.asStateFlow()
+
+    val selectedAccountFilter: StateFlow<String?> = _selectedAccountIds
+        .combine(_selectedAccountIds) { _, _ -> getEffectiveAccountId() }
+        .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
     private val _runway = MutableStateFlow<Result<CashflowRunway>>(Result.Loading)
     val runway: StateFlow<Result<CashflowRunway>> = _runway.asStateFlow()
@@ -59,14 +63,39 @@ class StatisticsViewModel(
     }
 
     fun selectAccountFilter(accountId: String?) {
-        _selectedAccountFilter.value = accountId
+        toggleAccountFilter(accountId)
+    }
+
+    fun toggleAccountFilter(accountId: String?) {
+        if (accountId == null) {
+            _selectedAccountIds.value = emptySet()
+        } else {
+            val current = _selectedAccountIds.value.toMutableSet()
+            if (current.contains(accountId)) {
+                current.remove(accountId)
+            } else {
+                current.add(accountId)
+            }
+            _selectedAccountIds.value = current
+        }
+
+        val effectiveAccountId = getEffectiveAccountId()
         resetStats()
-        loadAvailablePeriods(accountId, force = true)
-        loadOverview(accountId, force = true)
-        loadCashflowRunway(accountId, force = true)
+        loadAvailablePeriods(effectiveAccountId, force = true)
+        loadOverview(effectiveAccountId, force = true)
+        loadCashflowRunway(effectiveAccountId, force = true)
         val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
-        loadHighlights(accountId, yearCode, force = true)
-        reloadDistributionForCurrentSelection(accountId, force = true)
+        loadHighlights(effectiveAccountId, yearCode, force = true)
+        reloadDistributionForCurrentSelection(effectiveAccountId, force = true)
+    }
+
+    fun getEffectiveAccountId(): String? {
+        val set = _selectedAccountIds.value
+        return when {
+            set.isEmpty() -> null
+            set.size == 1 -> set.first()
+            else -> set.joinToString(",")
+        }
     }
 
     private val _highlights = MutableStateFlow<Result<StatisticsSummary>>(Result.Loading)

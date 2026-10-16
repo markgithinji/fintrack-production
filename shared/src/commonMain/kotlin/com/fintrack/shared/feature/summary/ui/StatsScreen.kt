@@ -90,12 +90,12 @@ fun StatisticsScreen(
     val hasNextPeriod by viewModel.hasNextPeriod.collectAsStateWithLifecycle()
     val hasPreviousPeriod by viewModel.hasPreviousPeriod.collectAsStateWithLifecycle()
     val availableAccounts by viewModel.availableAccounts.collectAsStateWithLifecycle()
-    val selectedAccountFilter by viewModel.selectedAccountFilter.collectAsStateWithLifecycle()
+    val selectedAccountIds by viewModel.selectedAccountIds.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
     val importStateMap by transactionsViewModel.importState.collectAsStateWithLifecycle()
 
-    val activeAccountId = selectedAccountFilter
+    val activeAccountId = viewModel.getEffectiveAccountId()
 
     LaunchedEffect(Unit) {
         viewModel.loadAvailableAccounts()
@@ -148,9 +148,9 @@ fun StatisticsScreen(
         if (availableAccounts.isNotEmpty()) {
             AccountFilterChipBar(
                 accounts = availableAccounts,
-                selectedAccountId = selectedAccountFilter,
-                onSelectAccount = { accId ->
-                    viewModel.selectAccountFilter(accId)
+                selectedAccountIds = selectedAccountIds,
+                onToggleAccount = { accId ->
+                    viewModel.toggleAccountFilter(accId)
                 }
             )
         }
@@ -395,8 +395,8 @@ private fun getDefaultPeriod(
 @Composable
 private fun AccountFilterChipBar(
     accounts: List<com.fintrack.shared.feature.account.domain.model.Account>,
-    selectedAccountId: String?,
-    onSelectAccount: (String?) -> Unit,
+    selectedAccountIds: Set<String>,
+    onToggleAccount: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val hapticFeedback = com.fintrack.shared.feature.core.ui.util.rememberHapticFeedback()
@@ -409,12 +409,12 @@ private fun AccountFilterChipBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         item(key = "all_accounts") {
-            val isSelected = selectedAccountId == null
+            val isSelected = selectedAccountIds.isEmpty()
             FilterChip(
                 selected = isSelected,
                 onClick = {
                     hapticFeedback()
-                    onSelectAccount(null)
+                    onToggleAccount(null)
                 },
                 label = { Text("All Accounts", fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium) },
                 leadingIcon = if (isSelected) {
@@ -425,12 +425,12 @@ private fun AccountFilterChipBar(
         }
 
         items(accounts, key = { it.id }) { acc ->
-            val isSelected = selectedAccountId == acc.id
+            val isSelected = selectedAccountIds.contains(acc.id)
             FilterChip(
                 selected = isSelected,
                 onClick = {
                     hapticFeedback()
-                    onSelectAccount(acc.id)
+                    onToggleAccount(acc.id)
                 },
                 label = { Text(acc.name, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium) },
                 leadingIcon = if (isSelected) {

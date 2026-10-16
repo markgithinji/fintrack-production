@@ -77,8 +77,10 @@ class SummaryRepositoryImpl(
             val startInstant = range?.first?.atStartOfDayIn(TimeZone.currentSystemDefault()) ?: Instant.fromEpochSeconds(0)
             val endInstant = range?.second?.atTime(23, 59, 59)?.toInstant(TimeZone.currentSystemDefault()) ?: Clock.System.now()
 
+            val targetAccountId = if (accountId?.contains(",") == true) null else accountId
+
             val highlightsResult = queries.getHighlightsByRange(
-                accountId = accountId,
+                accountId = targetAccountId,
                 userId = offlineUserId,
                 start = startInstant,
                 end = endInstant
@@ -96,7 +98,7 @@ class SummaryRepositoryImpl(
 
             val expenseCategoryTotals = queries.getCategoryTotals(
                 userId = offlineUserId,
-                accountId = accountId,
+                accountId = targetAccountId,
                 isIncome = 0L,
                 start = startInstant,
                 end = endInstant
@@ -333,10 +335,12 @@ class SummaryRepositoryImpl(
                 ?: range?.second?.atTime(23, 59, 59)?.toInstant(TimeZone.currentSystemDefault()) 
                 ?: Clock.System.now()
 
+            val targetAccountId = if (accountId?.contains(",") == true) null else accountId
+
             // 2. Get Top-Level Fees for the period (Backend Parity)
             val highlights = queries.getHighlightsByRange(
                 userId = offlineUserId,
-                accountId = accountId,
+                accountId = targetAccountId,
                 start = startInstant,
                 end = endInstant
             ).executeAsOne()
@@ -345,7 +349,7 @@ class SummaryRepositoryImpl(
             // 3. Get Category Totals
             val categoryTotalsRaw = queries.getCategoryTotals(
                 userId = offlineUserId,
-                accountId = accountId,
+                accountId = targetAccountId,
                 isIncome = isIncomeValue,
                 start = startInstant,
                 end = endInstant
@@ -609,7 +613,8 @@ class SummaryRepositoryImpl(
 
     override suspend fun getAvailableWeeks(accountId: String?): Result<AvailableWeeks> = withContext(Dispatchers.IO) {
         try {
-            val weeks = queries.selectDistinctWeeks(offlineUserId, accountId).executeAsList()
+            val targetAccountId = if (accountId?.contains(",") == true) null else accountId
+            val weeks = queries.selectDistinctWeeks(offlineUserId, targetAccountId).executeAsList()
             Result.Success(AvailableWeeks(weeks))
         } catch (e: Exception) {
             Result.Error(e)
@@ -618,7 +623,8 @@ class SummaryRepositoryImpl(
 
     override suspend fun getAvailableMonths(accountId: String?): Result<AvailableMonths> = withContext(Dispatchers.IO) {
         try {
-            val months = queries.selectDistinctMonths(offlineUserId, accountId).executeAsList()
+            val targetAccountId = if (accountId?.contains(",") == true) null else accountId
+            val months = queries.selectDistinctMonths(offlineUserId, targetAccountId).executeAsList()
             Result.Success(AvailableMonths(months))
         } catch (e: Exception) {
             Result.Error(e)
@@ -627,7 +633,8 @@ class SummaryRepositoryImpl(
 
     override suspend fun getAvailableYears(accountId: String?): Result<AvailableYears> = withContext(Dispatchers.IO) {
         try {
-            val years = queries.selectDistinctYears(offlineUserId, accountId).executeAsList()
+            val targetAccountId = if (accountId?.contains(",") == true) null else accountId
+            val years = queries.selectDistinctYears(offlineUserId, targetAccountId).executeAsList()
             Result.Success(AvailableYears(years))
         } catch (e: Exception) {
             Result.Error(e)
