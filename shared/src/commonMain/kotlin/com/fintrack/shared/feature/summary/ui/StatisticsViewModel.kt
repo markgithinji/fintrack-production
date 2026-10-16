@@ -248,10 +248,7 @@ class StatisticsViewModel(
         _transactionCounts.value = Result.Loading
         _incomeDistribution.value = Result.Loading
         _expenseDistribution.value = Result.Loading
-        _availableWeeks.value = emptyList()
-        _availableMonths.value = emptyList()
-        _availableYears.value = emptyList()
-        _selectedPeriod.value = null
+        _runway.value = Result.Loading
         _metadataState.value = Result.Loading
     }
 
