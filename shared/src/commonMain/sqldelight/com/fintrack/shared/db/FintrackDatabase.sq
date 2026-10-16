@@ -180,7 +180,7 @@ selectRecentTransactionsByAccount:
 SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
-WHERE T.accountId = :accountId
+WHERE instr(',' || :accountId || ',', ',' || T.accountId || ',') > 0
 ORDER BY T.dateTime DESC
 LIMIT :limit;
 
@@ -199,7 +199,7 @@ WHERE T.id = ?;
 countTransactions:
 SELECT COUNT(*) FROM TransactionEntity
 WHERE userId = :userId
-AND (:accountId IS NULL OR accountId = :accountId)
+AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
 AND (:isIncome IS NULL OR isIncome = :isIncome)
 AND (:useCategoryFilter = 0 OR categoryId IN :categoryIds)
 AND (:start IS NULL OR dateTime >= :start)
@@ -211,7 +211,7 @@ SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost,
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.userId = :userId
-AND (:accountId IS NULL OR T.accountId = :accountId)
+AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || T.accountId || ',') > 0)
 AND (:isIncome IS NULL OR T.isIncome = :isIncome)
 AND (:useCategoryFilter = 0 OR T.categoryId IN :categoryIds)
 AND (:start IS NULL OR T.dateTime >= :start)
@@ -232,7 +232,7 @@ SELECT
     SUM(CASE WHEN isIncome = 1 THEN CAST(amount AS REAL) - CAST(transactionCost AS REAL) ELSE 0 END) AS incomeTotal,
     SUM(CASE WHEN isIncome = 0 THEN CAST(amount AS REAL) + CAST(transactionCost AS REAL) ELSE 0 END) AS expenseTotal
 FROM TransactionEntity
-WHERE userId = :userId AND (:accountId IS NULL OR accountId = :accountId) AND dateTime >= :start AND dateTime <= :end
+WHERE userId = :userId AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0) AND dateTime >= :start AND dateTime <= :end
 GROUP BY day
 ORDER BY day ASC;
 
@@ -244,7 +244,7 @@ SELECT
     COUNT(*) AS txCount
 FROM TransactionEntity T
 JOIN CategoryEntity C ON T.categoryId = C.id
-WHERE T.userId = :userId AND (:accountId IS NULL OR T.accountId = :accountId) AND (:isIncome IS NULL OR T.isIncome = :isIncome) AND T.dateTime >= :start AND T.dateTime <= :end
+WHERE T.userId = :userId AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || T.accountId || ',') > 0) AND (:isIncome IS NULL OR T.isIncome = :isIncome) AND T.dateTime >= :start AND T.dateTime <= :end
 GROUP BY catId
 ORDER BY totalSum DESC;
 
@@ -255,7 +255,7 @@ SELECT
     SUM(CAST(transactionCost AS REAL)) +
     SUM(CASE WHEN categoryId = '00000000-0000-4000-a000-000000000028' THEN CAST(amount AS REAL) ELSE 0 END) AS feesTotal
 FROM TransactionEntity
-WHERE (:accountId IS NULL OR accountId = :accountId) AND (userId = :userId);
+WHERE (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0) AND (userId = :userId);
 
 getHighlightsByRange:
 SELECT
@@ -264,7 +264,7 @@ SELECT
     SUM(CAST(transactionCost AS REAL)) +
     SUM(CASE WHEN categoryId = '00000000-0000-4000-a000-000000000028' THEN CAST(amount AS REAL) ELSE 0 END) AS feesTotal
 FROM TransactionEntity
-WHERE (:accountId IS NULL OR accountId = :accountId) AND (userId = :userId) AND dateTime >= :start AND dateTime <= :end;
+WHERE (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0) AND (userId = :userId) AND dateTime >= :start AND dateTime <= :end;
 
 getTest:
 SELECT 1;
@@ -272,19 +272,19 @@ SELECT 1;
 selectDistinctMonths:
 SELECT DISTINCT strftime('%Y-%m', dateTime / 1000, 'unixepoch') AS month
 FROM TransactionEntity
-WHERE userId = ? AND (:accountId IS NULL OR accountId = :accountId)
+WHERE userId = ? AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
 ORDER BY month DESC;
 
 selectDistinctYears:
 SELECT DISTINCT strftime('%Y', dateTime / 1000, 'unixepoch') AS year
 FROM TransactionEntity
-WHERE userId = ? AND (:accountId IS NULL OR accountId = :accountId)
+WHERE userId = ? AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
 ORDER BY year DESC;
 
 selectDistinctWeeks:
 SELECT DISTINCT strftime('%Y-W%W', dateTime / 1000, 'unixepoch') AS week
 FROM TransactionEntity
-WHERE userId = ? AND (:accountId IS NULL OR accountId = :accountId)
+WHERE userId = ? AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
 ORDER BY week DESC;
 
 getTransactionCountSummary:
@@ -297,7 +297,7 @@ SELECT
     SUM(CAST(amount AS REAL)) AS totalAmount
 FROM TransactionEntity
 WHERE userId = :userId
-AND (:accountId IS NULL OR accountId = :accountId)
+AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
 AND (:isIncome IS NULL OR isIncome = :isIncome)
 AND (:useCategoryFilter = 0 OR categoryId IN :categoryIds)
 AND (:start IS NULL OR dateTime >= :start)

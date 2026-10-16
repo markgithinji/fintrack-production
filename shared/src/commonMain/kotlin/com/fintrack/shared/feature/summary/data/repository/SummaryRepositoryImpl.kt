@@ -77,7 +77,7 @@ class SummaryRepositoryImpl(
             val startInstant = range?.first?.atStartOfDayIn(TimeZone.currentSystemDefault()) ?: Instant.fromEpochSeconds(0)
             val endInstant = range?.second?.atTime(23, 59, 59)?.toInstant(TimeZone.currentSystemDefault()) ?: Clock.System.now()
 
-            val targetAccountId = if (accountId?.contains(",") == true) null else accountId
+            val targetAccountId = accountId
 
             val highlightsResult = queries.getHighlightsByRange(
                 accountId = targetAccountId,
@@ -335,7 +335,7 @@ class SummaryRepositoryImpl(
                 ?: range?.second?.atTime(23, 59, 59)?.toInstant(TimeZone.currentSystemDefault()) 
                 ?: Clock.System.now()
 
-            val targetAccountId = if (accountId?.contains(",") == true) null else accountId
+            val targetAccountId = accountId
 
             // 2. Get Top-Level Fees for the period (Backend Parity)
             val highlights = queries.getHighlightsByRange(
@@ -379,7 +379,7 @@ class SummaryRepositoryImpl(
 
             // 6. Merchant Insights (Mainly X, Y)
             val allTransactionsForPeriod = queries.selectAllTransactions(offlineUserId).executeAsList()
-                .filter { it.dateTime >= startInstant && it.dateTime <= endInstant && (accountId == null || it.accountId == accountId) }
+                .filter { it.dateTime >= startInstant && it.dateTime <= endInstant && (accountId == null || accountId.split(",").contains(it.accountId)) }
             
             val merchantInsights = allTransactionsForPeriod
                 .filter { tx -> (isIncomeValue == null || tx.isIncome == isIncomeValue) }
@@ -613,7 +613,7 @@ class SummaryRepositoryImpl(
 
     override suspend fun getAvailableWeeks(accountId: String?): Result<AvailableWeeks> = withContext(Dispatchers.IO) {
         try {
-            val targetAccountId = if (accountId?.contains(",") == true) null else accountId
+            val targetAccountId = accountId
             val weeks = queries.selectDistinctWeeks(offlineUserId, targetAccountId).executeAsList()
             Result.Success(AvailableWeeks(weeks))
         } catch (e: Exception) {
@@ -623,7 +623,7 @@ class SummaryRepositoryImpl(
 
     override suspend fun getAvailableMonths(accountId: String?): Result<AvailableMonths> = withContext(Dispatchers.IO) {
         try {
-            val targetAccountId = if (accountId?.contains(",") == true) null else accountId
+            val targetAccountId = accountId
             val months = queries.selectDistinctMonths(offlineUserId, targetAccountId).executeAsList()
             Result.Success(AvailableMonths(months))
         } catch (e: Exception) {
@@ -633,7 +633,7 @@ class SummaryRepositoryImpl(
 
     override suspend fun getAvailableYears(accountId: String?): Result<AvailableYears> = withContext(Dispatchers.IO) {
         try {
-            val targetAccountId = if (accountId?.contains(",") == true) null else accountId
+            val targetAccountId = accountId
             val years = queries.selectDistinctYears(offlineUserId, targetAccountId).executeAsList()
             Result.Success(AvailableYears(years))
         } catch (e: Exception) {
