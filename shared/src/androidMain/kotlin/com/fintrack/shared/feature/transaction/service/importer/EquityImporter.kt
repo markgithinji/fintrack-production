@@ -134,10 +134,7 @@ class EquityImporter(
                                 latestBalance = EquityParser.parseBalance(body)
                             }
 
-                            var parsed = EquityParser.parse(body, accountId, smsInstant, rules, categories)
-                            if (parsed == null && isFinancialCandidate(body)) {
-                                parsed = geminiParser.parseSmsWithGemini(body, accountId, smsInstant, rules, categories)
-                            }
+                            val parsed = EquityParser.parse(body, accountId, smsInstant, rules, categories)
 
                             logEquitySmsComparison(body, parsed)
 
@@ -234,7 +231,6 @@ class EquityImporter(
                 appendLine()
             }
 
-            Log.d("EQUITY_LOG", logEntry)
             val file = File(context.cacheDir, "equity_sms_parsing_log.txt")
             file.appendText(logEntry)
 

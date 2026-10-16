@@ -107,9 +107,7 @@ object EquityParser {
         fun wrap(transaction: Transaction?): Transaction? {
             if (transaction == null) return null
             if (transaction.amount <= BigDecimal.ZERO) return null
-            val result = transaction.copy(rawMessage = message)
-            println("[SMS_SYNC] [EquityParser] Successfully parsed transaction: ref=${result.externalId}, amount=${result.amount}, category=${result.category}, accountId=${result.accountId}")
-            return result
+            return transaction.copy(rawMessage = message)
         }
 
         // 1. Confirmed Payment of KES X to MERCHANT

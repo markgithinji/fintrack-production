@@ -100,16 +100,6 @@ class GetCashflowRunwayUseCase(
             null
         }
 
-        println("[RUNWAY_DIAGNOSTIC] === CASHFLOW RUNWAY COMPUTATION ===")
-        println("[RUNWAY_DIAGNOSTIC] Target AccountId: $accountId")
-        println("[RUNWAY_DIAGNOSTIC] Current Balance: $currentBalance across ${targetAccounts.size} accounts")
-        println("[RUNWAY_DIAGNOSTIC] Past 30 Days Expenses: $past30DaysExpensesTotal across ${past30Expenses.size} variable txs")
-        println("[RUNWAY_DIAGNOSTIC] Computed Daily Burn Rate: $dailyBurnRate / day")
-        println("[RUNWAY_DIAGNOSTIC] Remaining Days in Month: $remainingDaysInMonth, Projected Variable Expense: $projectedVariableExpense")
-        println("[RUNWAY_DIAGNOSTIC] Upcoming Bills: $upcomingBillsTotal")
-        println("[RUNWAY_DIAGNOSTIC] Projected EOM Balance: $projectedEomBalance, Overdraft Risk: $isOverdraftRisk, Depletion Days: $estimatedDepletionDays")
-        println("[RUNWAY_DIAGNOSTIC] ===================================")
-
         Result.Success(
             CashflowRunway(
                 currentBalance = currentBalance,

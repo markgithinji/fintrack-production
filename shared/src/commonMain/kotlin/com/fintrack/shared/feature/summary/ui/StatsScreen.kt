@@ -48,6 +48,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -411,11 +413,17 @@ private fun AccountFilterChipBar(
     modifier: Modifier = Modifier
 ) {
     val hapticFeedback = com.fintrack.shared.feature.core.ui.util.rememberHapticFeedback()
+    val density = LocalDensity.current
 
     LazyRow(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .onGloballyPositioned { coords ->
+                val heightPx = coords.size.height
+                val heightDp = with(density) { heightPx.toDp() }
+                println("[CHIP_LAYOUT_LOG] Final Loaded Chips Bar Height: ${heightPx}px (${heightDp})")
+            },
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -457,24 +465,36 @@ private fun AccountFilterChipBar(
 private fun AccountFilterShimmerBar(
     modifier: Modifier = Modifier
 ) {
+    val density = LocalDensity.current
+
     LazyRow(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .onGloballyPositioned { coords ->
+                val heightPx = coords.size.height
+                val heightDp = with(density) { heightPx.toDp() }
+                println("[CHIP_LAYOUT_LOG] Loading Shimmer Bar Height: ${heightPx}px (${heightDp})")
+            },
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         items(count = 3, key = { "account_filter_shimmer_$it" }) { index ->
             val chipWidth = when (index) {
-                0 -> 100.dp
-                1 -> 80.dp
-                else -> 110.dp
+                0 -> 96.dp
+                1 -> 76.dp
+                else -> 92.dp
             }
-            AnimatedShimmerBox(
-                modifier = Modifier
-                    .size(width = chipWidth, height = 32.dp)
-                    .clip(RoundedCornerShape(12.dp))
-            )
+            Box(
+                modifier = Modifier.height(48.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                AnimatedShimmerBox(
+                    modifier = Modifier
+                        .size(width = chipWidth, height = 32.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+            }
         }
     }
 }

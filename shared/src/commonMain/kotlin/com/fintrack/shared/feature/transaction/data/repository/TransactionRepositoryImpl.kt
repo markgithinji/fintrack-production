@@ -146,11 +146,6 @@ class TransactionRepositoryImpl(
 
     override suspend fun addTransactions(transactions: List<Transaction>): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            logger.info(TAG, "[SMS_DIAGNOSTIC] [STAGE 2 - SAVE START] Batch inserting ${transactions.size} transactions into database...")
-            if (transactions.isNotEmpty()) {
-                val sample = transactions.first()
-                logger.info(TAG, "[SMS_DIAGNOSTIC] [STAGE 2 - SAMPLE ITEM] First item: id=${sample.id}, accountId=${sample.accountId}, categoryId=${sample.categoryId}, amount=${sample.amount}, rawMessage=${sample.rawMessage?.take(30)}")
-            }
             queries.transaction {
                 transactions.forEach { transaction ->
                     queries.insertTransaction(
@@ -179,13 +174,9 @@ class TransactionRepositoryImpl(
                     )
                 }
             }
-            val totalInDb = try {
-                queries.countTransactions(userId = offlineUserId, accountId = null, isIncome = null, useCategoryFilter = 0, categoryIds = emptyList(), start = null, end = null, hasTransactionCost = null).executeAsOne()
-            } catch (e: Exception) { -1L }
-            logger.info(TAG, "[SMS_DIAGNOSTIC] [STAGE 2 - SAVE SUCCESS] Batch inserted ${transactions.size} transactions. Total transactions in SQLite DB for '$offlineUserId': $totalInDb")
             Result.Success(Unit)
         } catch (e: Exception) {
-            logger.error(TAG, "[SMS_DIAGNOSTIC] [STAGE 2 - SAVE EXCEPTION] Error inserting ${transactions.size} transactions into database!", e)
+            logger.error(TAG, "Error inserting ${transactions.size} transactions into database", e)
             Result.Error(e)
         }
     }

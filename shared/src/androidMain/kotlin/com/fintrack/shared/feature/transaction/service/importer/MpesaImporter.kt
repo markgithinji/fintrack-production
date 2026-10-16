@@ -124,10 +124,7 @@ class MpesaImporter(
                             latestBalance = MpesaParser.parseBalance(body)
                         }
 
-                        var parsed = MpesaParser.parse(body, accountId, smsInstant, rules, categories)
-                        if (parsed == null && isFinancialCandidate(body)) {
-                            parsed = geminiParser.parseSmsWithGemini(body, accountId, smsInstant, rules, categories)
-                        }
+                        val parsed = MpesaParser.parse(body, accountId, smsInstant, rules, categories)
 
                         logMpesaSmsComparison(body, parsed)
 
@@ -226,7 +223,6 @@ class MpesaImporter(
                 appendLine()
             }
 
-            Log.d("MPESA_LOG", logEntry)
             val cacheFile = File(context.cacheDir, "mpesa_sms_parsing_log.txt")
             cacheFile.appendText(logEntry)
 

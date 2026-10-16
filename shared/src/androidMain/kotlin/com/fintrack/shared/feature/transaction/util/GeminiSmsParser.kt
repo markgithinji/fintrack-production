@@ -1,7 +1,6 @@
 package com.fintrack.shared.feature.transaction.util
 
 import android.content.Context
-import android.util.Log
 import com.fintrack.shared.feature.category.domain.model.Category
 import com.fintrack.shared.feature.category.domain.model.CategoryRule
 import com.fintrack.shared.feature.category.util.CategoryMatcher
@@ -13,10 +12,6 @@ import kotlin.time.Clock
 
 class GeminiSmsParser(private val context: Context) {
 
-    companion object {
-        private const val TAG = "SMS_SYNC"
-    }
-
     private val generativeModel = Generation.getClient()
 
     suspend fun parseSmsWithGemini(
@@ -27,8 +22,6 @@ class GeminiSmsParser(private val context: Context) {
         allCategories: List<Category> = emptyList()
     ): Transaction? {
         return try {
-            Log.d(TAG, "[GeminiSmsParser] Fallback triggered! Passing non-standard SMS to Gemini Nano...")
-
             val prompt = """
                 Extract transaction details from this financial SMS text:
                 "$rawSms"
@@ -64,7 +57,7 @@ class GeminiSmsParser(private val context: Context) {
             val categoryName = allCategories.find { it.id == resolvedCategoryId }?.name
                 ?: if (isIncome) "Other Income" else "Transfer"
 
-            val transaction = Transaction(
+            Transaction(
                 accountId = accountId,
                 isIncome = isIncome,
                 amount = parsedAmount,
@@ -77,11 +70,7 @@ class GeminiSmsParser(private val context: Context) {
                 balance = null,
                 rawMessage = rawSms
             )
-
-            Log.d(TAG, "[GeminiSmsParser] Gemini Nano successfully parsed transaction: ref=$refCode, amount=$parsedAmount, merchant=$merchantName, category=$categoryName")
-            transaction
-        } catch (e: Exception) {
-            Log.d(TAG, "[GeminiSmsParser] Gemini Nano on-device parsing unavailable or exception: ${e.message}")
+        } catch (_: Exception) {
             null
         }
     }

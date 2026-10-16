@@ -91,9 +91,7 @@ object MpesaParser {
         fun wrap(transaction: Transaction?): Transaction? {
             if (transaction == null) return null
             if (transaction.amount <= BigDecimal.ZERO) return null
-            val result = transaction.copy(rawMessage = message)
-            println("[SMS_SYNC] [MpesaParser] Successfully parsed transaction: ref=${result.externalId}, amount=${result.amount}, category=${result.category}, accountId=${result.accountId}")
-            return result
+            return transaction.copy(rawMessage = message)
         }
 
         // 1. Fuliza (Check this FIRST because it often uses "transferred from M-PESA")
