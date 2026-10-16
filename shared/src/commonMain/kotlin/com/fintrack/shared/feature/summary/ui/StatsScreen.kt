@@ -57,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fintrack.shared.feature.core.ui.AnimatedShimmerBox
 import com.fintrack.shared.feature.core.ui.CommonErrorState
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.summary.domain.model.TabType
@@ -144,29 +145,39 @@ fun StatisticsScreen(
             .background(MaterialTheme.colorScheme.background)
             .padding(top = paddingValues.calculateTopPadding())
     ) {
-        // Account Selection Filter Bar
-        if (availableAccounts.isNotEmpty()) {
-            AccountFilterChipBar(
-                accounts = availableAccounts,
-                selectedAccountIds = selectedAccountIds,
-                onToggleAccount = { accId ->
-                    viewModel.toggleAccountFilter(accId)
-                }
-            )
-        }
-
-        // Top Tab Switcher
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp, bottom = 8.dp)
+        // Unified Top Control Panel Container
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.background,
+            tonalElevation = 1.dp
         ) {
-            TabSwitcher(
-                selectedTab = selectedTab,
-                onTabSelected = { 
-                    viewModel.onTabChanged(it, activeAccountId)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Top Tab Switcher
+                TabSwitcher(
+                    selectedTab = selectedTab,
+                    onTabSelected = { 
+                        viewModel.onTabChanged(it, activeAccountId)
+                    }
+                )
+
+                // Account Selection Filter Bar
+                if (availableAccounts.isNotEmpty()) {
+                    AccountFilterChipBar(
+                        accounts = availableAccounts,
+                        selectedAccountIds = selectedAccountIds,
+                        onToggleAccount = { accId ->
+                            viewModel.toggleAccountFilter(accId)
+                        }
+                    )
+                } else {
+                    AccountFilterShimmerBar()
                 }
-            )
+            }
         }
 
         LazyColumn(
@@ -437,6 +448,32 @@ private fun AccountFilterChipBar(
                     { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
                 } else null,
                 shape = RoundedCornerShape(12.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun AccountFilterShimmerBar(
+    modifier: Modifier = Modifier
+) {
+    LazyRow(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        items(count = 3, key = { "account_filter_shimmer_$it" }) { index ->
+            val chipWidth = when (index) {
+                0 -> 100.dp
+                1 -> 80.dp
+                else -> 110.dp
+            }
+            AnimatedShimmerBox(
+                modifier = Modifier
+                    .size(width = chipWidth, height = 32.dp)
+                    .clip(RoundedCornerShape(12.dp))
             )
         }
     }
