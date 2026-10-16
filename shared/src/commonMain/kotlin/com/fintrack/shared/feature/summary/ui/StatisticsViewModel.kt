@@ -4,6 +4,7 @@ import Period
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fintrack.shared.feature.core.util.Result
+import com.fintrack.shared.feature.summary.domain.model.CashflowRunway
 import com.fintrack.shared.feature.summary.domain.model.CategoryComparisonSummary
 import com.fintrack.shared.feature.summary.domain.model.DistributionSummary
 import com.fintrack.shared.feature.summary.domain.model.Highlights
@@ -12,7 +13,11 @@ import com.fintrack.shared.feature.summary.domain.model.StatisticsSummary
 import com.fintrack.shared.feature.summary.domain.model.TabType
 import com.fintrack.shared.feature.summary.domain.model.TransactionCountSummary
 import com.fintrack.shared.feature.summary.domain.model.TransactionType
+import com.fintrack.shared.feature.account.domain.model.Account
+import com.fintrack.shared.feature.account.domain.repository.AccountRepository
 import com.fintrack.shared.feature.summary.domain.repository.SummaryRepository
+import com.fintrack.shared.feature.summary.domain.usecase.GetCashflowRunwayUseCase
+import kotlinx.coroutines.flow.asStateFlow
 import com.fintrack.shared.feature.core.util.DateTimeHelper
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -30,8 +35,37 @@ import kotlinx.coroutines.launch
 
 @OptIn(FlowPreview::class)
 class StatisticsViewModel(
-    private val summaryRepository: SummaryRepository
+    private val summaryRepository: SummaryRepository,
+    private val accountRepository: AccountRepository,
+    private val getCashflowRunwayUseCase: GetCashflowRunwayUseCase
 ) : ViewModel() {
+
+    private val _availableAccounts = MutableStateFlow<List<Account>>(emptyList())
+    val availableAccounts: StateFlow<List<Account>> = _availableAccounts.asStateFlow()
+
+    private val _selectedAccountFilter = MutableStateFlow<String?>(null)
+    val selectedAccountFilter: StateFlow<String?> = _selectedAccountFilter.asStateFlow()
+
+    private val _runway = MutableStateFlow<Result<CashflowRunway>>(Result.Loading)
+    val runway: StateFlow<Result<CashflowRunway>> = _runway.asStateFlow()
+
+    fun loadAvailableAccounts() {
+        viewModelScope.launch {
+            when (val res = accountRepository.getAccounts()) {
+                is Result.Success -> _availableAccounts.value = res.data
+                else -> {}
+            }
+        }
+    }
+
+    fun selectAccountFilter(accountId: String?) {
+        if (_selectedAccountFilter.value == accountId) return
+        _selectedAccountFilter.value = accountId
+        resetStats()
+        loadAvailablePeriods(accountId, force = true)
+        loadOverview(accountId, force = true)
+        loadCashflowRunway(accountId, force = true)
+    }
 
     private val _highlights = MutableStateFlow<Result<StatisticsSummary>>(Result.Loading)
     val highlights: StateFlow<Result<StatisticsSummary>> = _highlights
@@ -138,11 +172,28 @@ class StatisticsViewModel(
 
     private var lastHighlightsAccountId: String? = null
     private var lastHighlightsPeriod: String? = null
+    private var lastRunwayAccountId: String? = null
     private var highlightsJob: Job? = null
     private var availablePeriodsJob: Job? = null
     private var overviewJob: Job? = null
     private var categoryComparisonsJob: Job? = null
     private var transactionCountsJob: Job? = null
+    private var runwayJob: Job? = null
+
+    fun loadCashflowRunway(accountId: String? = null, force: Boolean = false) {
+        val accountChanged = lastRunwayAccountId != accountId
+        if (!force && !accountChanged && _runway.value is Result.Success) return
+
+        runwayJob?.cancel()
+        if (accountChanged || force) {
+            _runway.value = Result.Loading
+        }
+
+        runwayJob = viewModelScope.launch {
+            lastRunwayAccountId = accountId
+            _runway.value = getCashflowRunwayUseCase(accountId)
+        }
+    }
 
     fun resetStats() {
         lastHighlightsAccountId = null

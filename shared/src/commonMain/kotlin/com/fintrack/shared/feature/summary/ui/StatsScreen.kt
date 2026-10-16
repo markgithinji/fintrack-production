@@ -23,15 +23,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -85,13 +89,21 @@ fun StatisticsScreen(
     val metadataState by viewModel.metadataState.collectAsStateWithLifecycle()
     val hasNextPeriod by viewModel.hasNextPeriod.collectAsStateWithLifecycle()
     val hasPreviousPeriod by viewModel.hasPreviousPeriod.collectAsStateWithLifecycle()
+    val availableAccounts by viewModel.availableAccounts.collectAsStateWithLifecycle()
+    val selectedAccountFilter by viewModel.selectedAccountFilter.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
     val importStateMap by transactionsViewModel.importState.collectAsStateWithLifecycle()
 
+    val activeAccountId = selectedAccountFilter
+
+    LaunchedEffect(Unit) {
+        viewModel.loadAvailableAccounts()
+    }
+
     // Syncing state from TransactionViewModel
-    LaunchedEffect(selectedAccountId, importStateMap) {
-        val isSyncing = selectedAccountId != null && importStateMap[selectedAccountId] is Result.Loading
+    LaunchedEffect(activeAccountId, importStateMap) {
+        val isSyncing = activeAccountId != null && importStateMap[activeAccountId] is Result.Loading
         viewModel.setSyncing(isSyncing)
     }
 
@@ -102,23 +114,15 @@ fun StatisticsScreen(
         getDefaultPeriod(availableWeeks, availableMonths, availableYears)
     }
 
-    LaunchedEffect(selectedAccountId, refreshTrigger) {
-        if (selectedAccountId != null) {
-            val force = refreshTrigger > lastProcessedRefreshTrigger && lastProcessedRefreshTrigger != -1
-            if (force) {
-                viewModel.resetStats()
-            }
-            viewModel.loadAvailablePeriods(selectedAccountId, force = force)
-            viewModel.loadOverview(selectedAccountId, force = force)
-            lastProcessedRefreshTrigger = refreshTrigger
+    LaunchedEffect(activeAccountId, refreshTrigger) {
+        val force = refreshTrigger > lastProcessedRefreshTrigger && lastProcessedRefreshTrigger != -1
+        if (force) {
+            viewModel.resetStats()
         }
-    }
-
-    if (selectedAccountId == null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-        return
+        viewModel.loadAvailablePeriods(activeAccountId, force = force)
+        viewModel.loadOverview(activeAccountId, force = force)
+        viewModel.loadCashflowRunway(activeAccountId, force = force)
+        lastProcessedRefreshTrigger = refreshTrigger
     }
 
     if (metadataState is Result.Error) {
@@ -126,8 +130,9 @@ fun StatisticsScreen(
             title = "Unable to load statistics",
             error = (metadataState as Result.Error).exception,
             onRetry = {
-                viewModel.loadAvailablePeriods(selectedAccountId, force = true)
-                viewModel.loadOverview(selectedAccountId, force = true)
+                viewModel.loadAvailablePeriods(activeAccountId, force = true)
+                viewModel.loadOverview(activeAccountId, force = true)
+                viewModel.loadCashflowRunway(activeAccountId, force = true)
             }
         )
         return
@@ -139,16 +144,27 @@ fun StatisticsScreen(
             .background(MaterialTheme.colorScheme.background)
             .padding(top = paddingValues.calculateTopPadding())
     ) {
+        // Account Selection Filter Bar
+        if (availableAccounts.isNotEmpty()) {
+            AccountFilterChipBar(
+                accounts = availableAccounts,
+                selectedAccountId = selectedAccountFilter,
+                onSelectAccount = { accId ->
+                    viewModel.selectAccountFilter(accId)
+                }
+            )
+        }
+
         // Top Tab Switcher
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 16.dp, bottom = 8.dp)
+                .padding(top = 4.dp, bottom = 8.dp)
         ) {
             TabSwitcher(
                 selectedTab = selectedTab,
                 onTabSelected = { 
-                    viewModel.onTabChanged(it, selectedAccountId)
+                    viewModel.onTabChanged(it, activeAccountId)
                 }
             )
         }
@@ -281,7 +297,7 @@ fun StatisticsScreen(
                             selectedTab is TabType.Income,
                             dateRange?.first,
                             dateRange?.second,
-                            selectedAccountId
+                            activeAccountId ?: ""
                         )
                     }
                 )
@@ -373,5 +389,55 @@ private fun getDefaultPeriod(
         availableMonths.isNotEmpty() -> Period.Month(availableMonths.first())
         availableYears.isNotEmpty() -> Period.Year(availableYears.first())
         else -> Period.Week("2024-W01")
+    }
+}
+
+@Composable
+private fun AccountFilterChipBar(
+    accounts: List<com.fintrack.shared.feature.account.domain.model.Account>,
+    selectedAccountId: String?,
+    onSelectAccount: (String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val hapticFeedback = com.fintrack.shared.feature.core.ui.util.rememberHapticFeedback()
+
+    LazyRow(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        item(key = "all_accounts") {
+            val isSelected = selectedAccountId == null
+            FilterChip(
+                selected = isSelected,
+                onClick = {
+                    hapticFeedback()
+                    onSelectAccount(null)
+                },
+                label = { Text("All Accounts", fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium) },
+                leadingIcon = if (isSelected) {
+                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                } else null,
+                shape = RoundedCornerShape(12.dp)
+            )
+        }
+
+        items(accounts, key = { it.id }) { acc ->
+            val isSelected = selectedAccountId == acc.id
+            FilterChip(
+                selected = isSelected,
+                onClick = {
+                    hapticFeedback()
+                    onSelectAccount(acc.id)
+                },
+                label = { Text(acc.name, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium) },
+                leadingIcon = if (isSelected) {
+                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                } else null,
+                shape = RoundedCornerShape(12.dp)
+            )
+        }
     }
 }
