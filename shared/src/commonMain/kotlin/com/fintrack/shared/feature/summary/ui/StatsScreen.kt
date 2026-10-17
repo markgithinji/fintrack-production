@@ -4,10 +4,12 @@ import Period
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -423,8 +425,6 @@ private fun AccountFilterChipBar(
     onToggleAccount: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val hapticFeedback = com.fintrack.shared.feature.core.ui.util.rememberHapticFeedback()
-
     LazyRow(
         modifier = modifier
             .fillMaxWidth()
@@ -434,33 +434,86 @@ private fun AccountFilterChipBar(
     ) {
         item(key = "all_accounts") {
             val isSelected = selectedAccountIds.isEmpty()
-            FilterChip(
+            SelectableFilterChip(
                 selected = isSelected,
-                onClick = {
-                    hapticFeedback()
-                    onToggleAccount(null)
-                },
-                label = { Text("All Accounts", fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium) },
-                leadingIcon = if (isSelected) {
-                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                } else null,
-                shape = RoundedCornerShape(12.dp)
+                label = "All Accounts",
+                onClick = { onToggleAccount(null) }
             )
         }
 
         items(accounts, key = { it.id }) { acc ->
             val isSelected = selectedAccountIds.contains(acc.id)
-            FilterChip(
+            SelectableFilterChip(
                 selected = isSelected,
-                onClick = {
-                    hapticFeedback()
-                    onToggleAccount(acc.id)
-                },
-                label = { Text(acc.name, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium) },
-                leadingIcon = if (isSelected) {
-                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                } else null,
-                shape = RoundedCornerShape(12.dp)
+                label = acc.name,
+                onClick = { onToggleAccount(acc.id) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SelectableFilterChip(
+    selected: Boolean,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    leadingIcon: ImageVector? = null
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val animatedBgColor by animateColorAsState(
+        targetValue = if (selected) colorScheme.primaryContainer else colorScheme.surface,
+        animationSpec = tween(150),
+        label = "chipBgColor"
+    )
+    val animatedContentColor by animateColorAsState(
+        targetValue = if (selected) colorScheme.onPrimaryContainer else colorScheme.onSurface,
+        animationSpec = tween(150),
+        label = "chipContentColor"
+    )
+
+    val hapticFeedback = com.fintrack.shared.feature.core.ui.util.rememberHapticFeedback()
+    Surface(
+        onClick = {
+            hapticFeedback()
+            onClick()
+        },
+        shape = RoundedCornerShape(12.dp),
+        color = animatedBgColor,
+        border = BorderStroke(
+            width = if (selected) 1.5.dp else 1.dp,
+            color = if (selected) colorScheme.primary else colorScheme.outlineVariant.copy(alpha = 0.5f)
+        ),
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .animateContentSize(animationSpec = tween(200)),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (selected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            } else if (leadingIcon != null) {
+                Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = null,
+                    tint = colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            Text(
+                text = label,
+                color = animatedContentColor,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                fontSize = 13.sp
             )
         }
     }
