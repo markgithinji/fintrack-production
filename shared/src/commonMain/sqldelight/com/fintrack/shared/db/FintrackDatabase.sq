@@ -344,3 +344,52 @@ SELECT * FROM CategoryRuleEntity WHERE userId = ? OR userId IS NULL;
 
 deleteCategoryRule:
 DELETE FROM CategoryRuleEntity WHERE id = ?;
+
+-- Savings Goal Queries
+CREATE TABLE IF NOT EXISTS SavingsGoalEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    targetAmount REAL NOT NULL,
+    currentAmount REAL NOT NULL DEFAULT 0.0,
+    targetDate TEXT NOT NULL,
+    categoryId TEXT,
+    accountId TEXT,
+    iconName TEXT NOT NULL DEFAULT 'Savings',
+    colorHex TEXT NOT NULL DEFAULT '#2E7D32',
+    createdAt TEXT NOT NULL
+);
+
+createSavingsGoalTableIfNotExists:
+CREATE TABLE IF NOT EXISTS SavingsGoalEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    targetAmount REAL NOT NULL,
+    currentAmount REAL NOT NULL DEFAULT 0.0,
+    targetDate TEXT NOT NULL,
+    categoryId TEXT,
+    accountId TEXT,
+    iconName TEXT NOT NULL DEFAULT 'Savings',
+    colorHex TEXT NOT NULL DEFAULT '#2E7D32',
+    createdAt TEXT NOT NULL
+);
+
+insertSavingsGoal:
+INSERT OR REPLACE INTO SavingsGoalEntity(id, userId, name, targetAmount, currentAmount, targetDate, categoryId, accountId, iconName, colorHex, createdAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectAllSavingsGoals:
+SELECT * FROM SavingsGoalEntity WHERE userId = ?;
+
+selectSavingsGoalById:
+SELECT * FROM SavingsGoalEntity WHERE id = ?;
+
+updateSavingsGoalAmount:
+UPDATE SavingsGoalEntity SET currentAmount = ? WHERE id = ?;
+
+deleteSavingsGoal:
+DELETE FROM SavingsGoalEntity WHERE id = ?;
+
+deleteAllSavingsGoals:
+DELETE FROM SavingsGoalEntity WHERE userId = ?;
