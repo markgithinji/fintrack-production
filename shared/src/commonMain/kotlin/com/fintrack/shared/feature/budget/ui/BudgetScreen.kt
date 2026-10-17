@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -45,8 +46,8 @@ import com.fintrack.shared.feature.budget.domain.model.SavingsGoalWithCalculatio
 import com.fintrack.shared.feature.budget.ui.components.AddSavingsGoalDialog
 import com.fintrack.shared.feature.budget.ui.components.DepositToGoalDialog
 import com.fintrack.shared.feature.budget.ui.components.SavingsGoalCard
+import com.fintrack.shared.feature.budget.ui.components.SavingsGoalShimmerLoading
 import com.fintrack.shared.feature.budget.ui.components.SavingsGoalsInfoCard
-import com.fintrack.shared.feature.budget.ui.components.SavingsGoalCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -124,98 +125,99 @@ fun BudgetScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        when (val currentBudgets = budgets) {
-            is Result.Loading -> {
-                BudgetScreenLoadingState(paddingValues)
-            }
-
-            is Result.Error -> {
-                BudgetErrorRetryState(
-                    error = currentBudgets.exception,
-                    onRetry = { viewModel.reloadBudgets() }
-                )
-            }
-
-            is Result.Success -> {
-                val data = currentBudgets.data
-                
-                LazyColumn(
-                    state = listState,
-                    contentPadding = PaddingValues(
-                        top = paddingValues.calculateTopPadding(),
-                        bottom = paddingValues.calculateBottomPadding() + 32.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(
+                top = paddingValues.calculateTopPadding(),
+                bottom = paddingValues.calculateBottomPadding() + 32.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Top Segmented Tab Switcher (ALWAYS VISIBLE AT TOP!)
+            item(key = "tab_switcher") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    // Top Segmented Tab Switcher
-                    item(key = "tab_switcher") {
+                    Surface(
+                        onClick = { viewModel.selectTab(BudgetTab.SPENDING_BUDGETS) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (selectedTab == BudgetTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.surface else Color.Transparent,
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                .padding(4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(vertical = 10.dp)
                         ) {
-                            Surface(
-                                onClick = { viewModel.selectTab(BudgetTab.SPENDING_BUDGETS) },
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (selectedTab == BudgetTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.surface else Color.Transparent,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
-                                    modifier = Modifier.padding(vertical = 10.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.PieChart,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = if (selectedTab == BudgetTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        text = "Spending Budgets",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = if (selectedTab == BudgetTab.SPENDING_BUDGETS) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (selectedTab == BudgetTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-
-                            Surface(
-                                onClick = { viewModel.selectTab(BudgetTab.SAVINGS_GOALS) },
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (selectedTab == BudgetTab.SAVINGS_GOALS) MaterialTheme.colorScheme.surface else Color.Transparent,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
-                                    modifier = Modifier.padding(vertical = 10.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Savings,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = if (selectedTab == BudgetTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        text = "Savings Goals",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = if (selectedTab == BudgetTab.SAVINGS_GOALS) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (selectedTab == BudgetTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
+                            Icon(
+                                imageVector = Icons.Default.PieChart,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = if (selectedTab == BudgetTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Spending Budgets",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (selectedTab == BudgetTab.SPENDING_BUDGETS) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selectedTab == BudgetTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
 
-                    if (selectedTab == BudgetTab.SPENDING_BUDGETS) {
-                        // SPENDING BUDGETS TAB
+                    Surface(
+                        onClick = { viewModel.selectTab(BudgetTab.SAVINGS_GOALS) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (selectedTab == BudgetTab.SAVINGS_GOALS) MaterialTheme.colorScheme.surface else Color.Transparent,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(vertical = 10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Savings,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = if (selectedTab == BudgetTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Savings Goals",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (selectedTab == BudgetTab.SAVINGS_GOALS) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selectedTab == BudgetTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (selectedTab == BudgetTab.SPENDING_BUDGETS) {
+                // SPENDING BUDGETS TAB
+                when (val currentBudgets = budgets) {
+                    is Result.Loading -> {
+                        spendingBudgetsShimmerItems()
+                    }
+
+                    is Result.Error -> {
+                        item {
+                            BudgetErrorRetryState(
+                                error = currentBudgets.exception,
+                                onRetry = { viewModel.reloadBudgets() }
+                            )
+                        }
+                    }
+
+                    is Result.Success -> {
+                        val data = currentBudgets.data
                         if (data.isNotEmpty()) {
                             item {
                                 BudgetSummaryHeader(data)
@@ -271,82 +273,75 @@ fun BudgetScreen(
                                 )
                             }
                         }
-                    } else {
-                        // SAVINGS GOALS TAB
-                        item(key = "savings_info_card") {
-                            SavingsGoalsInfoCard(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    }
+                }
+            } else {
+                // SAVINGS GOALS TAB
+                item(key = "savings_info_card") {
+                    SavingsGoalsInfoCard(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+
+                item(key = "add_goal_button") {
+                    SexyAddSavingsGoalButton(
+                        onClick = { showAddGoalDialog = true },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+
+                when (val goalsResult = savingsGoals) {
+                    is Result.Loading -> {
+                        item {
+                            SavingsGoalShimmerLoading()
+                        }
+                    }
+                    is Result.Error -> {
+                        item {
+                            CommonErrorState(
+                                title = "Unable to load savings goals",
+                                error = goalsResult.exception,
+                                onRetry = { viewModel.loadSavingsGoals() }
                             )
                         }
-
-                        item(key = "add_goal_button") {
-                            SexyAddSavingsGoalButton(
-                                onClick = { showAddGoalDialog = true },
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                            )
-                        }
-
-                        when (val goalsResult = savingsGoals) {
-                            is Result.Loading -> {
-                                item {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(32.dp),
-                                        contentAlignment = Alignment.Center
+                    }
+                    is Result.Success -> {
+                        val goalsList = goalsResult.data
+                        if (goalsList.isNotEmpty()) {
+                            items(goalsList, key = { it.goal.id }) { goalCalc ->
+                                SavingsGoalCard(
+                                    goalCalc = goalCalc,
+                                    onDepositClick = { depositTargetGoal = goalCalc },
+                                    onDeleteClick = { viewModel.deleteSavingsGoal(goalCalc.goal.id) },
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                                )
+                            }
+                        } else {
+                            item {
+                                Surface(
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(24.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        CircularProgressIndicator()
-                                    }
-                                }
-                            }
-                            is Result.Error -> {
-                                item {
-                                    CommonErrorState(
-                                        title = "Unable to load savings goals",
-                                        error = goalsResult.exception,
-                                        onRetry = { viewModel.loadSavingsGoals() }
-                                    )
-                                }
-                            }
-                            is Result.Success -> {
-                                val goalsList = goalsResult.data
-                                if (goalsList.isNotEmpty()) {
-                                    items(goalsList, key = { it.goal.id }) { goalCalc ->
-                                        SavingsGoalCard(
-                                            goalCalc = goalCalc,
-                                            onDepositClick = { depositTargetGoal = goalCalc },
-                                            onDeleteClick = { viewModel.deleteSavingsGoal(goalCalc.goal.id) },
-                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                                        Text(
+                                            text = "No Savings Goals Yet",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
-                                    }
-                                } else {
-                                    item {
-                                        Surface(
-                                            shape = RoundedCornerShape(20.dp),
-                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(16.dp)
-                                        ) {
-                                            Column(
-                                                modifier = Modifier.padding(24.dp),
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                Text(
-                                                    text = "No Savings Goals Yet",
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSurface
-                                                )
-                                                Text(
-                                                    text = "Create a goal for your emergency fund, vacation, or big purchase. FinTrack will auto-calculate required monthly savings and cashflow feasibility!",
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    textAlign = TextAlign.Center
-                                                )
-                                            }
-                                        }
+                                        Text(
+                                            text = "Create a goal for your emergency fund, vacation, or big purchase. FinTrack will auto-calculate required monthly savings and cashflow feasibility!",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center
+                                        )
                                     }
                                 }
                             }
@@ -937,18 +932,10 @@ fun BudgetErrorRetryState(
     )
 }
 
-@Composable
-fun BudgetScreenLoadingState(paddingValues: PaddingValues = PaddingValues(0.dp)) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            top = paddingValues.calculateTopPadding(),
-            bottom = paddingValues.calculateBottomPadding()
-        )
-    ) {
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+fun LazyListScope.spendingBudgetsShimmerItems() {
+    item {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -1023,5 +1010,4 @@ fun BudgetScreenLoadingState(paddingValues: PaddingValues = PaddingValues(0.dp))
                 }
             }
         }
-    }
 }
