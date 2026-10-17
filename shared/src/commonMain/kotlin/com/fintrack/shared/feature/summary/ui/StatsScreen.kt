@@ -424,17 +424,11 @@ private fun AccountFilterChipBar(
     modifier: Modifier = Modifier
 ) {
     val hapticFeedback = com.fintrack.shared.feature.core.ui.util.rememberHapticFeedback()
-    val density = LocalDensity.current
 
     LazyRow(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .onGloballyPositioned { coords ->
-                val heightPx = coords.size.height
-                val heightDp = with(density) { heightPx.toDp() }
-                println("[CHIP_LAYOUT_LOG] Final Loaded Chips Bar Height: ${heightPx}px (${heightDp})")
-            },
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -476,17 +470,10 @@ private fun AccountFilterChipBar(
 private fun AccountFilterShimmerBar(
     modifier: Modifier = Modifier
 ) {
-    val density = LocalDensity.current
-
     LazyRow(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .onGloballyPositioned { coords ->
-                val heightPx = coords.size.height
-                val heightDp = with(density) { heightPx.toDp() }
-                println("[CHIP_LAYOUT_LOG] Loading Shimmer Bar Height: ${heightPx}px (${heightDp})")
-            },
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
