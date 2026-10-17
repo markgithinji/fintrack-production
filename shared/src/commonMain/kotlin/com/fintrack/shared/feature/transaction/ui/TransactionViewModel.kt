@@ -168,7 +168,7 @@ class TransactionViewModel(
                 invalidatePagingCache()
                 _importState.update { it + (accountId to Result.Success(Unit)) }
                 _importEvents.emit(ImportEvent.Success(accountId))
-                if (accountId != null) {
+                if (accountId != null && accountId == lastLoadedRecentAccountId) {
                     loadRecentTransactions(accountId, force = true)
                 }
             } catch (e: Exception) {

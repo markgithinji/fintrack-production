@@ -91,9 +91,10 @@ fun HomeScreen(
             
             when (event) {
                 is ImportEvent.Success -> {
-                    if (event.accountId == accountId || event.accountId == null || accountId == null) {
-                        onGlobalRefresh()
-                        delay(1500)
+                    if (event.accountId == accountId && accountId != null) {
+                        transactionsViewModel.loadRecentTransactions(accountId, force = true)
+                        accountsViewModel.reloadAccounts(showLoading = false)
+                        delay(1000)
                         transactionsViewModel.resetImportState(event.accountId)
                     }
                 }
@@ -116,15 +117,6 @@ fun HomeScreen(
                     }
                 }
             }
-        }
-    }
-
-    // Handle completed sync states even if the event was missed (e.g., user was on another screen)
-    LaunchedEffect(importState, accountId) {
-        if (importState is Result.Success && accountId != null) {
-            onGlobalRefresh()
-            delay(1500)
-            transactionsViewModel.resetImportState(accountId)
         }
     }
 
