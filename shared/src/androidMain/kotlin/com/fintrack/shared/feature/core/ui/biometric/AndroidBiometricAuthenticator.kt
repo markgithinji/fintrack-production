@@ -23,6 +23,9 @@ class AndroidBiometricAuthenticator(
             BiometricManager.BIOMETRIC_SUCCESS -> {
                 // Continue to authentication
             }
+            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> {
+                return BiometricResult.NotEnrolled
+            }
             else -> return BiometricResult.NotAvailable
         }
 

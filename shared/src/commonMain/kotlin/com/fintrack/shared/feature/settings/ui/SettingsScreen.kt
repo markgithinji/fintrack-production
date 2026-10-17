@@ -605,20 +605,40 @@ fun SettingsScreen(
                             icon = Icons.Default.Fingerprint,
                             checked = isBiometricEnabled,
                             onCheckedChange = { enabled ->
-                                if (enabled) {
-                                    scope.launch {
+                                scope.launch {
+                                    if (enabled) {
                                         val result = biometricAuthenticator.authenticate(
-                                            title = "Enable Biometric",
+                                            title = "Enable Biometric Lock",
                                             subtitle = "Confirm your identity to enable biometric lock"
                                         )
-                                        if (result is BiometricResult.Success) {
-                                            viewModel.toggleBiometric(true)
-                                        } else if (result is BiometricResult.Error) {
-                                            viewModel.setError(result.message)
+                                        when (result) {
+                                            is BiometricResult.Success -> {
+                                                viewModel.toggleBiometric(true)
+                                            }
+                                            is BiometricResult.NotEnrolled -> {
+                                                onShowToast("No fingerprint or screen lock set up on this device. Please enroll biometrics in phone Settings.", true)
+                                            }
+                                            is BiometricResult.NotAvailable -> {
+                                                onShowToast("Biometric authentication is not supported on this device.", true)
+                                            }
+                                            is BiometricResult.Error -> {
+                                                viewModel.setError(result.message)
+                                            }
+                                        }
+                                    } else {
+                                        val result = biometricAuthenticator.authenticate(
+                                            title = "Disable Biometric Lock",
+                                            subtitle = "Confirm your identity to remove biometric lock"
+                                        )
+                                        when (result) {
+                                            is BiometricResult.Success, is BiometricResult.NotEnrolled, is BiometricResult.NotAvailable -> {
+                                                viewModel.toggleBiometric(false)
+                                            }
+                                            is BiometricResult.Error -> {
+                                                viewModel.setError(result.message)
+                                            }
                                         }
                                     }
-                                } else {
-                                    viewModel.toggleBiometric(false)
                                 }
                             }
                         )
@@ -915,7 +935,7 @@ fun SettingsScreen(
                         subtitle = "Confirm your identity to export your transactions"
                     )
 
-                    if (authResult is BiometricResult.Success || authResult is BiometricResult.NotAvailable) {
+                    if (authResult is BiometricResult.Success || authResult is BiometricResult.NotAvailable || authResult is BiometricResult.NotEnrolled) {
                         viewModel.exportTransactions()
                         showExportFormatDialog = false
                     } else if (authResult is BiometricResult.Error) {
