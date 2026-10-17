@@ -136,6 +136,14 @@ class TransactionRepositoryImpl(
                     cost = transaction.transactionCost,
                     undo = false
                 )
+
+                // Savings Goal Auto-Sync
+                syncSavingsGoalsForCategory(
+                    categoryId = transaction.categoryId,
+                    amount = transaction.amount,
+                    isIncome = transaction.isIncome,
+                    undo = false
+                )
             }
             Result.Success(transaction)
         } catch (e: Exception) {
@@ -170,6 +178,13 @@ class TransactionRepositoryImpl(
                         isIncome = transaction.isIncome,
                         amount = transaction.amount,
                         cost = transaction.transactionCost,
+                        undo = false
+                    )
+
+                    syncSavingsGoalsForCategory(
+                        categoryId = transaction.categoryId,
+                        amount = transaction.amount,
+                        isIncome = transaction.isIncome,
                         undo = false
                     )
                 }
@@ -275,6 +290,12 @@ class TransactionRepositoryImpl(
                         cost = BigDecimal.parseString(oldRow.transactionCost),
                         undo = true
                     )
+                    syncSavingsGoalsForCategory(
+                        categoryId = oldRow.categoryId,
+                        amount = BigDecimal.parseString(oldRow.amount),
+                        isIncome = oldRow.isIncome != 0L,
+                        undo = true
+                    )
                 }
 
                 // Database Update
@@ -300,6 +321,13 @@ class TransactionRepositoryImpl(
                     cost = transaction.transactionCost,
                     undo = false
                 )
+
+                syncSavingsGoalsForCategory(
+                    categoryId = transaction.categoryId,
+                    amount = transaction.amount,
+                    isIncome = transaction.isIncome,
+                    undo = false
+                )
             }
             Result.Success(transaction)
         } catch (e: Exception) {
@@ -318,6 +346,12 @@ class TransactionRepositoryImpl(
                         isIncome = oldRow.isIncome != 0L,
                         amount = BigDecimal.parseString(oldRow.amount),
                         cost = BigDecimal.parseString(oldRow.transactionCost),
+                        undo = true
+                    )
+                    syncSavingsGoalsForCategory(
+                        categoryId = oldRow.categoryId,
+                        amount = BigDecimal.parseString(oldRow.amount),
+                        isIncome = oldRow.isIncome != 0L,
                         undo = true
                     )
                 }
@@ -536,6 +570,29 @@ class TransactionRepositoryImpl(
                     rawMessage = row.rawMessage
                 )
             }
+        }
+    }
+
+    private fun syncSavingsGoalsForCategory(
+        categoryId: String,
+        amount: BigDecimal,
+        isIncome: Boolean,
+        undo: Boolean = false
+    ) {
+        try {
+            val goals = queries.selectSavingsGoalsByCategoryId(categoryId).executeAsList()
+            if (goals.isNotEmpty()) {
+                val amountDouble = amount.doubleValue(false)
+                val baseDelta = if (isIncome) amountDouble else -amountDouble
+                val finalDelta = if (undo) -baseDelta else baseDelta
+
+                goals.forEach { goal ->
+                    val newAmount = (goal.currentAmount + finalDelta).coerceAtLeast(0.0)
+                    queries.updateSavingsGoalAmount(newAmount, goal.id)
+                }
+            }
+        } catch (e: Exception) {
+            logger.error(TAG, "Error syncing savings goals for category $categoryId", e)
         }
     }
 }

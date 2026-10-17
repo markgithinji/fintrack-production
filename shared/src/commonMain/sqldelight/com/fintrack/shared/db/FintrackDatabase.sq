@@ -393,3 +393,6 @@ DELETE FROM SavingsGoalEntity WHERE id = ?;
 
 deleteAllSavingsGoals:
 DELETE FROM SavingsGoalEntity WHERE userId = ?;
+
+selectSavingsGoalsByCategoryId:
+SELECT * FROM SavingsGoalEntity WHERE categoryId = ?;

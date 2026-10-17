@@ -24,9 +24,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -190,7 +193,7 @@ fun SavingsGoalCard(
                 // Auto-Calculated Monthly Requirement & Feasibility Badge
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = if (goal.isCompleted) "🎉 Goal Completed!" else "${goalCalc.requiredMonthlyContribution.toCurrencyString()}/mo required",
+                        text = if (goal.isCompleted) "Goal Completed" else "${goalCalc.requiredMonthlyContribution.toCurrencyString()}/mo required",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = if (goal.isCompleted) GreenIncome else MaterialTheme.colorScheme.onSurface
@@ -239,12 +242,14 @@ fun SavingsGoalCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddSavingsGoalDialog(
-    onGoalCreated: (name: String, targetAmount: Double, targetDate: String) -> Unit,
+    categories: List<com.fintrack.shared.feature.category.domain.model.Category> = emptyList(),
+    onGoalCreated: (name: String, targetAmount: Double, targetDate: String, categoryId: String?) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var targetAmountText by remember { mutableStateOf("") }
     var targetDate by remember { mutableStateOf("2025-12-31") }
+    var selectedCategory by remember { mutableStateOf<com.fintrack.shared.feature.category.domain.model.Category?>(categories.find { it.name.contains("savings", ignoreCase = true) }) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
     BasicAlertDialog(
@@ -364,7 +369,7 @@ fun AddSavingsGoalDialog(
                             } else if (amount == null || amount <= 0) {
                                 errorMsg = "Please enter a valid target amount"
                             } else {
-                                onGoalCreated(name.trim(), amount, targetDate.trim())
+                                onGoalCreated(name.trim(), amount, targetDate.trim(), selectedCategory?.id)
                                 onDismiss()
                             }
                         },
@@ -442,6 +447,97 @@ fun DepositToGoalDialog(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Deposit Now", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SavingsGoalsInfoCard(
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { expanded = !expanded }
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "How Savings Goals & Auto-Sync Work",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            AnimatedVisibility(visible = expanded) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("1.", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            text = "Auto-Calculated Contributions: FinTrack calculates your required monthly savings based on remaining months.",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("2.", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            text = "Feasibility Check: Compares required monthly savings against your actual monthly net surplus.",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("3.", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            text = "Automatic Category Sync: Any M-Pesa or Bank transaction tagged under a goal's category automatically credits progress!",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }

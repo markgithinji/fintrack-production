@@ -31,6 +31,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -42,6 +44,8 @@ import androidx.compose.material3.LinearProgressIndicator
 import com.fintrack.shared.feature.budget.domain.model.SavingsGoalWithCalculation
 import com.fintrack.shared.feature.budget.ui.components.AddSavingsGoalDialog
 import com.fintrack.shared.feature.budget.ui.components.DepositToGoalDialog
+import com.fintrack.shared.feature.budget.ui.components.SavingsGoalCard
+import com.fintrack.shared.feature.budget.ui.components.SavingsGoalsInfoCard
 import com.fintrack.shared.feature.budget.ui.components.SavingsGoalCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -94,6 +98,7 @@ fun BudgetScreen(
         ?: throw IllegalStateException("No SharedTransitionScope found")
 
     val budgets by viewModel.budgets.collectAsStateWithLifecycle()
+    val categories by viewModel.categories.collectAsStateWithLifecycle()
     val selectedTab by viewModel.selectedTab.collectAsStateWithLifecycle()
     val savingsGoals by viewModel.savingsGoals.collectAsStateWithLifecycle()
 
@@ -159,14 +164,25 @@ fun BudgetScreen(
                                 color = if (selectedTab == BudgetTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.surface else Color.Transparent,
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text(
-                                    text = "📊 Spending Budgets",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = if (selectedTab == BudgetTab.SPENDING_BUDGETS) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (selectedTab == BudgetTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center,
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
                                     modifier = Modifier.padding(vertical = 10.dp)
-                                )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PieChart,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = if (selectedTab == BudgetTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = "Spending Budgets",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (selectedTab == BudgetTab.SPENDING_BUDGETS) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (selectedTab == BudgetTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
 
                             Surface(
@@ -175,14 +191,25 @@ fun BudgetScreen(
                                 color = if (selectedTab == BudgetTab.SAVINGS_GOALS) MaterialTheme.colorScheme.surface else Color.Transparent,
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text(
-                                    text = "🎯 Savings Goals",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = if (selectedTab == BudgetTab.SAVINGS_GOALS) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (selectedTab == BudgetTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center,
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
                                     modifier = Modifier.padding(vertical = 10.dp)
-                                )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Savings,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = if (selectedTab == BudgetTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = "Savings Goals",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (selectedTab == BudgetTab.SAVINGS_GOALS) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (selectedTab == BudgetTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
@@ -246,20 +273,17 @@ fun BudgetScreen(
                         }
                     } else {
                         // SAVINGS GOALS TAB
-                        item {
-                            Button(
+                        item(key = "savings_info_card") {
+                            SavingsGoalsInfoCard(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        item(key = "add_goal_button") {
+                            SexyAddSavingsGoalButton(
                                 onClick = { showAddGoalDialog = true },
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    .height(48.dp)
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("New Savings Goal", fontWeight = FontWeight.Bold)
-                            }
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
                         }
 
                         when (val goalsResult = savingsGoals) {
@@ -310,7 +334,7 @@ fun BudgetScreen(
                                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                                             ) {
                                                 Text(
-                                                    text = "🎯 No Savings Goals Yet",
+                                                    text = "No Savings Goals Yet",
                                                     style = MaterialTheme.typography.titleMedium,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onSurface
@@ -335,8 +359,9 @@ fun BudgetScreen(
 
     if (showAddGoalDialog) {
         AddSavingsGoalDialog(
-            onGoalCreated = { name, targetAmount, targetDate ->
-                viewModel.createSavingsGoal(name, targetAmount, targetDate)
+            categories = categories,
+            onGoalCreated = { name, targetAmount, targetDate, categoryId ->
+                viewModel.createSavingsGoal(name, targetAmount, targetDate, categoryId = categoryId)
             },
             onDismiss = { showAddGoalDialog = false }
         )
@@ -539,6 +564,114 @@ fun SexyAddBudgetButton(
                     )
                     Text(
                         text = "Plan your spending strategically",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.4f)
+            )
+        }
+    }
+}
+
+@Composable
+fun SexyAddSavingsGoalButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var isPressed by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(72.dp)
+            .shadow(
+                elevation = if (isPressed) 1.dp else 4.dp,
+                shape = RoundedCornerShape(20.dp),
+                clip = false
+            )
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        isPressed = true
+                        try {
+                            awaitRelease()
+                        } finally {
+                            isPressed = false
+                        }
+                    },
+                    onTap = { onClick() }
+                )
+            },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondary,
+            contentColor = MaterialTheme.colorScheme.onSecondary
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val rotation by animateFloatAsState(
+                        targetValue = if (isPressed) 90f else 0f,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "add_goal_icon_rotation"
+                    )
+
+                    val scale by animateFloatAsState(
+                        targetValue = if (isPressed) 0.8f else 1f,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "add_goal_icon_scale"
+                    )
+
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "New Savings Goal",
+                        modifier = Modifier
+                            .size(24.dp)
+                            .graphicsLayer {
+                                rotationZ = rotation
+                                scaleX = scale
+                                scaleY = scale
+                            },
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column {
+                    Text(
+                        text = "New Savings Goal",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondary
+                    )
+                    Text(
+                        text = "Set a goal target & auto-sync savings",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.6f)
                     )
