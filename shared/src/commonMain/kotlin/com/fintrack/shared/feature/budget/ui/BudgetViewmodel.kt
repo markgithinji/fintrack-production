@@ -9,6 +9,11 @@ import com.fintrack.shared.feature.budget.domain.model.BudgetFormState
 import com.fintrack.shared.feature.budget.domain.model.BudgetWithStatus
 import com.fintrack.shared.feature.budget.domain.repository.BudgetRepository
 import com.fintrack.shared.feature.budget.domain.usecase.BudgetValidationUseCase
+import com.fintrack.shared.feature.budget.domain.model.SavingsGoal
+import com.fintrack.shared.feature.budget.domain.model.SavingsGoalWithCalculation
+import com.fintrack.shared.feature.budget.domain.repository.SavingsGoalRepository
+import com.fintrack.shared.feature.budget.domain.usecase.GetSavingsGoalsUseCase
+import com.fintrack.shared.feature.core.util.randomUUID
 import com.fintrack.shared.feature.category.data.LocalCategoryDataSource
 import com.fintrack.shared.feature.category.domain.model.Category
 import com.fintrack.shared.feature.category.domain.usecase.SyncCategoriesUseCase
@@ -31,14 +36,95 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
+import com.fintrack.shared.feature.core.util.randomUUID
+
+enum class BudgetTab {
+    SPENDING_BUDGETS,
+    SAVINGS_GOALS
+}
 
 class BudgetViewModel(
     private val budgetRepository: BudgetRepository,
+    private val savingsGoalRepository: SavingsGoalRepository,
+    private val getSavingsGoalsUseCase: GetSavingsGoalsUseCase,
     private val validationUseCase: BudgetValidationUseCase,
     private val localCategoryDataSource: LocalCategoryDataSource,
     private val syncCategoriesUseCase: SyncCategoriesUseCase,
     private val receiptScanner: ReceiptScanner? = null
 ) : ViewModel() {
+
+    private val _selectedTab = MutableStateFlow(BudgetTab.SPENDING_BUDGETS)
+    val selectedTab: StateFlow<BudgetTab> = _selectedTab.asStateFlow()
+
+    private val _savingsGoals = MutableStateFlow<Result<List<SavingsGoalWithCalculation>>>(Result.Loading)
+    val savingsGoals: StateFlow<Result<List<SavingsGoalWithCalculation>>> = _savingsGoals.asStateFlow()
+
+    fun selectTab(tab: BudgetTab) {
+        _selectedTab.value = tab
+        if (tab == BudgetTab.SAVINGS_GOALS) {
+            loadSavingsGoals()
+        }
+    }
+
+    fun loadSavingsGoals() {
+        viewModelScope.launch {
+            _savingsGoals.value = Result.Loading
+            _savingsGoals.value = getSavingsGoalsUseCase()
+        }
+    }
+
+    fun createSavingsGoal(
+        name: String,
+        targetAmount: Double,
+        targetDate: String,
+        categoryId: String? = null,
+        accountId: String? = null,
+        iconName: String = "Savings",
+        colorHex: String = "#2E7D32"
+    ) {
+        viewModelScope.launch {
+            val goal = SavingsGoal(
+                id = randomUUID(),
+                userId = "local_user",
+                name = name,
+                targetAmount = targetAmount,
+                currentAmount = 0.0,
+                targetDate = targetDate,
+                categoryId = categoryId,
+                accountId = accountId,
+                iconName = iconName,
+                colorHex = colorHex,
+                createdAt = kotlin.time.Clock.System.now().toString()
+            )
+            val res = savingsGoalRepository.saveSavingsGoal(goal)
+            if (res is Result.Success) {
+                loadSavingsGoals()
+            } else if (res is Result.Error) {
+                println("[SAVINGS_GOAL_LOG] Error saving savings goal: ${res.exception.message}")
+            }
+        }
+    }
+
+    fun depositToGoal(goalId: String, amount: Double) {
+        viewModelScope.launch {
+            val currentResult = savingsGoalRepository.getSavingsGoalById(goalId)
+            if (currentResult is Result.Success && currentResult.data != null) {
+                val goal = currentResult.data
+                val newAmount = goal.currentAmount + amount
+                savingsGoalRepository.updateGoalAmount(goalId, newAmount)
+                loadSavingsGoals()
+            }
+        }
+    }
+
+    fun deleteSavingsGoal(goalId: String) {
+        viewModelScope.launch {
+            val res = savingsGoalRepository.deleteSavingsGoal(goalId)
+            if (res is Result.Success) {
+                loadSavingsGoals()
+            }
+        }
+    }
 
     private val _categories = MutableStateFlow<List<Category>>(emptyList())
     val categories: StateFlow<List<Category>> = _categories.asStateFlow()
