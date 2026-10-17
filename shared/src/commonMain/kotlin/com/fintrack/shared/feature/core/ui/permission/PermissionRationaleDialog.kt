@@ -68,7 +68,7 @@ fun PermissionRationaleDialog(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Start,
-                    lineHeight = 20.sp
+                    lineHeight = 17.sp
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))

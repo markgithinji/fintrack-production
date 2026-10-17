@@ -51,49 +51,49 @@ val FinanceTypography = Typography(
     titleMedium = TextStyle(
         fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
-        lineHeight = 24.sp,
+        lineHeight = 20.sp,
         letterSpacing = 0.15.sp
     ),
     titleSmall = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 14.sp,
-        lineHeight = 20.sp,
+        lineHeight = 17.sp,
         letterSpacing = 0.1.sp
     ),
     bodyLarge = TextStyle(
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
-        lineHeight = 24.sp,
+        lineHeight = 20.sp,
         letterSpacing = 0.15.sp
     ),
     bodyMedium = TextStyle(
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
-        lineHeight = 20.sp,
+        lineHeight = 17.sp,
         letterSpacing = 0.25.sp
     ),
     bodySmall = TextStyle(
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
-        lineHeight = 16.sp,
+        lineHeight = 14.sp,
         letterSpacing = 0.4.sp
     ),
     labelLarge = TextStyle(
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
-        lineHeight = 20.sp,
+        lineHeight = 17.sp,
         letterSpacing = 0.1.sp
     ),
     labelMedium = TextStyle(
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
-        lineHeight = 16.sp,
+        lineHeight = 14.sp,
         letterSpacing = 0.5.sp
     ),
     labelSmall = TextStyle(
         fontWeight = FontWeight.Medium,
         fontSize = 10.sp,
-        lineHeight = 16.sp,
+        lineHeight = 12.sp,
         letterSpacing = 0.sp
     )
 )
