@@ -1,10 +1,13 @@
 package com.fintrack.shared.feature.budget.ui
 
 import com.fintrack.shared.feature.budget.domain.repository.FakeBudgetRepository
+import com.fintrack.shared.feature.budget.domain.repository.FakeSavingsGoalRepository
 import com.fintrack.shared.feature.budget.domain.usecase.BudgetValidationUseCase
+import com.fintrack.shared.feature.budget.domain.usecase.GetSavingsGoalsUseCase
 import com.fintrack.shared.feature.category.data.LocalCategoryDataSource
 import com.fintrack.shared.feature.category.domain.repository.FakeCategoryRepository
 import com.fintrack.shared.feature.category.domain.usecase.SyncCategoriesUseCase
+import com.fintrack.shared.feature.transaction.domain.repository.FakeTransactionRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -26,6 +29,10 @@ class BudgetViewModelTest {
     private val localCategoryDataSource = LocalCategoryDataSource()
     private val syncCategoriesUseCase = SyncCategoriesUseCase(FakeCategoryRepository(), localCategoryDataSource)
 
+    private val fakeSavingsGoalRepo = FakeSavingsGoalRepository()
+    private val fakeTransactionRepo = FakeTransactionRepository()
+    private val getSavingsGoalsUseCase = GetSavingsGoalsUseCase(fakeSavingsGoalRepo, fakeTransactionRepo)
+
     private lateinit var viewModel: BudgetViewModel
 
     @BeforeTest
@@ -33,6 +40,8 @@ class BudgetViewModelTest {
         Dispatchers.setMain(testDispatcher)
         viewModel = BudgetViewModel(
             budgetRepository = fakeRepo,
+            savingsGoalRepository = fakeSavingsGoalRepo,
+            getSavingsGoalsUseCase = getSavingsGoalsUseCase,
             validationUseCase = validationUseCase,
             localCategoryDataSource = localCategoryDataSource,
             syncCategoriesUseCase = syncCategoriesUseCase,
