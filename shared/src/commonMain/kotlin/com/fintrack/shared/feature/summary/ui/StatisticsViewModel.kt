@@ -56,7 +56,30 @@ class StatisticsViewModel(
     fun loadAvailableAccounts() {
         viewModelScope.launch {
             when (val res = accountRepository.getAccounts()) {
-                is Result.Success -> _availableAccounts.value = res.data
+                is Result.Success -> {
+                    val accounts = res.data
+                    _availableAccounts.value = accounts
+
+                    // Default to M-Pesa account on initial load if no filter selected yet
+                    if (_selectedAccountIds.value.isEmpty()) {
+                        val mpesaAccount = accounts.find { acc ->
+                            acc.linkedSources.contains("mpesa") ||
+                                    acc.name.contains("mpesa", ignoreCase = true) ||
+                                    acc.type == com.fintrack.shared.feature.account.domain.model.AccountType.MPESA
+                        }
+                        if (mpesaAccount != null) {
+                            _selectedAccountIds.value = setOf(mpesaAccount.id)
+                            val effectiveId = mpesaAccount.id
+                            resetStats()
+                            loadAvailablePeriods(effectiveId, force = true)
+                            loadOverview(effectiveId, force = true)
+                            loadCashflowRunway(effectiveId, force = true)
+                            val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
+                            loadHighlights(effectiveId, yearCode, force = true)
+                            reloadDistributionForCurrentSelection(effectiveId, force = true)
+                        }
+                    }
+                }
                 else -> {}
             }
         }
