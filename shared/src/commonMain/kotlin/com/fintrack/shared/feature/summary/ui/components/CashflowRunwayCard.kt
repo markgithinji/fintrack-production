@@ -1,0 +1,358 @@
+package com.fintrack.shared.feature.summary.ui.components
+
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.fintrack.shared.feature.core.ui.AnimatedShimmerBox
+import com.fintrack.shared.feature.core.ui.CommonErrorState
+import com.fintrack.shared.feature.core.util.Result
+import com.fintrack.shared.feature.navigation.ui.toCurrencyString
+import com.fintrack.shared.feature.summary.domain.model.CashflowRunway
+import com.fintrack.shared.ui.theme.GreenIncome
+import com.fintrack.shared.ui.theme.PinkExpense
+import com.fintrack.shared.ui.theme.SegmentColor1
+import com.fintrack.shared.ui.theme.SegmentColor2
+import com.fintrack.shared.ui.theme.SegmentColor3
+import com.fintrack.shared.ui.theme.SegmentColor4
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun CashflowRunwayCard(
+    runwayResult: Result<CashflowRunway>,
+    onRetry: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    var showHelpDialog by remember { mutableStateOf(false) }
+
+    if (showHelpDialog) {
+        CashflowRunwayHelpDialog(onDismiss = { showHelpDialog = false })
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Header Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { showHelpDialog = true }
+                ) {
+                    Text(
+                        text = "Cashflow Runway",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = "Runway Info",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                    )
+                }
+            }
+
+            when (runwayResult) {
+                is Result.Loading -> {
+                    CashflowRunwayShimmerLoading()
+                }
+
+                is Result.Error -> {
+                    CommonErrorState(
+                        title = "Unable to calculate cashflow runway",
+                        error = runwayResult.exception,
+                        onRetry = onRetry
+                    )
+                }
+
+                is Result.Success -> {
+                    val runway = runwayResult.data
+
+                    // Main EOM Projection Banner
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (runway.isOverdraftRisk) {
+                            PinkExpense.copy(alpha = 0.08f)
+                        } else {
+                            GreenIncome.copy(alpha = 0.08f)
+                        },
+                        border = BorderStroke(
+                            1.dp,
+                            if (runway.isOverdraftRisk) PinkExpense.copy(alpha = 0.25f) else GreenIncome.copy(alpha = 0.25f)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Projected End-of-Month",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                // Risk Badge
+                                Surface(
+                                    shape = CircleShape,
+                                    color = if (runway.isOverdraftRisk) PinkExpense else GreenIncome
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (runway.isOverdraftRisk) Icons.Default.Warning else Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(12.dp),
+                                            tint = Color.White
+                                        )
+                                        Text(
+                                            text = when {
+                                                runway.isOverdraftRisk && runway.estimatedDepletionDays != null && runway.estimatedDepletionDays > 0 -> "Depletes in ${runway.estimatedDepletionDays}d"
+                                                runway.isOverdraftRisk -> "Overdraft Risk"
+                                                else -> "Safe Runway"
+                                            },
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.sp
+                                        )
+                                    }
+                                }
+                            }
+
+                            Text(
+                                text = runway.projectedEomBalance.toCurrencyString(),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (runway.isOverdraftRisk) PinkExpense else GreenIncome
+                            )
+                        }
+                    }
+
+                    // 2x2 Compact Metric Grid
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            RunwayMetricItem(
+                                modifier = Modifier.weight(1f),
+                                label = "Daily Burn",
+                                value = "${runway.dailyBurnRate.toCurrencyString()}/day",
+                                icon = Icons.AutoMirrored.Filled.ShowChart,
+                                tint = SegmentColor1
+                            )
+                            RunwayMetricItem(
+                                modifier = Modifier.weight(1f),
+                                label = "Days Left",
+                                value = "${runway.remainingDaysInMonth} days",
+                                icon = Icons.Default.CalendarToday,
+                                tint = SegmentColor2
+                            )
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            RunwayMetricItem(
+                                modifier = Modifier.weight(1f),
+                                label = "Est. Variable",
+                                value = runway.projectedVariableExpense.toCurrencyString(),
+                                icon = Icons.AutoMirrored.Filled.TrendingDown,
+                                tint = SegmentColor3
+                            )
+                            RunwayMetricItem(
+                                modifier = Modifier.weight(1f),
+                                label = "Upcoming Bills",
+                                value = runway.upcomingBillsTotal.toCurrencyString(),
+                                icon = Icons.AutoMirrored.Filled.ReceiptLong,
+                                tint = SegmentColor4
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RunwayMetricItem(
+    label: String,
+    value: String,
+    icon: ImageVector,
+    tint: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f))
+    ) {
+        Row(
+            modifier = Modifier.padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(tint.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = tint
+                )
+            }
+            Column {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CashflowRunwayShimmerLoading() {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        AnimatedShimmerBox(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp)
+                .clip(RoundedCornerShape(14.dp))
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AnimatedShimmerBox(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(10.dp))
+            )
+            AnimatedShimmerBox(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(10.dp))
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            AnimatedShimmerBox(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(10.dp))
+            )
+            AnimatedShimmerBox(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(10.dp))
+            )
+        }
+    }
+}
+
+@Composable
+private fun CashflowRunwayHelpDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Cashflow Runway Forecast", fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Text(
+                "Cashflow Runway predicts your projected End-of-Month balance using:\n\n" +
+                "• Daily Burn Rate: Your average daily variable spending over the past 30 days.\n" +
+                "• Days Left: Days remaining in the current calendar month.\n" +
+                "• Upcoming Bills: Total recurring bills scheduled before month-end.\n\n" +
+                "It notifies you early if you are at risk of an overdraft before the month ends."
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Got it")
+            }
+        }
+    )
+}

@@ -90,14 +90,14 @@ class GetCashflowRunwayUseCase(
         val projectedEomBalance = currentBalance - totalProjectedDrain
         val isOverdraftRisk = projectedEomBalance < BigDecimal.ZERO
 
-        // 6. Estimated Depletion Days
-        val estimatedDepletionDays = if (dailyBurnRate > BigDecimal.ZERO && currentBalance > BigDecimal.ZERO) {
-            val days = currentBalance.divide(dailyBurnRate, decimalMode).intValue(false)
-            if (days <= remainingDaysInMonth) days else null
-        } else if (currentBalance <= BigDecimal.ZERO) {
-            0
-        } else {
-            null
+        // 6. Estimated Depletion Days (How many days of current daily burn rate current balance lasts)
+        val estimatedDepletionDays = when {
+            currentBalance <= BigDecimal.ZERO -> 0
+            dailyBurnRate > BigDecimal.ZERO -> {
+                val days = currentBalance.divide(dailyBurnRate, decimalMode).intValue(false)
+                if (days < 365) days else null
+            }
+            else -> null
         }
 
         Result.Success(

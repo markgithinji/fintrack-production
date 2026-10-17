@@ -63,6 +63,7 @@ import com.fintrack.shared.feature.core.ui.AnimatedShimmerBox
 import com.fintrack.shared.feature.core.ui.CommonErrorState
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.summary.domain.model.TabType
+import com.fintrack.shared.feature.summary.ui.components.CashflowRunwayCard
 import com.fintrack.shared.feature.summary.ui.components.CategoryTotalsCardWithTabs
 import com.fintrack.shared.feature.summary.ui.components.SpendingHighlightsSection
 import com.fintrack.shared.ui.theme.GreenIncome
@@ -89,6 +90,7 @@ fun StatisticsScreen(
     val availableYears by viewModel.availableYears.collectAsStateWithLifecycle()
     val highlights by viewModel.highlights.collectAsStateWithLifecycle()
     val distributionResult by viewModel.distribution.collectAsStateWithLifecycle()
+    val runway by viewModel.runway.collectAsStateWithLifecycle()
     val metadataState by viewModel.metadataState.collectAsStateWithLifecycle()
     val hasNextPeriod by viewModel.hasNextPeriod.collectAsStateWithLifecycle()
     val hasPreviousPeriod by viewModel.hasPreviousPeriod.collectAsStateWithLifecycle()
@@ -253,6 +255,15 @@ fun StatisticsScreen(
                         )
                     }
                 }
+            }
+
+            item(key = "cashflowRunway") {
+                CashflowRunwayCard(
+                    runwayResult = runway,
+                    onRetry = {
+                        viewModel.loadCashflowRunway(activeAccountId, force = true)
+                    }
+                )
             }
 
             item(key = "spendingHighlights") {
