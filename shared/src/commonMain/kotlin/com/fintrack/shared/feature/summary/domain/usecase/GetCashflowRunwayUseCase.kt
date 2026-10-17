@@ -27,15 +27,28 @@ class GetCashflowRunwayUseCase(
         val nowInstant = DateTimeHelper.now()
         val today = nowInstant.toLocalDateTime(TimeZone.currentSystemDefault()).date
 
+        val targetAccountIds = accountId?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+
         // 1. Current Total Balance
         val accountsResult = accountRepository.getAccounts()
         val accounts = (accountsResult as? Result.Success)?.data ?: emptyList()
-        val targetAccounts = if (accountId != null) accounts.filter { it.id == accountId } else accounts
+        val targetAccounts = if (targetAccountIds.isNotEmpty()) {
+            accounts.filter { targetAccountIds.contains(it.id) }
+        } else {
+            accounts
+        }
         val currentBalance = targetAccounts.fold(BigDecimal.ZERO) { acc, a -> acc + (a.balance ?: BigDecimal.ZERO) }
 
-        // 2. Query All Transactions ONCE for Account & Filter in Memory (0ms Disk Read)
-        val allTxResult = transactionRepository.getAllTransactions(startDate = null, endDate = null, accountId = accountId)
-        val allTx = (allTxResult as? Result.Success)?.data ?: emptyList()
+        // 2. Query All Transactions ONCE for Account & Filter in Memory
+        val singleAccountId = if (targetAccountIds.size == 1) targetAccountIds.first() else null
+        val allTxResult = transactionRepository.getAllTransactions(startDate = null, endDate = null, accountId = singleAccountId)
+        val rawTx = (allTxResult as? Result.Success)?.data ?: emptyList()
+
+        val allTx = if (targetAccountIds.size > 1) {
+            rawTx.filter { targetAccountIds.contains(it.accountId) }
+        } else {
+            rawTx
+        }
 
         val thirtyDaysAgo = today.minus(DatePeriod(days = 30)).toString()
         val todayStr = today.toString()
