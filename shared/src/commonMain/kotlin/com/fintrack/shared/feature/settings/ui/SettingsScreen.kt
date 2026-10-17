@@ -643,28 +643,34 @@ fun SettingsScreen(
                             }
                         )
 
-                        if (isBiometricEnabled) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                thickness = 0.5.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                            )
+                        AnimatedVisibility(
+                            visible = isBiometricEnabled,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut()
+                        ) {
+                            Column {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    thickness = 0.5.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                )
 
-                            val timeoutLabel = when (biometricLockTimeoutSeconds) {
-                                0 -> "Immediately"
-                                15 -> "15 seconds"
-                                30 -> "30 seconds (Default)"
-                                60 -> "1 minute"
-                                300 -> "5 minutes"
-                                else -> "$biometricLockTimeoutSeconds seconds"
+                                val timeoutLabel = when (biometricLockTimeoutSeconds) {
+                                    0 -> "Immediately"
+                                    15 -> "15 seconds"
+                                    30 -> "30 seconds (Default)"
+                                    60 -> "1 minute"
+                                    300 -> "5 minutes"
+                                    else -> "$biometricLockTimeoutSeconds seconds"
+                                }
+
+                                SettingsItem(
+                                    title = "Auto-Lock Timeout",
+                                    subtitle = timeoutLabel,
+                                    icon = Icons.Default.Schedule,
+                                    onClick = { showBiometricTimeoutDialog = true }
+                                )
                             }
-
-                            SettingsItem(
-                                title = "Auto-Lock Timeout",
-                                subtitle = timeoutLabel,
-                                icon = Icons.Default.Schedule,
-                                onClick = { showBiometricTimeoutDialog = true }
-                            )
                         }
                     }
                 }
