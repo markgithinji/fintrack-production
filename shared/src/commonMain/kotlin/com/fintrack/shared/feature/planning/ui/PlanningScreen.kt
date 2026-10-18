@@ -234,8 +234,8 @@ fun PlanningScreen(
                                                 animatedVisibilityScope = animatedVisibilityScope,
                                                 boundsTransform = { _, _ ->
                                                     spring(
-                                                        dampingRatio = Spring.DampingRatioLowBouncy,
-                                                        stiffness = Spring.StiffnessLow
+                                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                                        stiffness = Spring.StiffnessMediumLow
                                                     )
                                                 },
                                                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(20.dp))
@@ -256,8 +256,8 @@ fun PlanningScreen(
                                                 animatedVisibilityScope = animatedVisibilityScope,
                                                 boundsTransform = { _, _ ->
                                                     spring(
-                                                        dampingRatio = Spring.DampingRatioLowBouncy,
-                                                        stiffness = Spring.StiffnessLow
+                                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                                        stiffness = Spring.StiffnessMediumLow
                                                     )
                                                 },
                                                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(16.dp))

@@ -1,6 +1,14 @@
 package com.fintrack.shared.feature.budget.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -50,6 +58,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,8 +66,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import kotlin.time.Clock
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -487,18 +500,39 @@ fun SavingsGoalsInfoCard(
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val transition = updateTransition(targetState = expanded, label = "SavingsInfoCardTransition")
+
+    LaunchedEffect(transition.currentState, transition.targetState) {
+        if (transition.currentState && !transition.targetState) {
+            println("[SAVINGS_INFO_CARD_LOG] Closing animation STARTED at ${Clock.System.now()}")
+        } else if (!transition.currentState && !transition.targetState) {
+            println("[SAVINGS_INFO_CARD_LOG] Closing animation COMPLETED/FINISHED at ${Clock.System.now()}")
+        } else if (!transition.currentState && transition.targetState) {
+            println("[SAVINGS_INFO_CARD_LOG] Opening animation STARTED at ${Clock.System.now()}")
+        } else if (transition.currentState && transition.targetState) {
+            println("[SAVINGS_INFO_CARD_LOG] Opening animation COMPLETED/FINISHED at ${Clock.System.now()}")
+        }
+    }
+
+    val arrowRotation by transition.animateFloat(
+        transitionSpec = { tween(durationMillis = 300, easing = FastOutSlowInEasing) },
+        label = "arrowRotation"
+    ) { isExpanded ->
+        if (isExpanded) 180f else 0f
+    }
 
     Surface(
+        onClick = {
+            expanded = !expanded
+            println("[SAVINGS_INFO_CARD_LOG] Card clicked -> target expanded = $expanded")
+        },
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { expanded = !expanded }
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(14.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -524,17 +558,31 @@ fun SavingsGoalsInfoCard(
                 }
 
                 Icon(
-                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = null,
+                    imageVector = Icons.Default.ExpandMore,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier
+                        .size(20.dp)
+                        .graphicsLayer { rotationZ = arrowRotation }
                 )
             }
 
-            AnimatedVisibility(visible = expanded) {
+            transition.AnimatedVisibility(
+                visible = { it },
+                enter = fadeIn(animationSpec = tween(durationMillis = 200, delayMillis = 40)) + expandVertically(
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                    expandFrom = Alignment.Top
+                ),
+                exit = fadeOut(animationSpec = tween(durationMillis = 120)) + shrinkVertically(
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                    shrinkTowards = Alignment.Top
+                )
+            ) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(top = 4.dp)
+                    modifier = Modifier
+                        .padding(top = 10.dp)
+                        .clipToBounds()
                 ) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
 
