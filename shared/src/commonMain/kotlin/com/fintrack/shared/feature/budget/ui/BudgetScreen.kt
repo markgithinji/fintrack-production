@@ -933,81 +933,150 @@ fun BudgetErrorRetryState(
 }
 
 fun LazyListScope.spendingBudgetsShimmerItems() {
+    // 1. BudgetSummaryHeader Shimmer
     item {
         Card(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                val shimmerColors = listOf(
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.05f),
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
-                )
-                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            val shimmerColors = listOf(
+                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
+                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.08f),
+                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
+            )
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        AnimatedShimmerBox(
+                            modifier = Modifier.width(120.dp).height(14.dp).clip(RoundedCornerShape(4.dp)),
+                            shimmerColors = shimmerColors
+                        )
+                        AnimatedShimmerBox(
+                            modifier = Modifier.width(160.dp).height(28.dp).clip(RoundedCornerShape(6.dp)),
+                            shimmerColors = shimmerColors
+                        )
+                    }
+
                     AnimatedShimmerBox(
-                        modifier = Modifier.width(120.dp).height(20.dp).clip(RoundedCornerShape(4.dp)),
-                        shimmerColors = shimmerColors
-                    )
-                    AnimatedShimmerBox(
-                        modifier = Modifier.width(180.dp).height(32.dp).clip(RoundedCornerShape(8.dp)),
-                        shimmerColors = shimmerColors
-                    )
-                    AnimatedShimmerBox(
-                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+                        modifier = Modifier.size(48.dp).clip(CircleShape),
                         shimmerColors = shimmerColors
                     )
                 }
-            }
-        }
 
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .height(72.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    AnimatedShimmerBox(
+                        modifier = Modifier.width(100.dp).height(12.dp).clip(RoundedCornerShape(4.dp)),
+                        shimmerColors = shimmerColors
+                    )
+                    AnimatedShimmerBox(
+                        modifier = Modifier.width(60.dp).height(12.dp).clip(RoundedCornerShape(4.dp)),
+                        shimmerColors = shimmerColors
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(9.dp))
+
                 AnimatedShimmerBox(
-                    modifier = Modifier.fillMaxSize(),
-                    shimmerColors = listOf(
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.03f),
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
-                    )
+                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+                    shimmerColors = shimmerColors
                 )
             }
         }
+    }
 
-        items(3) {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    // 2. SexyAddBudgetButton Shimmer
+    item {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .height(72.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            AnimatedShimmerBox(
+                modifier = Modifier.fillMaxSize(),
+                shimmerColors = listOf(
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.03f),
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
+                )
+            )
+        }
+    }
+
+    // 3. BudgetItem Shimmers
+    items(3) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(205.7.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column {
-                            AnimatedShimmerBox(modifier = Modifier.width(140.dp).height(24.dp))
-                            Spacer(Modifier.height(4.dp))
-                            AnimatedShimmerBox(modifier = Modifier.width(100.dp).height(12.dp))
-                        }
-                        AnimatedShimmerBox(modifier = Modifier.width(60.dp).height(24.dp).clip(RoundedCornerShape(12.dp)))
+                // Row 1: Title & Status Chip
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        AnimatedShimmerBox(modifier = Modifier.width(140.dp).height(22.dp).clip(RoundedCornerShape(4.dp)))
+                        AnimatedShimmerBox(modifier = Modifier.width(110.dp).height(12.dp).clip(RoundedCornerShape(4.dp)))
                     }
+                    AnimatedShimmerBox(modifier = Modifier.width(64.dp).height(24.dp).clip(RoundedCornerShape(12.dp)))
+                }
+
+                // Row 2: Amounts, Progress Bar, Percentage Used
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AnimatedShimmerBox(modifier = Modifier.width(90.dp).height(18.dp).clip(RoundedCornerShape(4.dp)))
+                        AnimatedShimmerBox(modifier = Modifier.width(100.dp).height(12.dp).clip(RoundedCornerShape(4.dp)))
+                    }
+
                     AnimatedShimmerBox(modifier = Modifier.fillMaxWidth().height(10.dp).clip(CircleShape))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        AnimatedShimmerBox(modifier = Modifier.width(80.dp).height(12.dp))
-                        AnimatedShimmerBox(modifier = Modifier.width(60.dp).height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        AnimatedShimmerBox(modifier = Modifier.width(70.dp).height(12.dp).clip(RoundedCornerShape(4.dp)))
+                        AnimatedShimmerBox(modifier = Modifier.width(80.dp).height(12.dp).clip(RoundedCornerShape(4.dp)))
                     }
                 }
             }
         }
+    }
 }
