@@ -32,12 +32,15 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -78,161 +81,182 @@ fun SavingsGoalCard(
     val hapticFeedback = rememberHapticFeedback()
 
     Card(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Header Row: Icon + Name + Delete Button
+            // Header Row: Title + Target Date Pill
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Savings,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    Column {
-                        Text(
-                            text = goal.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "Target: ${goal.targetDate} (${goalCalc.remainingMonths} mo left)",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = goal.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "Target Date: ${goal.targetDate}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
-                IconButton(onClick = onDeleteClick, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.DeleteOutline,
-                        contentDescription = "Delete Goal",
-                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
-                        modifier = Modifier.size(18.dp)
+                // Remaining Months Badge
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ) {
+                    Text(
+                        text = "${goalCalc.remainingMonths} mo left",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
             }
 
-            // Progress & Amounts Row
+            // Amount Display Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
             ) {
-                // Circular Progress Ring
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    CircularProgressIndicator(
-                        progress = { goal.progressPercentage },
-                        modifier = Modifier.size(56.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        strokeWidth = 6.dp
-                    )
-                    Text(
-                        text = "${(goal.progressPercentage * 100).toInt()}%",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Column(modifier = Modifier.weight(1f)) {
+                Column {
                     Text(
                         text = goal.currentAmount.toCurrencyString(),
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "of ${goal.targetAmount.toCurrencyString()} goal",
+                        text = "saved of ${goal.targetAmount.toCurrencyString()} goal",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
+                Text(
+                    text = "${(goal.progressPercentage * 100).toInt()}%",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+            // Progress Bar
+            LinearProgressIndicator(
+                progress = { goal.progressPercentage },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(CircleShape),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                strokeCap = StrokeCap.Round,
+                drawStopIndicator = {}
+            )
 
-            // Footer Badges & Deposit Action
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // Callout Banner: Monthly Requirement & Cashflow Feasibility
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = if (goal.isCompleted) {
+                    GreenIncome.copy(alpha = 0.08f)
+                } else if (goalCalc.isFeasible) {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                } else {
+                    PinkExpense.copy(alpha = 0.08f)
+                },
+                border = BorderStroke(
+                    1.dp,
+                    if (goal.isCompleted || goalCalc.isFeasible) {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                    } else {
+                        PinkExpense.copy(alpha = 0.25f)
+                    }
+                ),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // Auto-Calculated Monthly Requirement & Feasibility Badge
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = if (goal.isCompleted) "Goal Completed" else "${goalCalc.requiredMonthlyContribution.toCurrencyString()}/mo required",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (goal.isCompleted) GreenIncome else MaterialTheme.colorScheme.onSurface
-                    )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = if (goal.isCompleted) "Goal Completed" else "${goalCalc.requiredMonthlyContribution.toCurrencyString()} / month",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (goal.isCompleted) GreenIncome else MaterialTheme.colorScheme.onSurface
+                        )
 
-                    if (!goal.isCompleted) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (goalCalc.isFeasible) Icons.Default.CheckCircle else Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = if (goalCalc.isFeasible) GreenIncome else PinkExpense,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Text(
-                                text = if (goalCalc.isFeasible) "On Track with Surplus" else "Surplus Gap: Consider adjusting target date",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontSize = 10.sp,
-                                color = if (goalCalc.isFeasible) GreenIncome else PinkExpense
-                            )
+                        if (!goal.isCompleted) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (goalCalc.isFeasible) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                    contentDescription = null,
+                                    tint = if (goalCalc.isFeasible) GreenIncome else PinkExpense,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = if (goalCalc.isFeasible) "On Track with Surplus" else "Surplus Gap: Adjust Date",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontSize = 10.sp,
+                                    color = if (goalCalc.isFeasible) GreenIncome else PinkExpense
+                                )
+                            }
                         }
                     }
-                }
 
-                if (!goal.isCompleted) {
-                    Button(
-                        onClick = {
-                            hapticFeedback()
-                            onDepositClick()
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.height(36.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Deposit", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        IconButton(onClick = onDeleteClick, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteOutline,
+                                contentDescription = "Delete Goal",
+                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        if (!goal.isCompleted) {
+                            Button(
+                                onClick = {
+                                    hapticFeedback()
+                                    onDepositClick()
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.height(34.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Deposit", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
             }
@@ -556,7 +580,7 @@ fun SavingsGoalShimmerLoading(
     ) {
         repeat(3) {
             Card(
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(22.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
                 modifier = Modifier
@@ -564,8 +588,8 @@ fun SavingsGoalShimmerLoading(
                     .padding(horizontal = 16.dp, vertical = 4.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     // Header Row
                     Row(
@@ -573,49 +597,40 @@ fun SavingsGoalShimmerLoading(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            AnimatedShimmerBox(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                            )
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                AnimatedShimmerBox(
-                                    modifier = Modifier
-                                        .width(120.dp)
-                                        .height(14.dp)
-                                        .clip(RoundedCornerShape(4.dp))
-                                )
-                                AnimatedShimmerBox(
-                                    modifier = Modifier
-                                        .width(90.dp)
-                                        .height(10.dp)
-                                        .clip(RoundedCornerShape(4.dp))
-                                )
-                            }
-                        }
-                    }
-
-                    // Progress Ring & Amount Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        AnimatedShimmerBox(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                        )
-
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             AnimatedShimmerBox(
                                 modifier = Modifier
-                                    .width(100.dp)
-                                    .height(20.dp)
+                                    .width(130.dp)
+                                    .height(14.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                            )
+                            AnimatedShimmerBox(
+                                modifier = Modifier
+                                    .width(90.dp)
+                                    .height(10.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                            )
+                        }
+
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(65.dp)
+                                .height(20.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                        )
+                    }
+
+                    // Amount Display Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            AnimatedShimmerBox(
+                                modifier = Modifier
+                                    .width(110.dp)
+                                    .height(22.dp)
                                     .clip(RoundedCornerShape(4.dp))
                             )
                             AnimatedShimmerBox(
@@ -625,37 +640,59 @@ fun SavingsGoalShimmerLoading(
                                     .clip(RoundedCornerShape(4.dp))
                             )
                         }
-                    }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
-
-                    // Footer Shimmer
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            AnimatedShimmerBox(
-                                modifier = Modifier
-                                    .width(110.dp)
-                                    .height(12.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                            )
-                            AnimatedShimmerBox(
-                                modifier = Modifier
-                                    .width(130.dp)
-                                    .height(10.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                            )
-                        }
 
                         AnimatedShimmerBox(
                             modifier = Modifier
-                                .width(80.dp)
-                                .height(36.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .width(40.dp)
+                                .height(16.dp)
+                                .clip(RoundedCornerShape(4.dp))
                         )
+                    }
+
+                    // Linear Progress Bar Shimmer
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(CircleShape)
+                    )
+
+                    // Callout Banner Shimmer
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                AnimatedShimmerBox(
+                                    modifier = Modifier
+                                        .width(110.dp)
+                                        .height(12.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                )
+                                AnimatedShimmerBox(
+                                    modifier = Modifier
+                                        .width(130.dp)
+                                        .height(10.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                )
+                            }
+
+                            AnimatedShimmerBox(
+                                modifier = Modifier
+                                    .width(72.dp)
+                                    .height(34.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                            )
+                        }
                     }
                 }
             }
