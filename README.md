@@ -19,6 +19,17 @@ Shared Kotlin business logic powers the engine on **Android** and **iOS**, with 
 
 ## 🔥 Key Financial Features
 
+### 🎯 Planning Hub & Savings Goals Vault (Sinking Funds)
+* **Unified Financial Planning**: Combines **Spending Budgets** (*category expense caps*) and **Savings Goals Vault** (*target accumulation funds*) in a sleek, segmented tab interface.
+* **Auto-Calculated Contributions**: Automatically calculates required monthly or weekly contributions based on target completion dates ($\frac{\text{Target} - \text{Saved}}{\text{Months Left}}$).
+* **Real-Time Cashflow Feasibility Engine**: Evaluates goal feasibility against actual historical 30-day net surplus ($\text{Income} - \text{Expenses}$), displaying **`🟢 On Track with Surplus`** or **`🟡 Surplus Gap`** status badges.
+* **Automatic Category Auto-Sync**: Automatically credits or debits goal progress whenever M-Pesa / Bank SMS transactions or receipts are categorized under a goal's linked category.
+* **Zero-Layout-Shift Shimmer Skeletons**: 1:1 pixel-aligned shimmer loading cards (`SavingsGoalShimmerLoading` & `spendingBudgetsShimmerItems`) matching loaded cards to the exact 0.0px.
+
+### 🔮 Cashflow Runway & EOM Forecast
+* **End-of-Month (EOM) Balance Projection**: Projects your expected month-end account balance based on 30-day daily burn rate, estimated variable expenses, and upcoming scheduled bills.
+* **Overdraft & Depletion Warning**: Calculates estimated depletion days and flags overdraft risks before month-end.
+
 ### 📡 100% Offline SMS Detection & Parsing (Android)
 * **Zero-Effort Tracking**: Real-time tracking of **M-Pesa** and **Equity Bank** SMS transactions without needing a remote backend server.
 * **Intelligent Regex Engine**: Parses complex financial events including **Paybill Payments**, **Till Payments**, **Bank Transfers**, **Reversals**, **Loan Approvals**, **Agent Withdrawals**, and **Airtime Purchases**.
