@@ -207,8 +207,7 @@ fun BudgetScreen(
                         spendingBudgetsShimmerItems()
                     }
 
-                    is Result.Error -> {
-                        item {
+                    is Result.Error -> { item(key = "spending_error") {
                             BudgetErrorRetryState(
                                 error = currentBudgets.exception,
                                 onRetry = { viewModel.reloadBudgets() }
@@ -219,11 +218,11 @@ fun BudgetScreen(
                     is Result.Success -> {
                         val data = currentBudgets.data
                         if (data.isNotEmpty()) {
-                            item {
+                            item(key = "spending_summary_header") {
                                 BudgetSummaryHeader(data)
                             }
 
-                            item {
+                            item(key = "spending_add_button") {
                                 with(sharedTransitionScope) {
                                     SexyAddBudgetButton(
                                         onClick = throttledOnAddBudget,
@@ -244,7 +243,7 @@ fun BudgetScreen(
                                 }
                             }
 
-                            items(data, key = { it.budget.id ?: it.budget.name }) { budgetWithStatus ->
+                            items(data, key = { "spending_${it.budget.id ?: it.budget.name}" }) { budgetWithStatus ->
                                 with(sharedTransitionScope) {
                                     BudgetItem(
                                         budgetWithStatus = budgetWithStatus,
@@ -266,7 +265,7 @@ fun BudgetScreen(
                                 }
                             }
                         } else {
-                            item {
+                            item(key = "spending_empty_state") {
                                 BudgetEmptyState(
                                     onAddBudget = throttledOnAddBudget,
                                     modifier = Modifier.fillMaxWidth()
@@ -283,7 +282,7 @@ fun BudgetScreen(
                     )
                 }
 
-                item(key = "add_goal_button") {
+                item(key = "savings_add_goal_button") {
                     SexyAddSavingsGoalButton(
                         onClick = { showAddGoalDialog = true },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
@@ -292,12 +291,12 @@ fun BudgetScreen(
 
                 when (val goalsResult = savingsGoals) {
                     is Result.Loading -> {
-                        item {
+                        item(key = "savings_loading_shimmer") {
                             SavingsGoalShimmerLoading()
                         }
                     }
                     is Result.Error -> {
-                        item {
+                        item(key = "savings_error") {
                             CommonErrorState(
                                 title = "Unable to load savings goals",
                                 error = goalsResult.exception,
@@ -308,7 +307,7 @@ fun BudgetScreen(
                     is Result.Success -> {
                         val goalsList = goalsResult.data
                         if (goalsList.isNotEmpty()) {
-                            items(goalsList, key = { it.goal.id }) { goalCalc ->
+                            items(goalsList, key = { "savings_${it.goal.id}" }) { goalCalc ->
                                 SavingsGoalCard(
                                     goalCalc = goalCalc,
                                     onDepositClick = { depositTargetGoal = goalCalc },
@@ -317,7 +316,7 @@ fun BudgetScreen(
                                 )
                             }
                         } else {
-                            item {
+                            item(key = "savings_empty_state") {
                                 Surface(
                                     shape = RoundedCornerShape(20.dp),
                                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
@@ -934,7 +933,7 @@ fun BudgetErrorRetryState(
 
 fun LazyListScope.spendingBudgetsShimmerItems() {
     // 1. BudgetSummaryHeader Shimmer
-    item {
+    item(key = "spending_shimmer_header") {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1002,7 +1001,7 @@ fun LazyListScope.spendingBudgetsShimmerItems() {
     }
 
     // 2. SexyAddBudgetButton Shimmer
-    item {
+    item(key = "spending_shimmer_add_button") {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1026,7 +1025,7 @@ fun LazyListScope.spendingBudgetsShimmerItems() {
     }
 
     // 3. BudgetItem Shimmers
-    items(3) {
+    items(3, key = { "spending_shimmer_item_$it" }) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
