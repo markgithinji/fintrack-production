@@ -97,13 +97,15 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 
+import com.fintrack.shared.feature.planning.ui.PlanningViewModel
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun BudgetDetailScreen(
     budgetId: String?,
     onGlobalRefresh: () -> Unit,
     onShowToast: (String, Boolean) -> Unit,
-    viewModel: BudgetViewModel = koinViewModel(),
+    viewModel: PlanningViewModel = koinViewModel(),
     accountsViewModel: AccountsViewModel = koinViewModel(),
     paddingValues: PaddingValues = PaddingValues(0.dp),
     animatedVisibilityScope: AnimatedVisibilityScope,

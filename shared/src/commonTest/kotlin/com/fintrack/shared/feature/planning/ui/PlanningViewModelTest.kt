@@ -1,4 +1,4 @@
-package com.fintrack.shared.feature.budget.ui
+package com.fintrack.shared.feature.planning.ui
 
 import com.fintrack.shared.feature.budget.domain.repository.FakeBudgetRepository
 import com.fintrack.shared.feature.budget.domain.repository.FakeSavingsGoalRepository
@@ -21,7 +21,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class BudgetViewModelTest {
+class PlanningViewModelTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private val fakeRepo = FakeBudgetRepository()
@@ -33,12 +33,12 @@ class BudgetViewModelTest {
     private val fakeTransactionRepo = FakeTransactionRepository()
     private val getSavingsGoalsUseCase = GetSavingsGoalsUseCase(fakeSavingsGoalRepo, fakeTransactionRepo)
 
-    private lateinit var viewModel: BudgetViewModel
+    private lateinit var viewModel: PlanningViewModel
 
     @BeforeTest
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = BudgetViewModel(
+        viewModel = PlanningViewModel(
             budgetRepository = fakeRepo,
             savingsGoalRepository = fakeSavingsGoalRepo,
             getSavingsGoalsUseCase = getSavingsGoalsUseCase,

@@ -2,7 +2,7 @@ package com.fintrack.shared.feature.core.di
 
 import com.fintrack.shared.feature.account.di.accountModule
 import com.fintrack.shared.feature.auth.di.authModule
-import com.fintrack.shared.feature.budget.di.budgetModule
+import com.fintrack.shared.feature.planning.di.planningModule
 import com.fintrack.shared.feature.category.di.categoryModule
 import com.fintrack.shared.feature.navigation.di.navigationModule
 import com.fintrack.shared.feature.summary.di.summaryModule
@@ -32,7 +32,7 @@ object Koin {
                 accountModule,
                 categoryModule,
                 transactionModule,
-                budgetModule,
+                planningModule,
                 summaryModule,
                 settingsModule,
                 userModule,

@@ -22,7 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.fintrack.shared.feature.account.ui.AccountsScreen
 import com.fintrack.shared.feature.budget.ui.BudgetDetailScreen
-import com.fintrack.shared.feature.budget.ui.BudgetScreen
+import com.fintrack.shared.feature.planning.ui.PlanningScreen
 import com.fintrack.shared.feature.category.ui.CategoryManagementScreen
 import com.fintrack.shared.feature.core.ui.AppLoadingScreen
 import com.fintrack.shared.feature.core.ui.util.navigateThrottled
@@ -200,7 +200,7 @@ fun MainNavigation(
         }
 
         composable<Screen.Budget> { 
-            BudgetScreen(
+            PlanningScreen(
                 refreshTrigger = refreshTrigger,
                 paddingValues = paddingValues,
                 animatedVisibilityScope = this,

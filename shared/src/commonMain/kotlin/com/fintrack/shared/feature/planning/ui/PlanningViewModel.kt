@@ -1,8 +1,7 @@
-package com.fintrack.shared.feature.budget.ui
+package com.fintrack.shared.feature.planning.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlin.time.Clock
 import com.fintrack.shared.feature.account.domain.model.Account
 import com.fintrack.shared.feature.budget.domain.model.Budget
 import com.fintrack.shared.feature.budget.domain.model.BudgetFormState
@@ -31,19 +30,19 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
-import com.fintrack.shared.feature.core.util.randomUUID
 
 enum class BudgetTab {
     SPENDING_BUDGETS,
     SAVINGS_GOALS
 }
 
-class BudgetViewModel(
+class PlanningViewModel(
     private val budgetRepository: BudgetRepository,
     private val savingsGoalRepository: SavingsGoalRepository,
     private val getSavingsGoalsUseCase: GetSavingsGoalsUseCase,
@@ -61,7 +60,7 @@ class BudgetViewModel(
 
     fun selectTab(tab: BudgetTab) {
         _selectedTab.value = tab
-        if (tab == BudgetTab.SAVINGS_GOALS) {
+        if (tab == BudgetTab.SAVINGS_GOALS && _savingsGoals.value is Result.Loading) {
             loadSavingsGoals()
         }
     }
@@ -165,7 +164,6 @@ class BudgetViewModel(
             if (result is Result.Success) {
                 val data = result.data
                 
-                // Match the suggested category
                 val currentCategories = _categories.value
                 val matchedCategory = data.suggestedCategoryName?.let { suggested ->
                     currentCategories.find { it.name.contains(suggested, ignoreCase = true) }
@@ -234,7 +232,7 @@ class BudgetViewModel(
     }
 
     private fun computeInitialFormState(): BudgetFormState {
-        val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+        val today = kotlin.time.Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
         return BudgetFormState(
             name = "",
             amount = "",

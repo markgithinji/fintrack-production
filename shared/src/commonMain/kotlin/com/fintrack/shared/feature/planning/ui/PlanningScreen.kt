@@ -1,4 +1,4 @@
-package com.fintrack.shared.feature.budget.ui
+package com.fintrack.shared.feature.planning.ui
 
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -87,9 +87,9 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun BudgetScreen(
+fun PlanningScreen(
     refreshTrigger: Int,
-    viewModel: BudgetViewModel = koinViewModel(),
+    viewModel: PlanningViewModel = koinViewModel(),
     paddingValues: PaddingValues = PaddingValues(0.dp),
     animatedVisibilityScope: AnimatedVisibilityScope,
     onAddBudget: () -> Unit = {},
@@ -207,7 +207,8 @@ fun BudgetScreen(
                         spendingBudgetsShimmerItems()
                     }
 
-                    is Result.Error -> { item(key = "spending_error") {
+                    is Result.Error -> {
+                        item(key = "spending_error") {
                             BudgetErrorRetryState(
                                 error = currentBudgets.exception,
                                 onRetry = { viewModel.reloadBudgets() }
@@ -547,7 +548,7 @@ fun SexyAddBudgetButton(
                     )
                 }
 
-                Spacer(Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(16.dp))
 
                 Column {
                     Text(

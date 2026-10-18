@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
@@ -228,8 +229,8 @@ fun MainAppScaffold(
                                             restoreState = true
                                         }
                                     },
-                                    icon = { Icon(Icons.Default.Info, contentDescription = "Budget") },
-                                    label = { Text("Budget") },
+                                    icon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = "Planning") },
+                                    label = { Text("Planning") },
                                     colors = itemColors
                                 )
                                 NavigationBarItem(
