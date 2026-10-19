@@ -46,6 +46,7 @@ interface SummaryRepository {
 
     suspend fun getTopMerchants(
         accountId: String?,
+        days: Int = 30,
         limit: Long = 10
     ): Result<List<MerchantSummary>>
 }

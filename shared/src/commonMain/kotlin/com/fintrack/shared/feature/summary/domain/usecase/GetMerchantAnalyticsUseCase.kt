@@ -9,8 +9,9 @@ class GetMerchantAnalyticsUseCase(
 ) {
     suspend operator fun invoke(
         accountId: String? = null,
+        days: Int = 30,
         limit: Long = 10
     ): Result<List<MerchantSummary>> {
-        return summaryRepository.getTopMerchants(accountId = accountId, limit = limit)
+        return summaryRepository.getTopMerchants(accountId = accountId, days = days, limit = limit)
     }
 }

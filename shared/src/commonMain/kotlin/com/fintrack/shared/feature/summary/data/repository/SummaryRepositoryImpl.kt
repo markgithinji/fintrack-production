@@ -1002,17 +1002,18 @@ class SummaryRepositoryImpl(
 
     override suspend fun getTopMerchants(
         accountId: String?,
+        days: Int,
         limit: Long
     ): Result<List<MerchantSummary>> = withContext(Dispatchers.IO) {
         try {
             val nowInstant = kotlin.time.Clock.System.now()
-            val thirtyDaysAgo = nowInstant.minus(30, kotlinx.datetime.DateTimeUnit.DAY, TimeZone.currentSystemDefault())
+            val startDaysAgo = nowInstant.minus(days, kotlinx.datetime.DateTimeUnit.DAY, TimeZone.currentSystemDefault())
 
             val targetAccountIds = accountId?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
 
             val allTxResult = queries.selectTransactionsByRange(
                 userId = offlineUserId,
-                dateTime = thirtyDaysAgo,
+                dateTime = startDaysAgo,
                 dateTime_ = nowInstant
             ).executeAsList()
 

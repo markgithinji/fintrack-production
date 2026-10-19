@@ -43,14 +43,23 @@ class StatisticsViewModel(
     private val getMerchantAnalyticsUseCase: GetMerchantAnalyticsUseCase? = null
 ) : ViewModel() {
 
+    private val _selectedMerchantDays = MutableStateFlow(30)
+    val selectedMerchantDays: StateFlow<Int> = _selectedMerchantDays.asStateFlow()
+
     private val _topMerchants = MutableStateFlow<Result<List<MerchantSummary>>>(Result.Loading)
     val topMerchants: StateFlow<Result<List<MerchantSummary>>> = _topMerchants.asStateFlow()
 
-    fun loadTopMerchants(accountId: String? = null) {
+    fun setMerchantDays(days: Int, accountId: String? = null) {
+        _selectedMerchantDays.value = days
+        loadTopMerchants(accountId, days)
+    }
+
+    fun loadTopMerchants(accountId: String? = null, days: Int? = null) {
         if (getMerchantAnalyticsUseCase == null) return
+        val targetDays = days ?: _selectedMerchantDays.value
         viewModelScope.launch {
             _topMerchants.value = Result.Loading
-            _topMerchants.value = getMerchantAnalyticsUseCase(accountId)
+            _topMerchants.value = getMerchantAnalyticsUseCase(accountId, targetDays)
         }
     }
 

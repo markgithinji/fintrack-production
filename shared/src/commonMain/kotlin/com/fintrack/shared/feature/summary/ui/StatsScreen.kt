@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Tune
 import com.fintrack.shared.feature.summary.domain.model.MerchantSummary
 import com.fintrack.shared.feature.summary.ui.components.MerchantDetailBottomSheet
 import com.fintrack.shared.feature.summary.ui.components.TopMerchantsContainerCard
+import com.fintrack.shared.feature.summary.ui.components.TopMerchantsShimmerContainerCard
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -107,6 +108,7 @@ fun StatisticsScreen(
     val availableAccounts by viewModel.availableAccounts.collectAsStateWithLifecycle()
     val selectedAccountIds by viewModel.selectedAccountIds.collectAsStateWithLifecycle()
     val topMerchants by viewModel.topMerchants.collectAsStateWithLifecycle()
+    val selectedMerchantDays by viewModel.selectedMerchantDays.collectAsStateWithLifecycle()
     var selectedMerchant by remember { mutableStateOf<MerchantSummary?>(null) }
     val listState = rememberLazyListState()
 
@@ -343,35 +345,31 @@ fun StatisticsScreen(
             when (val merchantRes = topMerchants) {
                 is Result.Loading -> {
                     item(key = "topMerchantsShimmer") {
-                        Card(
-                            shape = RoundedCornerShape(22.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(18.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                AnimatedShimmerBox(modifier = Modifier.width(140.dp).height(18.dp).clip(RoundedCornerShape(4.dp)))
-                                AnimatedShimmerBox(modifier = Modifier.width(180.dp).height(12.dp).clip(RoundedCornerShape(4.dp)))
-                            }
-                        }
+                        TopMerchantsShimmerContainerCard(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
                     }
                 }
-                is Result.Error -> {}
+                is Result.Error -> {
+                    item(key = "topMerchantsError") {
+                        TopMerchantsContainerCard(
+                            merchants = emptyList(),
+                            selectedDays = selectedMerchantDays,
+                            onDaysSelected = { viewModel.setMerchantDays(it, activeAccountId) },
+                            onMerchantClick = {},
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+                }
                 is Result.Success -> {
-                    val merchantList = merchantRes.data
-                    if (merchantList.isNotEmpty()) {
-                        item(key = "topMerchantsContainerCard") {
-                            TopMerchantsContainerCard(
-                                merchants = merchantList,
-                                onMerchantClick = { selectedMerchant = it },
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                            )
-                        }
+                    item(key = "topMerchantsContainerCard") {
+                        TopMerchantsContainerCard(
+                            merchants = merchantRes.data,
+                            selectedDays = selectedMerchantDays,
+                            onDaysSelected = { viewModel.setMerchantDays(it, activeAccountId) },
+                            onMerchantClick = { selectedMerchant = it },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
                     }
                 }
             }

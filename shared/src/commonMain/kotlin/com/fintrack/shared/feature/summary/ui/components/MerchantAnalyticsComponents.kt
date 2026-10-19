@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,6 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import com.fintrack.shared.feature.core.ui.AnimatedShimmerBox
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +44,8 @@ import com.fintrack.shared.ui.theme.PinkExpense
 @Composable
 fun TopMerchantsContainerCard(
     merchants: List<MerchantSummary>,
+    selectedDays: Int,
+    onDaysSelected: (Int) -> Unit,
     onMerchantClick: (MerchantSummary) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -55,28 +60,148 @@ fun TopMerchantsContainerCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = "Top Merchants & Vendors (30d)",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Top Merchants & Vendors",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    listOf(30 to "30d", 60 to "60d", 90 to "90d", 365 to "1yr").forEach { (days, label) ->
+                        val isSelected = selectedDays == days
+                        Surface(
+                            onClick = { onDaysSelected(days) },
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color.Transparent)
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
 
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                merchants.forEachIndexed { index, merchant ->
-                    CompactMerchantRow(
-                        merchant = merchant,
-                        onClick = { onMerchantClick(merchant) }
-                    )
-
-                    if (index < merchants.size - 1) {
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.08f),
-                            modifier = Modifier.padding(vertical = 2.dp)
+            if (merchants.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    merchants.forEachIndexed { index, merchant ->
+                        CompactMerchantRow(
+                            merchant = merchant,
+                            onClick = { onMerchantClick(merchant) }
                         )
+
+                        if (index < merchants.size - 1) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.08f),
+                                modifier = Modifier.padding(vertical = 2.dp)
+                            )
+                        }
                     }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No merchant transactions in this timeframe",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TopMerchantsShimmerContainerCard(
+    modifier: Modifier = Modifier
+) {
+    Card(
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AnimatedShimmerBox(
+                    modifier = Modifier
+                        .width(160.dp)
+                        .height(20.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                )
+                AnimatedShimmerBox(
+                    modifier = Modifier
+                        .width(120.dp)
+                        .height(20.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+            repeat(3) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            AnimatedShimmerBox(
+                                modifier = Modifier
+                                    .width(130.dp)
+                                    .height(16.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                            )
+                            AnimatedShimmerBox(
+                                modifier = Modifier
+                                    .width(90.dp)
+                                    .height(10.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                            )
+                        }
+                    }
+
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .width(70.dp)
+                            .height(16.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                    )
                 }
             }
         }
