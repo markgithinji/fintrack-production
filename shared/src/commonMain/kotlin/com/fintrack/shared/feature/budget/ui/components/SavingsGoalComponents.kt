@@ -592,6 +592,7 @@ fun SavingsGoalsInfoCard(
                             text = "Auto-Calculated Contributions: FinTrack calculates your required monthly savings based on remaining months.",
                             style = MaterialTheme.typography.bodySmall,
                             fontSize = 11.sp,
+                            lineHeight = 14.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -602,6 +603,7 @@ fun SavingsGoalsInfoCard(
                             text = "Feasibility Check: Compares required monthly savings against your actual monthly net surplus.",
                             style = MaterialTheme.typography.bodySmall,
                             fontSize = 11.sp,
+                            lineHeight = 14.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -612,6 +614,7 @@ fun SavingsGoalsInfoCard(
                             text = "Automatic Category Sync: Any M-Pesa or Bank transaction tagged under a goal's category automatically credits progress!",
                             style = MaterialTheme.typography.bodySmall,
                             fontSize = 11.sp,
+                            lineHeight = 14.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

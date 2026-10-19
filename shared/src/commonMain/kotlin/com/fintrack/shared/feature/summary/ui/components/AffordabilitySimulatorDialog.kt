@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -42,15 +43,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import com.fintrack.shared.feature.account.domain.model.Account
+import com.fintrack.shared.feature.account.domain.model.AccountType
 import com.fintrack.shared.feature.account.domain.repository.AccountRepository
+import com.fintrack.shared.feature.core.ui.AnimatedShimmerBox
 import com.fintrack.shared.feature.navigation.ui.toCurrencyString
 import com.fintrack.shared.feature.summary.domain.model.AffordabilitySimulationResult
 import com.fintrack.shared.feature.summary.domain.model.AffordabilityVerdict
@@ -76,6 +82,10 @@ fun AffordabilitySimulatorDialog(
         val accResult = accountRepository.getAccounts()
         if (accResult is Result.Success) {
             accountsList = accResult.data
+            val mpesaAcc = accountsList.find { it.type == AccountType.MPESA || it.name.contains("mpesa", ignoreCase = true) }
+            if (mpesaAcc != null) {
+                selectedAccountId = mpesaAcc.id
+            }
         }
     }
 
@@ -138,6 +148,7 @@ fun AffordabilitySimulatorDialog(
                         Text(
                             text = "Simulate unplanned purchase vs runway",
                             style = MaterialTheme.typography.bodySmall,
+                            lineHeight = 14.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -169,15 +180,16 @@ fun AffordabilitySimulatorDialog(
                             item {
                                 Surface(
                                     onClick = { selectedAccountId = null },
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = if (selectedAccountId == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (selectedAccountId == null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    border = BorderStroke(1.dp, if (selectedAccountId == null) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color.Transparent)
                                 ) {
                                     Text(
                                         text = "All Accounts",
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (selectedAccountId == null) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                        fontWeight = if (selectedAccountId == null) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (selectedAccountId == null) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                                     )
                                 }
                             }
@@ -186,15 +198,16 @@ fun AffordabilitySimulatorDialog(
                                 val isSelected = selectedAccountId == acc.id
                                 Surface(
                                     onClick = { selectedAccountId = acc.id },
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color.Transparent)
                                 ) {
                                     Text(
                                         text = acc.name,
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                                     )
                                 }
                             }
@@ -202,153 +215,225 @@ fun AffordabilitySimulatorDialog(
                     }
                 }
 
-                when (val result = simulationResult) {
-                    is Result.Loading -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.size(28.dp))
-                        }
-                    }
-
-                    is Result.Error -> {
-                        Text(
-                            text = result.exception.message ?: "Simulation error",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-
-                    is Result.Success -> {
-                        val sim = result.data
-                        val verdictColor = when (sim.verdict) {
-                            AffordabilityVerdict.SAFE -> GreenIncome
-                            AffordabilityVerdict.CAUTION -> Color(0xFFFF9800)
-                            AffordabilityVerdict.RISKY,
-                            AffordabilityVerdict.IMMEDIATE_DEFICIT -> PinkExpense
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = verdictColor.copy(alpha = 0.1f),
-                            border = BorderStroke(1.dp, verdictColor.copy(alpha = 0.3f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(260.dp)
+                ) {
+                    when (val result = simulationResult) {
+                        is Result.Loading -> {
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
+                                modifier = Modifier.fillMaxSize()
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(16.dp),
+                                    verticalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Icon(
-                                        imageVector = when (sim.verdict) {
-                                            AffordabilityVerdict.SAFE -> Icons.Default.CheckCircle
-                                            AffordabilityVerdict.CAUTION -> Icons.Default.Info
-                                            AffordabilityVerdict.RISKY,
-                                            AffordabilityVerdict.IMMEDIATE_DEFICIT -> Icons.Default.Warning
-                                        },
-                                        contentDescription = null,
-                                        tint = verdictColor,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        text = when (sim.verdict) {
-                                            AffordabilityVerdict.SAFE -> "SAFE PURCHASE"
-                                            AffordabilityVerdict.CAUTION -> "BORDERLINE CUSHION"
-                                            AffordabilityVerdict.RISKY -> "HIGH OVERDRAFT RISK"
-                                            AffordabilityVerdict.IMMEDIATE_DEFICIT -> "IMMEDIATE CASH DEFICIT"
-                                        },
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = verdictColor
-                                    )
-                                }
-
-                                Text(
-                                    text = sim.message,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-
-                                Text(
-                                    text = sim.recommendation,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-
-                                if (sim.remainingBurnDaysAfterPurchase != null) {
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Text(
-                                            text = "Covers ${sim.remainingBurnDaysAfterPurchase} days of daily spending after bills",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 10.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        AnimatedShimmerBox(
+                                            modifier = Modifier
+                                                .size(20.dp)
+                                                .clip(CircleShape)
+                                        )
+                                        AnimatedShimmerBox(
+                                            modifier = Modifier
+                                                .width(120.dp)
+                                                .height(16.dp)
+                                                .clip(RoundedCornerShape(4.dp))
                                         )
                                     }
-                                }
-
-                                if (sim.savingsGoalImpactMessage != null) {
-                                    Text(
-                                        text = sim.savingsGoalImpactMessage,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFFF9800)
+                                    AnimatedShimmerBox(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(32.dp)
+                                            .clip(RoundedCornerShape(4.dp))
                                     )
-                                }
-
-                                HorizontalDivider(color = verdictColor.copy(alpha = 0.2f))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column {
-                                        Text(
-                                            text = "Original EOM",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontSize = 10.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    AnimatedShimmerBox(
+                                        modifier = Modifier
+                                            .fillMaxWidth(0.85f)
+                                            .height(28.dp)
+                                            .clip(RoundedCornerShape(4.dp))
+                                    )
+                                    AnimatedShimmerBox(
+                                        modifier = Modifier
+                                            .width(180.dp)
+                                            .height(20.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                    )
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        AnimatedShimmerBox(
+                                            modifier = Modifier
+                                                .width(110.dp)
+                                                .height(20.dp)
+                                                .clip(RoundedCornerShape(4.dp))
                                         )
-                                        Text(
-                                            text = sim.projectedEomBalanceBefore.toCurrencyString(),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-
-                                    Column {
-                                        Text(
-                                            text = "New EOM Projection",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontSize = 10.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Text(
-                                            text = sim.projectedEomBalanceAfter.toCurrencyString(),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = verdictColor
+                                        AnimatedShimmerBox(
+                                            modifier = Modifier
+                                                .width(110.dp)
+                                                .height(20.dp)
+                                                .clip(RoundedCornerShape(4.dp))
                                         )
                                     }
                                 }
                             }
                         }
-                    }
 
-                    null -> {}
+                        is Result.Error -> {
+                            Text(
+                                text = result.exception.message ?: "Simulation error",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+
+                        is Result.Success -> {
+                            val sim = result.data
+                            val verdictColor = when (sim.verdict) {
+                                AffordabilityVerdict.SAFE -> GreenIncome
+                                AffordabilityVerdict.CAUTION -> Color(0xFFFF9800)
+                                AffordabilityVerdict.RISKY,
+                                AffordabilityVerdict.IMMEDIATE_DEFICIT -> PinkExpense
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = verdictColor.copy(alpha = 0.1f),
+                                border = BorderStroke(1.dp, verdictColor.copy(alpha = 0.3f)),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(16.dp),
+                                    verticalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = when (sim.verdict) {
+                                                AffordabilityVerdict.SAFE -> Icons.Default.CheckCircle
+                                                AffordabilityVerdict.CAUTION -> Icons.Default.Info
+                                                AffordabilityVerdict.RISKY,
+                                                AffordabilityVerdict.IMMEDIATE_DEFICIT -> Icons.Default.Warning
+                                            },
+                                            contentDescription = null,
+                                            tint = verdictColor,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Text(
+                                            text = when (sim.verdict) {
+                                                AffordabilityVerdict.SAFE -> "SAFE PURCHASE"
+                                                AffordabilityVerdict.CAUTION -> "BORDERLINE CUSHION"
+                                                AffordabilityVerdict.RISKY -> "HIGH OVERDRAFT RISK"
+                                                AffordabilityVerdict.IMMEDIATE_DEFICIT -> "IMMEDIATE CASH DEFICIT"
+                                            },
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = verdictColor
+                                        )
+                                    }
+
+                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text(
+                                            text = sim.message,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            lineHeight = 16.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+
+                                        Text(
+                                            text = sim.recommendation,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontSize = 11.sp,
+                                            lineHeight = 14.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    if (sim.remainingBurnDaysAfterPurchase != null) {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                        ) {
+                                            Text(
+                                                text = "Covers ${sim.remainingBurnDaysAfterPurchase} days of daily spending after bills",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 10.sp,
+                                                lineHeight = 13.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                    }
+
+                                    if (sim.savingsGoalImpactMessage != null) {
+                                        Text(
+                                            text = sim.savingsGoalImpactMessage,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            lineHeight = 13.sp,
+                                            color = Color(0xFFFF9800)
+                                        )
+                                    }
+
+                                    HorizontalDivider(color = verdictColor.copy(alpha = 0.2f))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = "Month-End Balance (Before)",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontSize = 10.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Text(
+                                                text = sim.projectedEomBalanceBefore.toCurrencyString(),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                text = "Month-End Balance (After)",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontSize = 10.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Text(
+                                                text = sim.projectedEomBalanceAfter.toCurrencyString(),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = verdictColor
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        null -> {}
+                    }
                 }
 
                 Row(
