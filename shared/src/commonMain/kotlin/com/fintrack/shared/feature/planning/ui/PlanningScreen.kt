@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
@@ -45,6 +46,11 @@ import androidx.compose.material3.LinearProgressIndicator
 import com.fintrack.shared.feature.account.ui.AccountsViewModel
 import com.fintrack.shared.feature.budget.domain.model.SavingsGoalWithCalculation
 import com.fintrack.shared.feature.planning.ui.components.AffordabilityToolCard
+import com.fintrack.shared.feature.planning.ui.components.AddEditDebtDialog
+import com.fintrack.shared.feature.planning.ui.components.DebtCard
+import com.fintrack.shared.feature.planning.ui.components.DebtPayoffSummaryCard
+import com.fintrack.shared.feature.planning.ui.components.DebtStrategySwitcher
+import com.fintrack.shared.feature.planning.ui.components.ExtraPaymentBoostCard
 import com.fintrack.shared.feature.summary.ui.components.AffordabilitySimulatorDialog
 import com.fintrack.shared.feature.budget.ui.components.AddSavingsGoalDialog
 import com.fintrack.shared.feature.budget.ui.components.DepositToGoalDialog
@@ -106,12 +112,17 @@ fun PlanningScreen(
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val selectedTab by viewModel.selectedTab.collectAsStateWithLifecycle()
     val savingsGoals by viewModel.savingsGoals.collectAsStateWithLifecycle()
+    val debts by viewModel.debts.collectAsStateWithLifecycle()
+    val selectedStrategy by viewModel.selectedStrategy.collectAsStateWithLifecycle()
+    val extraMonthlyPayment by viewModel.extraMonthlyPayment.collectAsStateWithLifecycle()
+    val payoffPlan by viewModel.payoffPlan.collectAsStateWithLifecycle()
     val accountsResult by accountsViewModel.accounts.collectAsStateWithLifecycle()
     val accounts = (accountsResult as? Result.Success)?.data ?: emptyList()
 
     var showAddGoalDialog by remember { mutableStateOf(false) }
     var depositTargetGoal by remember { mutableStateOf<SavingsGoalWithCalculation?>(null) }
     var showAffordabilitySimulator by remember { mutableStateOf(false) }
+    var showAddDebtDialog by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
     
@@ -123,6 +134,8 @@ fun PlanningScreen(
             viewModel.reloadBudgets(showLoading = false)
             if (selectedTab == BudgetTab.SAVINGS_GOALS) {
                 viewModel.loadSavingsGoals()
+            } else if (selectedTab == BudgetTab.DEBT_PAYOFF) {
+                viewModel.loadDebts()
             }
         }
     }
@@ -170,7 +183,7 @@ fun PlanningScreen(
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                text = "Spending Budgets",
+                                text = "Budgets",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (selectedTab == BudgetTab.SPENDING_BUDGETS) FontWeight.Bold else FontWeight.Medium,
                                 color = if (selectedTab == BudgetTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
@@ -197,10 +210,37 @@ fun PlanningScreen(
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                text = "Savings Goals",
+                                text = "Savings",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (selectedTab == BudgetTab.SAVINGS_GOALS) FontWeight.Bold else FontWeight.Medium,
                                 color = if (selectedTab == BudgetTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Surface(
+                        onClick = { viewModel.selectTab(BudgetTab.DEBT_PAYOFF) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (selectedTab == BudgetTab.DEBT_PAYOFF) MaterialTheme.colorScheme.surface else Color.Transparent,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(vertical = 10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CreditCard,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = if (selectedTab == BudgetTab.DEBT_PAYOFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Debt Payoff",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (selectedTab == BudgetTab.DEBT_PAYOFF) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selectedTab == BudgetTab.DEBT_PAYOFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -290,7 +330,7 @@ fun PlanningScreen(
                         }
                     }
                 }
-            } else {
+            } else if (selectedTab == BudgetTab.SAVINGS_GOALS) {
                 // SAVINGS GOALS TAB
                 item(key = "savings_info_card") {
                     SavingsGoalsInfoCard(
@@ -363,6 +403,100 @@ fun PlanningScreen(
                         }
                     }
                 }
+            } else if (selectedTab == BudgetTab.DEBT_PAYOFF) {
+                if (payoffPlan != null && payoffPlan!!.orderedDebts.isNotEmpty()) {
+                    item(key = "debt_summary_card") {
+                        DebtPayoffSummaryCard(
+                            plan = payoffPlan!!,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+
+                    item(key = "debt_strategy_switcher") {
+                        DebtStrategySwitcher(
+                            selectedStrategy = selectedStrategy,
+                            onStrategySelected = { viewModel.setStrategy(it) },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+
+                    item(key = "debt_extra_payment") {
+                        ExtraPaymentBoostCard(
+                            extraMonthlyPayment = extraMonthlyPayment,
+                            onExtraPaymentChange = { viewModel.setExtraMonthlyPayment(it) },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+
+                    item(key = "debt_add_button") {
+                        Button(
+                            onClick = { showAddDebtDialog = true },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .height(48.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Add Loan or Debt", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    items(payoffPlan!!.orderedDebts, key = { "debt_${it.debt.id}" }) { debtSchedule ->
+                        DebtCard(
+                            debtSchedule = debtSchedule,
+                            onDeleteClick = { viewModel.deleteDebt(debtSchedule.debt.id) },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+                } else {
+                    item(key = "debt_add_button_empty") {
+                        Button(
+                            onClick = { showAddDebtDialog = true },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .height(48.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Add Loan or Debt", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    item(key = "debt_empty_state") {
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "No Loans or Debts",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Add bank loans, credit cards, or overdraft balances. Compare Debt Snowball vs Avalanche to eliminate debt fast!",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -390,6 +524,15 @@ fun PlanningScreen(
     if (showAffordabilitySimulator) {
         AffordabilitySimulatorDialog(
             onDismiss = { showAffordabilitySimulator = false }
+        )
+    }
+
+    if (showAddDebtDialog) {
+        AddEditDebtDialog(
+            onDebtCreated = { name, balance, rate, minPay ->
+                viewModel.createDebt(name, balance, rate, minPay)
+            },
+            onDismiss = { showAddDebtDialog = false }
         )
     }
 }

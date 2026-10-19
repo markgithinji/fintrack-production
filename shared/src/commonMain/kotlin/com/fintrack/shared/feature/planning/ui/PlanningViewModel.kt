@@ -20,6 +20,11 @@ import com.fintrack.shared.feature.core.domain.SaveState
 import com.fintrack.shared.feature.core.domain.ValidationResult
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.core.util.formatToTwoPrecision
+import com.fintrack.shared.feature.planning.domain.model.Debt
+import com.fintrack.shared.feature.planning.domain.model.DebtPayoffPlan
+import com.fintrack.shared.feature.planning.domain.model.DebtStrategy
+import com.fintrack.shared.feature.planning.domain.repository.DebtRepository
+import com.fintrack.shared.feature.planning.domain.usecase.CalculateDebtPayoffPlanUseCase
 import com.fintrack.shared.feature.transaction.domain.service.ReceiptScanner
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,7 +44,8 @@ import kotlinx.datetime.toLocalDateTime
 
 enum class BudgetTab {
     SPENDING_BUDGETS,
-    SAVINGS_GOALS
+    SAVINGS_GOALS,
+    DEBT_PAYOFF
 }
 
 class PlanningViewModel(
@@ -49,6 +55,8 @@ class PlanningViewModel(
     private val validationUseCase: BudgetValidationUseCase,
     private val localCategoryDataSource: LocalCategoryDataSource,
     private val syncCategoriesUseCase: SyncCategoriesUseCase,
+    private val debtRepository: DebtRepository? = null,
+    private val calculateDebtPayoffPlanUseCase: CalculateDebtPayoffPlanUseCase = CalculateDebtPayoffPlanUseCase(),
     private val receiptScanner: ReceiptScanner? = null
 ) : ViewModel() {
 
@@ -58,10 +66,86 @@ class PlanningViewModel(
     private val _savingsGoals = MutableStateFlow<Result<List<SavingsGoalWithCalculation>>>(Result.Loading)
     val savingsGoals: StateFlow<Result<List<SavingsGoalWithCalculation>>> = _savingsGoals.asStateFlow()
 
+    private val _debts = MutableStateFlow<Result<List<Debt>>>(Result.Loading)
+    val debts: StateFlow<Result<List<Debt>>> = _debts.asStateFlow()
+
+    private val _selectedStrategy = MutableStateFlow(DebtStrategy.SNOWBALL)
+    val selectedStrategy: StateFlow<DebtStrategy> = _selectedStrategy.asStateFlow()
+
+    private val _extraMonthlyPayment = MutableStateFlow(0.0)
+    val extraMonthlyPayment: StateFlow<Double> = _extraMonthlyPayment.asStateFlow()
+
+    private val _payoffPlan = MutableStateFlow<DebtPayoffPlan?>(null)
+    val payoffPlan: StateFlow<DebtPayoffPlan?> = _payoffPlan.asStateFlow()
+
     fun selectTab(tab: BudgetTab) {
         _selectedTab.value = tab
         if (tab == BudgetTab.SAVINGS_GOALS && _savingsGoals.value is Result.Loading) {
             loadSavingsGoals()
+        } else if (tab == BudgetTab.DEBT_PAYOFF && _debts.value is Result.Loading) {
+            loadDebts()
+        }
+    }
+
+    fun loadDebts() {
+        if (debtRepository == null) return
+        viewModelScope.launch {
+            _debts.value = Result.Loading
+            val res = debtRepository.getDebts()
+            _debts.value = res
+            if (res is Result.Success) {
+                recalculatePayoffPlan(res.data)
+            }
+        }
+    }
+
+    fun setStrategy(strategy: DebtStrategy) {
+        _selectedStrategy.value = strategy
+        val currentDebts = (_debts.value as? Result.Success)?.data ?: emptyList()
+        recalculatePayoffPlan(currentDebts)
+    }
+
+    fun setExtraMonthlyPayment(amount: Double) {
+        _extraMonthlyPayment.value = amount
+        val currentDebts = (_debts.value as? Result.Success)?.data ?: emptyList()
+        recalculatePayoffPlan(currentDebts)
+    }
+
+    private fun recalculatePayoffPlan(debtList: List<Debt>) {
+        _payoffPlan.value = calculateDebtPayoffPlanUseCase(
+            debts = debtList,
+            strategy = _selectedStrategy.value,
+            extraMonthlyPayment = _extraMonthlyPayment.value
+        )
+    }
+
+    fun createDebt(name: String, balance: Double, interestRate: Double, minimumPayment: Double) {
+        if (debtRepository == null) return
+        viewModelScope.launch {
+            val newDebt = Debt(
+                id = randomUUID(),
+                userId = "local_user",
+                name = name,
+                balance = balance,
+                initialBalance = balance,
+                interestRate = interestRate,
+                minimumPayment = minimumPayment,
+                createdAt = kotlin.time.Clock.System.now().toString()
+            )
+            val res = debtRepository.saveDebt(newDebt)
+            if (res is Result.Success) {
+                loadDebts()
+            }
+        }
+    }
+
+    fun deleteDebt(debtId: String) {
+        if (debtRepository == null) return
+        viewModelScope.launch {
+            val res = debtRepository.deleteDebt(debtId)
+            if (res is Result.Success) {
+                loadDebts()
+            }
         }
     }
 

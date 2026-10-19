@@ -396,3 +396,52 @@ DELETE FROM SavingsGoalEntity WHERE userId = ?;
 
 selectSavingsGoalsByCategoryId:
 SELECT * FROM SavingsGoalEntity WHERE categoryId = ?;
+
+-- Debt Queries
+CREATE TABLE IF NOT EXISTS DebtEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    balance REAL NOT NULL,
+    initialBalance REAL NOT NULL,
+    interestRate REAL NOT NULL,
+    minimumPayment REAL NOT NULL,
+    categoryId TEXT,
+    accountId TEXT,
+    colorHex TEXT NOT NULL DEFAULT '#E53935',
+    createdAt TEXT NOT NULL
+);
+
+createDebtTableIfNotExists:
+CREATE TABLE IF NOT EXISTS DebtEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    balance REAL NOT NULL,
+    initialBalance REAL NOT NULL,
+    interestRate REAL NOT NULL,
+    minimumPayment REAL NOT NULL,
+    categoryId TEXT,
+    accountId TEXT,
+    colorHex TEXT NOT NULL DEFAULT '#E53935',
+    createdAt TEXT NOT NULL
+);
+
+insertDebt:
+INSERT OR REPLACE INTO DebtEntity(id, userId, name, balance, initialBalance, interestRate, minimumPayment, categoryId, accountId, colorHex, createdAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectAllDebts:
+SELECT * FROM DebtEntity WHERE userId = ?;
+
+selectDebtById:
+SELECT * FROM DebtEntity WHERE id = ?;
+
+updateDebtBalance:
+UPDATE DebtEntity SET balance = ? WHERE id = ?;
+
+deleteDebt:
+DELETE FROM DebtEntity WHERE id = ?;
+
+deleteAllDebts:
+DELETE FROM DebtEntity WHERE userId = ?;
