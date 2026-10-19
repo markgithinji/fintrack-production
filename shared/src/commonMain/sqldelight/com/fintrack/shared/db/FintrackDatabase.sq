@@ -248,6 +248,23 @@ WHERE T.userId = :userId AND (:accountId IS NULL OR instr(',' || :accountId || '
 GROUP BY catId
 ORDER BY totalSum DESC;
 
+getTopMerchants:
+SELECT
+    COALESCE(description, 'Other') AS merchantName,
+    SUM(CAST(amount AS REAL)) AS totalSpent,
+    COUNT(*) AS visitCount,
+    AVG(CAST(amount AS REAL)) AS avgAmount,
+    MIN(dateTime) AS firstSeen,
+    MAX(dateTime) AS lastSeen
+FROM TransactionEntity
+WHERE userId = :userId
+AND isIncome = 0
+AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
+AND dateTime >= :start AND dateTime <= :end
+GROUP BY merchantName
+ORDER BY totalSpent DESC
+LIMIT :limit;
+
 getHighlights:
 SELECT
     SUM(CASE WHEN isIncome = 1 THEN CAST(amount AS REAL) ELSE 0 END) AS incomeTotal,

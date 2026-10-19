@@ -999,4 +999,121 @@ class SummaryRepositoryImpl(
             Result.Error(e)
         }
     }
+
+    override suspend fun getTopMerchants(
+        accountId: String?,
+        limit: Long
+    ): Result<List<MerchantSummary>> = withContext(Dispatchers.IO) {
+        try {
+            val nowInstant = kotlin.time.Clock.System.now()
+            val thirtyDaysAgo = nowInstant.minus(30, kotlinx.datetime.DateTimeUnit.DAY, TimeZone.currentSystemDefault())
+
+            val targetAccountIds = accountId?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+
+            val allTxResult = queries.selectTransactionsByRange(
+                userId = offlineUserId,
+                dateTime = thirtyDaysAgo,
+                dateTime_ = nowInstant
+            ).executeAsList()
+
+            val filteredTx = allTxResult.filter { tx ->
+                val isExpense = tx.isIncome == 0L
+                val matchesAccount = if (targetAccountIds.isNotEmpty()) {
+                    targetAccountIds.contains(tx.accountId)
+                } else true
+                isExpense && matchesAccount
+            }
+
+            class MerchantAccumulator(
+                val cleanName: String,
+                var totalSpent: Double = 0.0,
+                var visitCount: Int = 0,
+                var firstSeen: kotlinx.datetime.Instant? = null,
+                var lastSeen: kotlinx.datetime.Instant? = null
+            )
+
+            val map = mutableMapOf<String, MerchantAccumulator>()
+
+            for (tx in filteredTx) {
+                val rawDesc = tx.description ?: "Other"
+                val cleanName = cleanMerchantName(rawDesc)
+
+                val acc = map.getOrPut(cleanName) { MerchantAccumulator(cleanName) }
+                val amount = tx.amount.toDoubleOrNull() ?: 0.0
+                acc.totalSpent = acc.totalSpent + amount
+                acc.visitCount += 1
+
+                val txTime = tx.dateTime
+                if (acc.firstSeen == null || txTime < acc.firstSeen!!) {
+                    acc.firstSeen = txTime
+                }
+                if (acc.lastSeen == null || txTime > acc.lastSeen!!) {
+                    acc.lastSeen = txTime
+                }
+            }
+
+            val merchantSummaries = map.values
+                .sortedByDescending { it.totalSpent }
+                .take(limit.toInt())
+                .mapIndexed { index, acc ->
+                    val avgCost = if (acc.visitCount > 0) acc.totalSpent / acc.visitCount else 0.0
+                    val firstSeenStr = acc.firstSeen?.toLocalDateTime(TimeZone.currentSystemDefault())?.date?.toString() ?: ""
+                    val lastSeenStr = acc.lastSeen?.toLocalDateTime(TimeZone.currentSystemDefault())?.date?.toString() ?: ""
+
+                    MerchantSummary(
+                        rank = index + 1,
+                        merchantName = acc.cleanName,
+                        totalSpent = BigDecimal.fromDouble(acc.totalSpent),
+                        visitCount = acc.visitCount,
+                        averageTransactionCost = BigDecimal.fromDouble(avgCost),
+                        firstSeenDate = firstSeenStr,
+                        lastSeenDate = lastSeenStr
+                    )
+                }
+
+            Result.Success(merchantSummaries)
+        } catch (e: Exception) {
+            logger.error(tag, "Error fetching top merchants", e)
+            Result.Error(e)
+        }
+    }
+
+    private fun cleanMerchantName(raw: String): String {
+        var text = raw.trim()
+        if (text.isBlank()) return "Other"
+
+        // 1. Remove common transaction prefixes
+        val prefixes = listOf(
+            "sent to", "paid to", "payment to", "transfer to", "transferred to",
+            "pay bill to", "paybill to", "buy goods to", "bought from",
+            "withdrawal from", "withdrawal at", "agent withdrawal at", "deposit at"
+        )
+        for (prefix in prefixes) {
+            if (text.startsWith(prefix, ignoreCase = true)) {
+                text = text.substring(prefix.length).trim()
+                break
+            }
+        }
+
+        // 2. Remove 10-digit/12-digit phone numbers
+        text = text.replace(Regex("""\b(254[71]\d{8}|0[71]\d{8})\b"""), "").trim()
+
+        // 3. Remove Paybill / Till / Account / Ref prefixes & numbers
+        text = text.replace(Regex("""(?i)\b(paybill|till|acc\.?|account|ref\.?|reference|receipt)\s*#?\d*"""), "").trim()
+
+        // 4. Remove trailing numbers/ref codes
+        text = text.replace(Regex("""\b[A-Z0-9]{8,12}\b"""), "").trim()
+        text = text.replace(Regex("""\b\d{5,8}\b"""), "").trim()
+
+        // 5. Clean up extra spaces & punctuation
+        text = text.replace(Regex("""\s+"""), " ").trim('-', ' ', ',', '.', ':')
+
+        if (text.isBlank()) return "Other"
+
+        // 6. Title case format
+        return text.split(" ").joinToString(" ") { word ->
+            if (word.length <= 3 && word.all { it.isLetter() && it.isUpperCase() }) word
+            else word.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+        }
+    }
 }

@@ -8,6 +8,7 @@ import com.fintrack.shared.feature.summary.domain.model.CashflowRunway
 import com.fintrack.shared.feature.summary.domain.model.CategoryComparisonSummary
 import com.fintrack.shared.feature.summary.domain.model.DistributionSummary
 import com.fintrack.shared.feature.summary.domain.model.Highlights
+import com.fintrack.shared.feature.summary.domain.model.MerchantSummary
 import com.fintrack.shared.feature.summary.domain.model.OverviewSummary
 import com.fintrack.shared.feature.summary.domain.model.StatisticsSummary
 import com.fintrack.shared.feature.summary.domain.model.TabType
@@ -17,6 +18,7 @@ import com.fintrack.shared.feature.account.domain.model.Account
 import com.fintrack.shared.feature.account.domain.repository.AccountRepository
 import com.fintrack.shared.feature.summary.domain.repository.SummaryRepository
 import com.fintrack.shared.feature.summary.domain.usecase.GetCashflowRunwayUseCase
+import com.fintrack.shared.feature.summary.domain.usecase.GetMerchantAnalyticsUseCase
 import kotlinx.coroutines.flow.asStateFlow
 import com.fintrack.shared.feature.core.util.DateTimeHelper
 import kotlinx.datetime.TimeZone
@@ -37,8 +39,20 @@ import kotlinx.coroutines.launch
 class StatisticsViewModel(
     private val summaryRepository: SummaryRepository,
     private val accountRepository: AccountRepository,
-    private val getCashflowRunwayUseCase: GetCashflowRunwayUseCase
+    private val getCashflowRunwayUseCase: GetCashflowRunwayUseCase,
+    private val getMerchantAnalyticsUseCase: GetMerchantAnalyticsUseCase? = null
 ) : ViewModel() {
+
+    private val _topMerchants = MutableStateFlow<Result<List<MerchantSummary>>>(Result.Loading)
+    val topMerchants: StateFlow<Result<List<MerchantSummary>>> = _topMerchants.asStateFlow()
+
+    fun loadTopMerchants(accountId: String? = null) {
+        if (getMerchantAnalyticsUseCase == null) return
+        viewModelScope.launch {
+            _topMerchants.value = Result.Loading
+            _topMerchants.value = getMerchantAnalyticsUseCase(accountId)
+        }
+    }
 
     private val _availableAccounts = MutableStateFlow<List<Account>>(emptyList())
     val availableAccounts: StateFlow<List<Account>> = _availableAccounts.asStateFlow()

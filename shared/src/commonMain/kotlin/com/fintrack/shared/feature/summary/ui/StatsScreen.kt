@@ -24,16 +24,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Tune
+import com.fintrack.shared.feature.summary.domain.model.MerchantSummary
+import com.fintrack.shared.feature.summary.ui.components.MerchantDetailBottomSheet
+import com.fintrack.shared.feature.summary.ui.components.TopMerchantsContainerCard
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -98,6 +106,8 @@ fun StatisticsScreen(
     val hasPreviousPeriod by viewModel.hasPreviousPeriod.collectAsStateWithLifecycle()
     val availableAccounts by viewModel.availableAccounts.collectAsStateWithLifecycle()
     val selectedAccountIds by viewModel.selectedAccountIds.collectAsStateWithLifecycle()
+    val topMerchants by viewModel.topMerchants.collectAsStateWithLifecycle()
+    var selectedMerchant by remember { mutableStateOf<MerchantSummary?>(null) }
     val listState = rememberLazyListState()
 
     val importStateMap by transactionsViewModel.importState.collectAsStateWithLifecycle()
@@ -129,6 +139,7 @@ fun StatisticsScreen(
         viewModel.loadAvailablePeriods(activeAccountId, force = force)
         viewModel.loadOverview(activeAccountId, force = force)
         viewModel.loadCashflowRunway(activeAccountId, force = force)
+        viewModel.loadTopMerchants(activeAccountId)
         lastProcessedRefreshTrigger = refreshTrigger
     }
 
@@ -328,7 +339,50 @@ fun StatisticsScreen(
                     }
                 )
             }
+
+            when (val merchantRes = topMerchants) {
+                is Result.Loading -> {
+                    item(key = "topMerchantsShimmer") {
+                        Card(
+                            shape = RoundedCornerShape(22.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(18.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                AnimatedShimmerBox(modifier = Modifier.width(140.dp).height(18.dp).clip(RoundedCornerShape(4.dp)))
+                                AnimatedShimmerBox(modifier = Modifier.width(180.dp).height(12.dp).clip(RoundedCornerShape(4.dp)))
+                            }
+                        }
+                    }
+                }
+                is Result.Error -> {}
+                is Result.Success -> {
+                    val merchantList = merchantRes.data
+                    if (merchantList.isNotEmpty()) {
+                        item(key = "topMerchantsContainerCard") {
+                            TopMerchantsContainerCard(
+                                merchants = merchantList,
+                                onMerchantClick = { selectedMerchant = it },
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    if (selectedMerchant != null) {
+        MerchantDetailBottomSheet(
+            merchant = selectedMerchant!!,
+            onDismiss = { selectedMerchant = null }
+        )
     }
 }
 

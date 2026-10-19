@@ -7,6 +7,7 @@ import com.fintrack.shared.feature.summary.domain.model.AvailableYears
 import com.fintrack.shared.feature.summary.domain.model.CategoryComparison
 import com.fintrack.shared.feature.summary.domain.model.CategoryComparisonSummary
 import com.fintrack.shared.feature.summary.domain.model.DistributionSummary
+import com.fintrack.shared.feature.summary.domain.model.MerchantSummary
 import com.fintrack.shared.feature.summary.domain.model.OverviewSummary
 import com.fintrack.shared.feature.summary.domain.model.ProfileMetrics
 import com.fintrack.shared.feature.summary.domain.model.StatisticsSummary
@@ -42,4 +43,9 @@ interface SummaryRepository {
     ): Result<TransactionCountSummary>
 
     suspend fun getProfileMetrics(): Result<ProfileMetrics>
+
+    suspend fun getTopMerchants(
+        accountId: String?,
+        limit: Long = 10
+    ): Result<List<MerchantSummary>>
 }
