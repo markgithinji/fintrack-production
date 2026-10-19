@@ -34,6 +34,7 @@ CREATE TABLE TransactionEntity (
     transactionCost TEXT NOT NULL DEFAULT '0',
     dateTime INTEGER AS Instant NOT NULL,
     description TEXT,
+    merchantName TEXT,
     externalId TEXT UNIQUE,
     balance TEXT,
     rawMessage TEXT,
@@ -116,12 +117,12 @@ reassignTransactions:
 UPDATE TransactionEntity SET categoryId = :newCategoryId WHERE categoryId = :oldCategoryId AND userId = :userId;
 
 insertTransaction:
-INSERT OR REPLACE INTO TransactionEntity(id, userId, accountId, categoryId, isIncome, amount, transactionCost, dateTime, description, externalId, balance, rawMessage, createdAt, updatedAt)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO TransactionEntity(id, userId, accountId, categoryId, isIncome, amount, transactionCost, dateTime, description, merchantName, externalId, balance, rawMessage, createdAt, updatedAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 updateTransaction:
 UPDATE TransactionEntity
-SET accountId = ?, categoryId = ?, isIncome = ?, amount = ?, transactionCost = ?, dateTime = ?, description = ?, balance = ?, rawMessage = ?, updatedAt = ?
+SET accountId = ?, categoryId = ?, isIncome = ?, amount = ?, transactionCost = ?, dateTime = ?, description = ?, merchantName = ?, balance = ?, rawMessage = ?, updatedAt = ?
 WHERE id = ?;
 
 updateTransactionsCategoryByKeyword:
@@ -131,53 +132,54 @@ WHERE userId = :userId
 AND isIncome = :isIncome
 AND (
     LOWER(description) LIKE '%' || LOWER(:keyword) || '%'
+    OR (merchantName IS NOT NULL AND LOWER(merchantName) LIKE '%' || LOWER(:keyword) || '%')
     OR (rawMessage IS NOT NULL AND LOWER(rawMessage) LIKE '%' || LOWER(:keyword) || '%')
 );
 
 selectAllTransactionsWithCategory:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.userId = ?
 ORDER BY T.dateTime DESC;
 
 selectAllTransactions:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.userId = ?
 ORDER BY T.dateTime DESC;
 
 selectTransactionsByRange:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.userId = ? AND T.dateTime >= ? AND T.dateTime <= ?
 ORDER BY T.dateTime DESC;
 
 selectTransactionsByAccount:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.accountId = ?
 ORDER BY T.dateTime DESC;
 
 selectTransactionsWithRawMessageByAccount:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.accountId = ?
 ORDER BY T.dateTime DESC;
 
 selectAllTransactionsWithRawMessage:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.userId = ?
 ORDER BY T.dateTime DESC;
 
 selectRecentTransactionsByAccount:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE instr(',' || :accountId || ',', ',' || T.accountId || ',') > 0
@@ -191,7 +193,7 @@ deleteTransaction:
 DELETE FROM TransactionEntity WHERE id = ?;
 
 selectTransactionById:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.id = ?;
@@ -207,7 +209,7 @@ AND (:end IS NULL OR dateTime <= :end)
 AND (:hasTransactionCost IS NULL OR (CAST(transactionCost AS REAL) > 0) = :hasTransactionCost);
 
 selectTransactionsPaged:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.userId = :userId

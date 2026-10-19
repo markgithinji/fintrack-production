@@ -73,6 +73,7 @@ class TransactionRepositoryImpl(
                         categoryId = row.categoryId,
                         dateTime = row.dateTime,
                         description = row.description,
+                        merchantName = row.merchantName ?: row.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                         externalId = row.externalId,
                         balance = row.balance?.let { BigDecimal.parseString(it) },
                         rawMessage = row.rawMessage
@@ -92,6 +93,7 @@ class TransactionRepositoryImpl(
                         categoryId = row.categoryId,
                         dateTime = row.dateTime,
                         description = row.description,
+                        merchantName = row.merchantName ?: row.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                         externalId = row.externalId,
                         balance = row.balance?.let { BigDecimal.parseString(it) },
                         rawMessage = row.rawMessage
@@ -121,6 +123,7 @@ class TransactionRepositoryImpl(
                     transactionCost = transaction.transactionCost.toPlainString(),
                     dateTime = transaction.dateTime,
                     description = transaction.description,
+                    merchantName = transaction.merchantName ?: transaction.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                     externalId = transaction.externalId,
                     balance = transaction.balance?.toPlainString(),
                     rawMessage = transaction.rawMessage,
@@ -166,6 +169,7 @@ class TransactionRepositoryImpl(
                         transactionCost = transaction.transactionCost.toPlainString(),
                         dateTime = transaction.dateTime,
                         description = transaction.description,
+                        merchantName = transaction.merchantName ?: transaction.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                         externalId = transaction.externalId,
                         balance = transaction.balance?.toPlainString(),
                         rawMessage = transaction.rawMessage,
@@ -215,6 +219,7 @@ class TransactionRepositoryImpl(
                         categoryId = row.categoryId,
                         dateTime = row.dateTime,
                         description = row.description,
+                        merchantName = row.merchantName ?: row.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                         externalId = row.externalId,
                         balance = row.balance?.let { BigDecimal.parseString(it) },
                         rawMessage = row.rawMessage
@@ -247,6 +252,7 @@ class TransactionRepositoryImpl(
                         categoryId = row.categoryId,
                         dateTime = row.dateTime,
                         description = row.description,
+                        merchantName = row.merchantName ?: row.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                         externalId = row.externalId,
                         balance = row.balance?.let { BigDecimal.parseString(it) },
                         rawMessage = row.rawMessage
@@ -264,6 +270,7 @@ class TransactionRepositoryImpl(
                         categoryId = row.categoryId,
                         dateTime = row.dateTime,
                         description = row.description,
+                        merchantName = row.merchantName ?: row.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                         externalId = row.externalId,
                         balance = row.balance?.let { BigDecimal.parseString(it) },
                         rawMessage = row.rawMessage
@@ -307,6 +314,7 @@ class TransactionRepositoryImpl(
                     transactionCost = transaction.transactionCost.toPlainString(),
                     dateTime = transaction.dateTime,
                     description = transaction.description,
+                    merchantName = transaction.merchantName ?: transaction.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                     balance = transaction.balance?.toPlainString(),
                     rawMessage = transaction.rawMessage,
                     updatedAt = DateTimeHelper.now(),
@@ -565,6 +573,7 @@ class TransactionRepositoryImpl(
                     categoryId = row.categoryId,
                     dateTime = row.dateTime,
                     description = row.description,
+                    merchantName = row.merchantName ?: row.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                     externalId = row.externalId,
                     balance = row.balance?.let { BigDecimal.parseString(it) },
                     rawMessage = row.rawMessage

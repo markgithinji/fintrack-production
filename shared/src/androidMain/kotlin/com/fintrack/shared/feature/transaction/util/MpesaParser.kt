@@ -285,6 +285,7 @@ object MpesaParser {
         rawMessage: String? = null
     ): Transaction {
         val resolvedCategory = Category.fromName(category, !isIncome)
+        val cleanMerchant = com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(description)
         
         return Transaction(
             accountId = accountId,
@@ -295,6 +296,7 @@ object MpesaParser {
             categoryId = resolvedCategory.id,
             dateTime = dateTime,
             description = "$description (Ref: $code)",
+            merchantName = cleanMerchant,
             externalId = code,
             balance = balance,
             rawMessage = rawMessage

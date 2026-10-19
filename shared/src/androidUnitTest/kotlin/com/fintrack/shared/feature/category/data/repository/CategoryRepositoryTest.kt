@@ -94,6 +94,7 @@ class CategoryRepositoryTest {
             transactionCost = "0.0",
             dateTime = now,
             description = "Paid to Merchant (Ref: QZE12345)",
+            merchantName = "Java House Westlands",
             externalId = null,
             balance = null,
             rawMessage = "QZE12345 Confirmed. Ksh350.00 paid to Java House Westlands on 15/1/25.",

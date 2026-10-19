@@ -45,6 +45,7 @@ data class TransactionBackupDto(
     val transactionCost: String,
     val dateTime: String,
     val description: String? = null,
+    val merchantName: String? = null,
     val externalId: String? = null,
     val balance: String? = null,
     val rawMessage: String? = null
