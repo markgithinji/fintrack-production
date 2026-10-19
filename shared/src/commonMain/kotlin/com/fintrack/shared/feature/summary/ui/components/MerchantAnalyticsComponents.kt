@@ -1,5 +1,10 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -8,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -28,6 +34,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,7 +65,10 @@ fun TopMerchantsContainerCard(
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy)),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Header Title (Line 1 - Stays permanently mounted!)
@@ -70,20 +80,35 @@ fun TopMerchantsContainerCard(
             )
 
             // Duration Chips (Line 2 - Stays permanently mounted & interactive!)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(30 to "30d", 60 to "60d", 90 to "90d", 365 to "1yr").forEach { (days, label) ->
                     val isSelected = selectedDays == days
+                    val animatedBgColor by animateColorAsState(
+                        targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                        animationSpec = tween(150),
+                        label = "chipBg"
+                    )
+                    val animatedContentColor by animateColorAsState(
+                        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                        animationSpec = tween(150),
+                        label = "chipContent"
+                    )
+
                     Surface(
                         onClick = { onDaysSelected(days) },
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color.Transparent)
+                        shape = RoundedCornerShape(12.dp),
+                        color = animatedBgColor,
+                        border = BorderStroke(
+                            width = if (isSelected) 1.5.dp else 1.dp,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
                     ) {
                         Text(
                             text = label,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = animatedContentColor,
+                            fontSize = 12.sp,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                         )
                     }
@@ -96,10 +121,8 @@ fun TopMerchantsContainerCard(
             when (merchantsResult) {
                 is Result.Loading -> {
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(160.dp),
-                        verticalArrangement = Arrangement.SpaceBetween
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         repeat(3) {
                             Row(
@@ -147,7 +170,7 @@ fun TopMerchantsContainerCard(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(100.dp),
+                            .padding(vertical = 16.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -161,7 +184,10 @@ fun TopMerchantsContainerCard(
                 is Result.Success -> {
                     val merchants = merchantsResult.data
                     if (merchants.isNotEmpty()) {
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
                             merchants.forEachIndexed { index, merchant ->
                                 CompactMerchantRow(
                                     merchant = merchant,
@@ -180,7 +206,7 @@ fun TopMerchantsContainerCard(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(100.dp),
+                                .padding(vertical = 16.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(

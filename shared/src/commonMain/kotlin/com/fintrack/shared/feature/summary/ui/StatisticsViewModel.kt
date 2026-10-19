@@ -43,7 +43,7 @@ class StatisticsViewModel(
     private val getMerchantAnalyticsUseCase: GetMerchantAnalyticsUseCase? = null
 ) : ViewModel() {
 
-    private val _selectedMerchantDays = MutableStateFlow(30)
+    private val _selectedMerchantDays = MutableStateFlow(60)
     val selectedMerchantDays: StateFlow<Int> = _selectedMerchantDays.asStateFlow()
 
     private val _topMerchants = MutableStateFlow<Result<List<MerchantSummary>>>(Result.Loading)
