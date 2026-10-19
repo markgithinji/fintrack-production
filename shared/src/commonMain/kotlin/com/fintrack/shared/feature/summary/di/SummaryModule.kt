@@ -3,6 +3,7 @@ package com.fintrack.shared.feature.summary.di
 import com.fintrack.shared.feature.summary.data.repository.SummaryRepositoryImpl
 import com.fintrack.shared.feature.summary.domain.repository.SummaryRepository
 import com.fintrack.shared.feature.summary.domain.usecase.GetCashflowRunwayUseCase
+import com.fintrack.shared.feature.summary.domain.usecase.SimulateAffordabilityUseCase
 import com.fintrack.shared.feature.summary.ui.StatisticsViewModel
 import com.fintrack.shared.feature.summary.ui.custom.CustomAnalysisViewModel
 import org.koin.core.module.dsl.singleOf
@@ -20,6 +21,7 @@ val summaryModule = module {
     }
 
     singleOf(::GetCashflowRunwayUseCase)
+    singleOf(::SimulateAffordabilityUseCase)
 
     viewModelOf(::StatisticsViewModel)
     viewModelOf(::CustomAnalysisViewModel)

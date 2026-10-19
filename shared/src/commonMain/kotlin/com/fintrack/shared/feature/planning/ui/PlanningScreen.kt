@@ -42,7 +42,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import com.fintrack.shared.feature.account.ui.AccountsViewModel
 import com.fintrack.shared.feature.budget.domain.model.SavingsGoalWithCalculation
+import com.fintrack.shared.feature.planning.ui.components.AffordabilityToolCard
+import com.fintrack.shared.feature.summary.ui.components.AffordabilitySimulatorDialog
 import com.fintrack.shared.feature.budget.ui.components.AddSavingsGoalDialog
 import com.fintrack.shared.feature.budget.ui.components.DepositToGoalDialog
 import com.fintrack.shared.feature.budget.ui.components.SavingsGoalCard
@@ -90,6 +93,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun PlanningScreen(
     refreshTrigger: Int,
     viewModel: PlanningViewModel = koinViewModel(),
+    accountsViewModel: AccountsViewModel = koinViewModel(),
     paddingValues: PaddingValues = PaddingValues(0.dp),
     animatedVisibilityScope: AnimatedVisibilityScope,
     onAddBudget: () -> Unit = {},
@@ -102,9 +106,12 @@ fun PlanningScreen(
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val selectedTab by viewModel.selectedTab.collectAsStateWithLifecycle()
     val savingsGoals by viewModel.savingsGoals.collectAsStateWithLifecycle()
+    val accountsResult by accountsViewModel.accounts.collectAsStateWithLifecycle()
+    val accounts = (accountsResult as? Result.Success)?.data ?: emptyList()
 
     var showAddGoalDialog by remember { mutableStateOf(false) }
     var depositTargetGoal by remember { mutableStateOf<SavingsGoalWithCalculation?>(null) }
+    var showAffordabilitySimulator by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
     
@@ -198,6 +205,14 @@ fun PlanningScreen(
                         }
                     }
                 }
+            }
+
+            // Dedicated Decision Tool Card
+            item(key = "affordability_tool_card") {
+                AffordabilityToolCard(
+                    onSimulateClick = { showAffordabilitySimulator = true },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
             }
 
             if (selectedTab == BudgetTab.SPENDING_BUDGETS) {
@@ -369,6 +384,12 @@ fun PlanningScreen(
                 viewModel.depositToGoal(depositTargetGoal!!.goal.id, amount)
             },
             onDismiss = { depositTargetGoal = null }
+        )
+    }
+
+    if (showAffordabilitySimulator) {
+        AffordabilitySimulatorDialog(
+            onDismiss = { showAffordabilitySimulator = false }
         )
     }
 }
