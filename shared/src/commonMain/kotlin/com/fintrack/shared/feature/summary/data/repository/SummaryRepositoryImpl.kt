@@ -1038,8 +1038,9 @@ class SummaryRepositoryImpl(
             for (tx in filteredTx) {
                 val rawDesc = tx.description ?: "Other"
                 val cleanName = cleanMerchantName(rawDesc)
+                val mapKey = cleanName.lowercase()
 
-                val acc = map.getOrPut(cleanName) { MerchantAccumulator(cleanName) }
+                val acc = map.getOrPut(mapKey) { MerchantAccumulator(cleanName) }
                 val amount = tx.amount.toDoubleOrNull() ?: 0.0
                 acc.totalSpent = acc.totalSpent + amount
                 acc.visitCount += 1
@@ -1083,7 +1084,13 @@ class SummaryRepositoryImpl(
         var text = raw.trim()
         if (text.isBlank()) return "Other"
 
-        // 1. Remove common transaction prefixes
+        // 1. Remove parenthetical reference codes e.g. (Ref: UJ7CO99MU0)
+        text = text.replace(Regex("""(?i)\(ref[^)]*\)"""), "").trim()
+        text = text.replace(Regex("""(?i)\(account[^)]*\)"""), "").trim()
+        text = text.replace(Regex("""(?i)\(acc[^)]*\)"""), "").trim()
+        text = text.replace(Regex("""[\(\)]"""), " ").trim()
+
+        // 2. Remove common transaction prefixes
         val prefixes = listOf(
             "sent to", "paid to", "payment to", "transfer to", "transferred to",
             "pay bill to", "paybill to", "buy goods to", "bought from",
@@ -1096,25 +1103,38 @@ class SummaryRepositoryImpl(
             }
         }
 
-        // 2. Remove 10-digit/12-digit phone numbers
+        // 3. Remove 10-digit/12-digit phone numbers
         text = text.replace(Regex("""\b(254[71]\d{8}|0[71]\d{8})\b"""), "").trim()
 
-        // 3. Remove Paybill / Till / Account / Ref prefixes & numbers
-        text = text.replace(Regex("""(?i)\b(paybill|till|acc\.?|account|ref\.?|reference|receipt)\s*#?\d*"""), "").trim()
+        // 4. Remove Paybill / Till / Account / Ref prefixes & numbers
+        text = text.replace(Regex("""(?i)\bfor\s+(account|acc|ount)\b"""), "").trim()
+        text = text.replace(Regex("""(?i)\b(paybill|till|acc\.?|account|ount|ref\.?|reference|receipt)\s*#?\d*"""), "").trim()
 
-        // 4. Remove trailing numbers/ref codes
+        // 5. Remove trailing numbers/ref codes
         text = text.replace(Regex("""\b[A-Z0-9]{8,12}\b"""), "").trim()
-        text = text.replace(Regex("""\b\d{5,8}\b"""), "").trim()
+        text = text.replace(Regex("""\b\d{5,12}\b"""), "").trim()
 
-        // 5. Clean up extra spaces & punctuation
-        text = text.replace(Regex("""\s+"""), " ").trim('-', ' ', ',', '.', ':')
+        // 6. Clean up extra spaces & lingering punctuation
+        text = text.replace(":", "").replace(";", "").replace("?", "").replace("!", "")
+        text = text.replace(Regex("""\s+"""), " ").trim('-', ' ', ',', '.', ':', ';', '(', ')')
 
         if (text.isBlank()) return "Other"
 
-        // 6. Title case format
-        return text.split(" ").joinToString(" ") { word ->
-            if (word.length <= 3 && word.all { it.isLetter() && it.isUpperCase() }) word
-            else word.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-        }
+        // 7. Title case format & strip word-level trailing colons
+        val clean = text.split(" ")
+            .map { word -> word.trim(':', ';', ',', '.', '-', '(', ')') }
+            .filter { it.isNotBlank() }
+            .joinToString(" ") { word ->
+                if (word.length <= 3 && word.all { it.isLetter() && it.isUpperCase() }) word
+                else word.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+            }
+
+        val finalClean = clean
+            .replace(Regex("""(?i)\bfor\s+ount\b"""), "")
+            .replace(Regex("""(?i)\bount\b"""), "")
+            .replace("()", "")
+            .trim('-', ' ', ',', '.', ':', ';', '(', ')')
+
+        return if (finalClean.isBlank()) "Other" else finalClean
     }
 }

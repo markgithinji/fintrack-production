@@ -42,7 +42,6 @@ import androidx.compose.material.icons.filled.Tune
 import com.fintrack.shared.feature.summary.domain.model.MerchantSummary
 import com.fintrack.shared.feature.summary.ui.components.MerchantDetailBottomSheet
 import com.fintrack.shared.feature.summary.ui.components.TopMerchantsContainerCard
-import com.fintrack.shared.feature.summary.ui.components.TopMerchantsShimmerContainerCard
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -342,36 +341,14 @@ fun StatisticsScreen(
                 )
             }
 
-            when (val merchantRes = topMerchants) {
-                is Result.Loading -> {
-                    item(key = "topMerchantsShimmer") {
-                        TopMerchantsShimmerContainerCard(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-                is Result.Error -> {
-                    item(key = "topMerchantsError") {
-                        TopMerchantsContainerCard(
-                            merchants = emptyList(),
-                            selectedDays = selectedMerchantDays,
-                            onDaysSelected = { viewModel.setMerchantDays(it, activeAccountId) },
-                            onMerchantClick = {},
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-                is Result.Success -> {
-                    item(key = "topMerchantsContainerCard") {
-                        TopMerchantsContainerCard(
-                            merchants = merchantRes.data,
-                            selectedDays = selectedMerchantDays,
-                            onDaysSelected = { viewModel.setMerchantDays(it, activeAccountId) },
-                            onMerchantClick = { selectedMerchant = it },
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
-                    }
-                }
+            item(key = "topMerchantsContainerCard") {
+                TopMerchantsContainerCard(
+                    merchantsResult = topMerchants,
+                    selectedDays = selectedMerchantDays,
+                    onDaysSelected = { viewModel.setMerchantDays(it, activeAccountId) },
+                    onMerchantClick = { selectedMerchant = it },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
             }
         }
     }
