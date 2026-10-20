@@ -2,7 +2,9 @@ package com.fintrack.shared.feature.summary.di
 
 import com.fintrack.shared.feature.summary.data.repository.SummaryRepositoryImpl
 import com.fintrack.shared.feature.summary.domain.repository.SummaryRepository
+import com.fintrack.shared.feature.summary.domain.usecase.DetectSpendSpikesUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.GetCashflowRunwayUseCase
+import com.fintrack.shared.feature.summary.domain.usecase.GetEmergencyFundScoreUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.GetMerchantAnalyticsUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.GetNetWorthSummaryUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.SimulateAffordabilityUseCase
@@ -24,6 +26,8 @@ val summaryModule = module {
 
     singleOf(::GetCashflowRunwayUseCase)
     singleOf(::GetNetWorthSummaryUseCase)
+    singleOf(::DetectSpendSpikesUseCase)
+    singleOf(::GetEmergencyFundScoreUseCase)
     singleOf(::SimulateAffordabilityUseCase)
     singleOf(::GetMerchantAnalyticsUseCase)
 

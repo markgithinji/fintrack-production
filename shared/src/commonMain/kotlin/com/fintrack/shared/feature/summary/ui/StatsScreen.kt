@@ -41,8 +41,10 @@ import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Tune
 import com.fintrack.shared.feature.summary.domain.model.MerchantSummary
 import com.fintrack.shared.feature.summary.domain.model.OverviewPeriod
+import com.fintrack.shared.feature.summary.ui.components.EmergencyFundScoreCard
 import com.fintrack.shared.feature.summary.ui.components.MerchantDetailBottomSheet
 import com.fintrack.shared.feature.summary.ui.components.NetWorthCard
+import com.fintrack.shared.feature.summary.ui.components.SpendSpikeAlertCard
 import com.fintrack.shared.feature.summary.ui.components.TopMerchantsContainerCard
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -105,6 +107,8 @@ fun StatisticsScreen(
     val distributionResult by viewModel.distribution.collectAsStateWithLifecycle()
     val runway by viewModel.runway.collectAsStateWithLifecycle()
     val netWorthSummary by viewModel.netWorthSummary.collectAsStateWithLifecycle()
+    val spendSpikes by viewModel.spendSpikes.collectAsStateWithLifecycle()
+    val emergencyFundScore by viewModel.emergencyFundScore.collectAsStateWithLifecycle()
     val metadataState by viewModel.metadataState.collectAsStateWithLifecycle()
     val hasNextPeriod by viewModel.hasNextPeriod.collectAsStateWithLifecycle()
     val hasPreviousPeriod by viewModel.hasPreviousPeriod.collectAsStateWithLifecycle()
@@ -147,6 +151,8 @@ fun StatisticsScreen(
         viewModel.loadOverview(activeAccountId, force = force)
         viewModel.loadCashflowRunway(activeAccountId, force = force)
         viewModel.loadNetWorthSummary(activeAccountId, force = force)
+        viewModel.loadSpendSpikes(activeAccountId, force = force)
+        viewModel.loadEmergencyFundScore(activeAccountId, force = force)
         viewModel.loadTopMerchants(activeAccountId)
         lastProcessedRefreshTrigger = refreshTrigger
     }
@@ -278,6 +284,13 @@ fun StatisticsScreen(
                 }
             }
 
+            item(key = "spendSpikeAlert") {
+                SpendSpikeAlertCard(
+                    spikesResult = spendSpikes,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
+
             item(key = "cashflowRunway") {
                 CashflowRunwayCard(
                     runwayResult = runway,
@@ -293,6 +306,13 @@ fun StatisticsScreen(
                     onRetry = {
                         viewModel.loadNetWorthSummary(activeAccountId, force = true)
                     }
+                )
+            }
+
+            item(key = "emergencyFundScore") {
+                EmergencyFundScoreCard(
+                    scoreResult = emergencyFundScore,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
             }
 

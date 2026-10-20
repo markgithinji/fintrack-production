@@ -8,10 +8,14 @@ import com.fintrack.shared.feature.summary.domain.model.CashflowRunway
 import com.fintrack.shared.feature.summary.domain.model.CategoryComparisonSummary
 import com.fintrack.shared.feature.summary.domain.model.DistributionSummary
 import com.fintrack.shared.feature.summary.domain.model.Highlights
+import com.fintrack.shared.feature.summary.domain.model.EmergencyFundScore
 import com.fintrack.shared.feature.summary.domain.model.MerchantSummary
 import com.fintrack.shared.feature.summary.domain.model.NetWorthSummary
 import com.fintrack.shared.feature.summary.domain.model.OverviewPeriod
 import com.fintrack.shared.feature.summary.domain.model.OverviewSummary
+import com.fintrack.shared.feature.summary.domain.model.SpendSpikeAnomaly
+import com.fintrack.shared.feature.summary.domain.usecase.DetectSpendSpikesUseCase
+import com.fintrack.shared.feature.summary.domain.usecase.GetEmergencyFundScoreUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.GetNetWorthSummaryUseCase
 import com.fintrack.shared.feature.summary.domain.model.StatisticsSummary
 import com.fintrack.shared.feature.summary.domain.model.TabType
@@ -48,8 +52,32 @@ class StatisticsViewModel(
     private val accountRepository: AccountRepository,
     private val getCashflowRunwayUseCase: GetCashflowRunwayUseCase,
     private val getNetWorthSummaryUseCase: GetNetWorthSummaryUseCase? = null,
+    private val detectSpendSpikesUseCase: DetectSpendSpikesUseCase? = null,
+    private val getEmergencyFundScoreUseCase: GetEmergencyFundScoreUseCase? = null,
     private val getMerchantAnalyticsUseCase: GetMerchantAnalyticsUseCase? = null
 ) : ViewModel() {
+
+    private val _spendSpikes = MutableStateFlow<Result<List<SpendSpikeAnomaly>>>(Result.Loading)
+    val spendSpikes: StateFlow<Result<List<SpendSpikeAnomaly>>> = _spendSpikes.asStateFlow()
+
+    private val _emergencyFundScore = MutableStateFlow<Result<EmergencyFundScore>>(Result.Loading)
+    val emergencyFundScore: StateFlow<Result<EmergencyFundScore>> = _emergencyFundScore.asStateFlow()
+
+    fun loadSpendSpikes(accountId: String? = null, force: Boolean = false) {
+        if (detectSpendSpikesUseCase == null) return
+        viewModelScope.launch {
+            if (force) _spendSpikes.value = Result.Loading
+            _spendSpikes.value = detectSpendSpikesUseCase(accountId)
+        }
+    }
+
+    fun loadEmergencyFundScore(accountId: String? = null, force: Boolean = false) {
+        if (getEmergencyFundScoreUseCase == null) return
+        viewModelScope.launch {
+            if (force) _emergencyFundScore.value = Result.Loading
+            _emergencyFundScore.value = getEmergencyFundScoreUseCase(accountId)
+        }
+    }
 
     private val _netWorthSummary = MutableStateFlow<Result<NetWorthSummary>>(Result.Loading)
     val netWorthSummary: StateFlow<Result<NetWorthSummary>> = _netWorthSummary.asStateFlow()
@@ -137,6 +165,8 @@ class StatisticsViewModel(
                     loadOverview(effectiveId, force = true)
                     loadCashflowRunway(effectiveId, force = true)
                     loadNetWorthSummary(effectiveId, force = true)
+                    loadSpendSpikes(effectiveId, force = true)
+                    loadEmergencyFundScore(effectiveId, force = true)
                     loadTopMerchants(effectiveId)
                     val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
                     loadHighlights(effectiveId, yearCode, force = true)
@@ -170,6 +200,8 @@ class StatisticsViewModel(
         loadOverview(effectiveAccountId, force = true)
         loadCashflowRunway(effectiveAccountId, force = true)
         loadNetWorthSummary(effectiveAccountId, force = true)
+        loadSpendSpikes(effectiveAccountId, force = true)
+        loadEmergencyFundScore(effectiveAccountId, force = true)
         val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
         loadHighlights(effectiveAccountId, yearCode, force = true)
         reloadDistributionForCurrentSelection(effectiveAccountId, force = true)
