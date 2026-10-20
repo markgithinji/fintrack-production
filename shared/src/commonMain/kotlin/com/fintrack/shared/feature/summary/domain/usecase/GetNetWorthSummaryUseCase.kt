@@ -61,7 +61,15 @@ class GetNetWorthSummaryUseCase(
             val billsResult = transactionRepository.getRecurringBills()
             val recurringBills = (billsResult as? Result.Success)?.data ?: emptyList()
 
-            recurringBills.filter { it.isActive && (it.name.contains("loan", ignoreCase = true) || it.name.contains("fuliza", ignoreCase = true)) }
+            val accountFilteredBills = if (targetAccountIds.isNotEmpty()) {
+                recurringBills.filter { bill ->
+                    val isBankDebt = bill.name.contains("bank", ignoreCase = true) || bill.name.contains("kcb", ignoreCase = true) || bill.name.contains("equity", ignoreCase = true)
+                    val isMpesaSelected = targetAccounts.any { it.name.contains("mpesa", ignoreCase = true) || it.type == com.fintrack.shared.feature.account.domain.model.AccountType.MPESA }
+                    if (isMpesaSelected && isBankDebt) false else true
+                }
+            } else recurringBills
+
+            accountFilteredBills.filter { it.isActive && (it.name.contains("loan", ignoreCase = true) || it.name.contains("fuliza", ignoreCase = true)) }
                 .forEach { bill ->
                     val alreadyInLiabilities = liabilityItems.any { it.name.contains(bill.name, ignoreCase = true) || bill.name.contains(it.name, ignoreCase = true) }
                     if (!alreadyInLiabilities) {

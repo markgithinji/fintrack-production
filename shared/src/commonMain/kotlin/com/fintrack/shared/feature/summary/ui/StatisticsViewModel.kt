@@ -54,9 +54,12 @@ class StatisticsViewModel(
     private val _netWorthSummary = MutableStateFlow<Result<NetWorthSummary>>(Result.Loading)
     val netWorthSummary: StateFlow<Result<NetWorthSummary>> = _netWorthSummary.asStateFlow()
 
+    private var netWorthJob: Job? = null
+
     fun loadNetWorthSummary(accountId: String? = null, force: Boolean = false) {
         if (getNetWorthSummaryUseCase == null) return
-        viewModelScope.launch {
+        netWorthJob?.cancel()
+        netWorthJob = viewModelScope.launch {
             if (force) _netWorthSummary.value = Result.Loading
             _netWorthSummary.value = getNetWorthSummaryUseCase(accountId)
         }
@@ -113,7 +116,6 @@ class StatisticsViewModel(
             when (val res = accountRepository.getAccounts()) {
                 is Result.Success -> {
                     val accounts = res.data
-                    _availableAccounts.value = accounts
 
                     // Default to M-Pesa account on initial load if no filter selected yet
                     if (_selectedAccountIds.value.isEmpty()) {
@@ -124,17 +126,21 @@ class StatisticsViewModel(
                         }
                         if (mpesaAccount != null) {
                             _selectedAccountIds.value = setOf(mpesaAccount.id)
-                            val effectiveId = mpesaAccount.id
-                            resetStats()
-                            loadAvailablePeriods(effectiveId, force = true)
-                            loadOverview(effectiveId, force = true)
-                            loadCashflowRunway(effectiveId, force = true)
-                            loadNetWorthSummary(effectiveId, force = true)
-                            val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
-                            loadHighlights(effectiveId, yearCode, force = true)
-                            reloadDistributionForCurrentSelection(effectiveId, force = true)
                         }
                     }
+
+                    _availableAccounts.value = accounts
+
+                    val effectiveId = getEffectiveAccountId()
+                    resetStats()
+                    loadAvailablePeriods(effectiveId, force = true)
+                    loadOverview(effectiveId, force = true)
+                    loadCashflowRunway(effectiveId, force = true)
+                    loadNetWorthSummary(effectiveId, force = true)
+                    loadTopMerchants(effectiveId)
+                    val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
+                    loadHighlights(effectiveId, yearCode, force = true)
+                    reloadDistributionForCurrentSelection(effectiveId, force = true)
                 }
                 else -> {}
             }
