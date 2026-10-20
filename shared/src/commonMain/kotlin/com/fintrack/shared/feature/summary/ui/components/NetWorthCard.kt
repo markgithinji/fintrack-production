@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,6 +20,8 @@ import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.Button
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -69,9 +72,6 @@ fun NetWorthCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clickable {
-                if (netWorthResult is Result.Success) showBottomSheet = true
-            }
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -82,12 +82,26 @@ fun NetWorthCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Net Worth & Debt Ratio",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable {
+                        if (netWorthResult is Result.Success) showBottomSheet = true
+                    }
+                ) {
+                    Text(
+                        text = "Net Worth & Debt Ratio",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = "Net Worth Info",
+                        modifier = Modifier.size(15.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                    )
+                }
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
@@ -373,12 +387,24 @@ fun NetWorthBreakdownBottomSheet(
 
             // Assets Section
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Assets",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = GreenIncome
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Assets",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = GreenIncome
+                    )
+                    Text(
+                        text = summary.totalAssets.toCurrencyString(),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = GreenIncome
+                    )
+                }
 
                 summary.assetBreakdown.forEach { item ->
                     Row(
@@ -404,12 +430,24 @@ fun NetWorthBreakdownBottomSheet(
             // Liabilities Section
             if (summary.liabilityBreakdown.isNotEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Liabilities & Loans",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = PinkExpense
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Liabilities & Loans",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = PinkExpense
+                        )
+                        Text(
+                            text = summary.totalLiabilities.toCurrencyString(),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = PinkExpense
+                        )
+                    }
 
                     summary.liabilityBreakdown.forEach { item ->
                         Row(
@@ -417,11 +455,31 @@ fun NetWorthBreakdownBottomSheet(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = item.name,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = colorScheme.onSurface
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = item.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = colorScheme.onSurface
+                                )
+                                if (item.name.contains("fuliza", ignoreCase = true) || item.name.contains("loan", ignoreCase = true)) {
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = PinkExpense.copy(alpha = 0.1f)
+                                    ) {
+                                        Text(
+                                            text = "⚡ High Priority",
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = PinkExpense
+                                        )
+                                    }
+                                }
+                            }
                             Text(
                                 text = item.amount.toCurrencyString(),
                                 style = MaterialTheme.typography.bodyMedium,
@@ -431,6 +489,50 @@ fun NetWorthBreakdownBottomSheet(
                         }
                     }
                 }
+            }
+
+            // Smart Recommendation Card
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "💡 Financial Tip",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.primary
+                    )
+                    Text(
+                        text = if (summary.totalLiabilities > BigDecimal.ZERO) {
+                            "Paying off high-interest overdrafts and loans first will immediately lower your Debt-to-Asset ratio from ${summary.debtToAssetRatioPercentage.toInt()}% and boost your Net Worth growth!"
+                        } else {
+                            "Your Debt-to-Asset ratio is 0%! Continue routing monthly surplus into Savings Vaults to accelerate long-term wealth accumulation."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Bottom Action Button
+            Button(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text(
+                    text = "Done",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

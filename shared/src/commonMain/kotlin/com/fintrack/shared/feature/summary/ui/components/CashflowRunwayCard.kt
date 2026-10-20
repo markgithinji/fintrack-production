@@ -26,18 +26,21 @@ import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -75,8 +78,11 @@ fun CashflowRunwayCard(
 ) {
     var showHelpDialog by remember { mutableStateOf(false) }
 
-    if (showHelpDialog) {
-        CashflowRunwayHelpDialog(onDismiss = { showHelpDialog = false })
+    if (showHelpDialog && runwayResult is Result.Success) {
+        CashflowRunwayBottomSheet(
+            runway = runwayResult.data,
+            onDismiss = { showHelpDialog = false }
+        )
     }
 
     Card(
@@ -447,155 +453,183 @@ private fun ShimmerMetricItem(modifier: Modifier = Modifier) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CashflowRunwayHelpDialog(onDismiss: () -> Unit) {
-    BasicAlertDialog(
+fun CashflowRunwayBottomSheet(
+    runway: CashflowRunway,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val colorScheme = MaterialTheme.colorScheme
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-        modifier = Modifier
-            .padding(24.dp)
-            .fillMaxWidth(0.92f)
+        sheetState = sheetState,
+        containerColor = colorScheme.surface,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
-        Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            // Sheet Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Header Icon & Title
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
+                    Surface(
+                        shape = CircleShape,
+                        color = colorScheme.primaryContainer,
+                        modifier = Modifier.size(40.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ShowChart,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ShowChart,
+                                contentDescription = null,
+                                tint = colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
 
                     Column {
                         Text(
-                            text = "Cashflow Runway",
+                            text = "Cashflow Runway Forecast",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = colorScheme.onSurface
                         )
                         Text(
-                            text = "End-of-month cash prediction",
+                            text = "Daily Burn & Scheduled Bills Breakdown",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Clear, contentDescription = "Close")
+                }
+            }
 
-                // Steps Breakdown Card
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    modifier = Modifier.fillMaxWidth()
+            HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+            // Main Forecast Summary Card
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (runway.isOverdraftRisk) PinkExpense.copy(alpha = 0.08f) else GreenIncome.copy(alpha = 0.08f)
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    if (runway.isOverdraftRisk) PinkExpense.copy(alpha = 0.25f) else GreenIncome.copy(alpha = 0.25f)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = "How the forecast works:",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-
-                        RunwayStepRow(
-                            stepNumber = "1",
-                            title = "Starting Cash",
-                            description = "Starts with your current active account cash balance."
-                        )
-
-                        RunwayStepRow(
-                            stepNumber = "2",
-                            title = "Daily Burn Rate",
-                            description = "Subtracts your 30-day average daily spending for remaining days."
-                        )
-
-                        RunwayStepRow(
-                            stepNumber = "3",
-                            title = "Upcoming Bills",
-                            description = "Subtracts recurring bills scheduled before month-end."
-                        )
-                    }
+                    Text(
+                        text = "Projected End-of-Month Balance",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = runway.projectedEomBalance.toCurrencyString(),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (runway.isOverdraftRisk) PinkExpense else GreenIncome
+                    )
                 }
+            }
 
-                // Indicators Row
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = GreenIncome.copy(alpha = 0.08f),
-                        border = BorderStroke(1.dp, GreenIncome.copy(alpha = 0.25f)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = GreenIncome, modifier = Modifier.size(18.dp))
-                            Text(
-                                text = "Safe Runway: Cash covers all month-end expenses.",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = PinkExpense.copy(alpha = 0.08f),
-                        border = BorderStroke(1.dp, PinkExpense.copy(alpha = 0.25f)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(Icons.Default.Warning, contentDescription = null, tint = PinkExpense, modifier = Modifier.size(18.dp))
-                            Text(
-                                text = "Overdraft Risk: Warns early if money will run out.",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                }
-
-                // Action Button
-                Button(
-                    onClick = onDismiss,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
+            // Steps & Metrics Breakdown Card
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Got it", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Forecast Calculations:",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.onSurface
+                    )
+
+                    RunwayStepRow(
+                        stepNumber = "1",
+                        title = "Starting Cash Balance",
+                        description = runway.currentBalance.toCurrencyString()
+                    )
+
+                    RunwayStepRow(
+                        stepNumber = "2",
+                        title = "Daily Burn Velocity",
+                        description = "${runway.dailyBurnRate.toCurrencyString()}/day for ${runway.remainingDaysInMonth} remaining days (${runway.projectedVariableExpense.toCurrencyString()} est.)"
+                    )
+
+                    RunwayStepRow(
+                        stepNumber = "3",
+                        title = "Scheduled Bills Total",
+                        description = runway.upcomingBillsTotal.toCurrencyString()
+                    )
                 }
+            }
+
+            // Action Tip Card
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "💡 Runway Extension Tip",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.primary
+                    )
+                    Text(
+                        text = if (runway.isOverdraftRisk) {
+                            "Pausing or rescheduling upcoming non-essential bills will immediately prevent your cash balance from dipping into overdraft before month end."
+                        } else {
+                            "Your cash runway is healthy! Route any remaining month-end surplus into your Savings Vaults to build your emergency buffer."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Bottom Action Button
+            Button(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text(
+                    text = "Done",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
