@@ -108,6 +108,30 @@ class GetNetWorthSummaryUseCase(
                 BigDecimal.fromInt(100)
             } else BigDecimal.ZERO
 
+            // 4. YTD (Jan 1st to Today) Net Worth Calculation
+            val janFirstStr = "${today.year}-01-01"
+            val ytdTxResult = transactionRepository.getAllTransactions(startDate = janFirstStr, endDate = todayStr, accountId = singleAccountId)
+            val ytdRawTx = (ytdTxResult as? Result.Success)?.data ?: emptyList()
+            val ytdFilteredTx = if (targetAccountIds.size > 1) {
+                ytdRawTx.filter { targetAccountIds.contains(it.accountId) }
+            } else ytdRawTx
+
+            var ytdNetIncome = BigDecimal.ZERO
+            for (tx in ytdFilteredTx) {
+                if (tx.isIncome) {
+                    ytdNetIncome = ytdNetIncome + tx.amount
+                } else {
+                    ytdNetIncome = ytdNetIncome - tx.amount
+                }
+            }
+
+            val janFirstNetWorth = netWorth - ytdNetIncome
+            val ytdGrowthRatePercentage = if (janFirstNetWorth > BigDecimal.ZERO && netWorth != janFirstNetWorth) {
+                (netWorth - janFirstNetWorth).divide(janFirstNetWorth, decimalMode).multiply(BigDecimal.fromInt(100))
+            } else if (netWorth > BigDecimal.ZERO && janFirstNetWorth <= BigDecimal.ZERO) {
+                BigDecimal.fromInt(100)
+            } else BigDecimal.ZERO
+
             Result.Success(
                 NetWorthSummary(
                     totalAssets = totalAssets,
@@ -115,6 +139,7 @@ class GetNetWorthSummaryUseCase(
                     netWorth = netWorth,
                     previousNetWorth = previousNetWorth,
                     growthRatePercentage = growthRatePercentage,
+                    ytdGrowthRatePercentage = ytdGrowthRatePercentage,
                     debtToAssetRatioPercentage = ratio,
                     financialHealthStatus = healthStatus,
                     assetBreakdown = assetItems,

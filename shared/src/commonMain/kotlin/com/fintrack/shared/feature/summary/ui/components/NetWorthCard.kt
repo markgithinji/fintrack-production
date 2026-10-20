@@ -128,35 +128,72 @@ fun NetWorthCard(
                             )
                         }
 
-                        // Growth Badge
-                        val growthRate = summary.growthRatePercentage
-                        val isPositive = growthRate == null || growthRate >= BigDecimal.ZERO
-                        val growthText = if (growthRate != null) {
-                            val prefix = if (growthRate >= BigDecimal.ZERO) "+" else ""
-                            "$prefix${growthRate.toInt()}% this month"
-                        } else "+0% this month"
+                        // Dual Growth Badges (30d Monthly + YTD Yearly)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            // 30d Monthly Growth Badge
+                            val growthRate = summary.growthRatePercentage
+                            val is30dPositive = growthRate == null || growthRate >= BigDecimal.ZERO
+                            val text30d = if (growthRate != null) {
+                                val prefix = if (growthRate >= BigDecimal.ZERO) "+" else ""
+                                "$prefix${growthRate.toInt()}% 1 Mo"
+                            } else "+0% 1 Mo"
 
-                        Surface(
-                            shape = CircleShape,
-                            color = if (isPositive) GreenIncome.copy(alpha = 0.1f) else PinkExpense.copy(alpha = 0.1f)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            Surface(
+                                shape = CircleShape,
+                                color = if (is30dPositive) GreenIncome.copy(alpha = 0.1f) else PinkExpense.copy(alpha = 0.1f)
                             ) {
-                                Icon(
-                                    imageVector = if (isPositive) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
-                                    contentDescription = null,
-                                    tint = if (isPositive) GreenIncome else PinkExpense,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Text(
-                                    text = growthText,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isPositive) GreenIncome else PinkExpense
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (is30dPositive) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
+                                        contentDescription = null,
+                                        tint = if (is30dPositive) GreenIncome else PinkExpense,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        text = text30d,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        color = if (is30dPositive) GreenIncome else PinkExpense
+                                    )
+                                }
+                            }
+
+                            // YTD Annual Growth Badge
+                            val ytdRate = summary.ytdGrowthRatePercentage
+                            val isYtdPositive = ytdRate == null || ytdRate >= BigDecimal.ZERO
+                            val textYtd = if (ytdRate != null) {
+                                val prefix = if (ytdRate >= BigDecimal.ZERO) "+" else ""
+                                "$prefix${ytdRate.toInt()}% 1 Yr"
+                            } else "+0% 1 Yr"
+
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isYtdPositive) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        text = textYtd,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                         }
                     }

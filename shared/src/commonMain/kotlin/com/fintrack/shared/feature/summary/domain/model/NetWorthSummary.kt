@@ -15,6 +15,7 @@ data class NetWorthSummary(
     val netWorth: BigDecimal,
     val previousNetWorth: BigDecimal? = null,
     val growthRatePercentage: BigDecimal? = null,
+    val ytdGrowthRatePercentage: BigDecimal? = null,
     val debtToAssetRatioPercentage: BigDecimal = BigDecimal.ZERO,
     val financialHealthStatus: String = "Healthy",
     val assetBreakdown: List<AssetLiabilityItem> = emptyList(),
