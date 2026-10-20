@@ -15,9 +15,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.TrendingUp
+import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -126,9 +128,16 @@ fun NetWorthCard(
                         }
 
                         // Growth Badge
+                        val growthRate = summary.growthRatePercentage
+                        val isPositive = growthRate == null || growthRate >= BigDecimal.ZERO
+                        val growthText = if (growthRate != null) {
+                            val prefix = if (growthRate >= BigDecimal.ZERO) "+" else ""
+                            "$prefix${growthRate.toInt()}% this month"
+                        } else "+0% this month"
+
                         Surface(
                             shape = CircleShape,
-                            color = GreenIncome.copy(alpha = 0.1f)
+                            color = if (isPositive) GreenIncome.copy(alpha = 0.1f) else PinkExpense.copy(alpha = 0.1f)
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -136,16 +145,16 @@ fun NetWorthCard(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.TrendingUp,
+                                    imageVector = if (isPositive) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
                                     contentDescription = null,
-                                    tint = GreenIncome,
+                                    tint = if (isPositive) GreenIncome else PinkExpense,
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Text(
-                                    text = "+12.4% this month",
+                                    text = growthText,
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = GreenIncome
+                                    color = if (isPositive) GreenIncome else PinkExpense
                                 )
                             }
                         }
@@ -229,7 +238,8 @@ fun NetWorthCard(
                                 .height(6.dp)
                                 .clip(RoundedCornerShape(3.dp)),
                             color = if (summary.financialHealthStatus == "Healthy") GreenIncome else PinkExpense,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            drawStopIndicator = {}
                         )
                     }
                 }

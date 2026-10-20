@@ -11,10 +11,13 @@ import com.ionspin.kotlin.bignum.decimal.RoundingMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.minus
+import kotlinx.datetime.toLocalDateTime
 
 class GetNetWorthSummaryUseCase(
     private val accountRepository: AccountRepository,
-    private val transactionRepository: TransactionRepository
+    private val transactionRepository: TransactionRepository,
+    private val savingsGoalRepository: com.fintrack.shared.feature.budget.domain.repository.SavingsGoalRepository? = null
 ) {
     private val decimalMode = DecimalMode(decimalPrecision = 20, roundingMode = RoundingMode.ROUND_HALF_CEILING)
 
@@ -42,7 +45,18 @@ class GetNetWorthSummaryUseCase(
                 }
             }
 
-            // Also check for Fuliza / Loan recurring liabilities
+            // 2. Savings Goal Vault Balances (Assets)
+            val goalsResult = savingsGoalRepository?.getSavingsGoals()
+            val savingsGoals = (goalsResult as? Result.Success)?.data ?: emptyList()
+
+            savingsGoals.forEach { goal ->
+                val goalBal = BigDecimal.fromDouble(goal.currentAmount)
+                if (goalBal > BigDecimal.ZERO) {
+                    assetItems.add(AssetLiabilityItem(goal.id, "${goal.name} (Vault)", goalBal, isAsset = true))
+                }
+            }
+
+            // 3. Recurring Liabilities & Overdrafts
             val billsResult = transactionRepository.getRecurringBills()
             val recurringBills = (billsResult as? Result.Success)?.data ?: emptyList()
 
@@ -66,13 +80,41 @@ class GetNetWorthSummaryUseCase(
                 else -> "High Debt"
             }
 
+            val singleAccountId = if (targetAccountIds.size == 1) targetAccountIds.first() else null
+            val nowInstant = com.fintrack.shared.feature.core.util.DateTimeHelper.now()
+            val today = nowInstant.toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).date
+            val thirtyDaysAgo = today.minus(kotlinx.datetime.DatePeriod(days = 30)).toString()
+            val todayStr = today.toString()
+
+            val allTxResult = transactionRepository.getAllTransactions(startDate = thirtyDaysAgo, endDate = todayStr, accountId = singleAccountId)
+            val rawTx = (allTxResult as? Result.Success)?.data ?: emptyList()
+            val filteredTx = if (targetAccountIds.size > 1) {
+                rawTx.filter { targetAccountIds.contains(it.accountId) }
+            } else rawTx
+
+            var past30dNetIncome = BigDecimal.ZERO
+            for (tx in filteredTx) {
+                if (tx.isIncome) {
+                    past30dNetIncome = past30dNetIncome + tx.amount
+                } else {
+                    past30dNetIncome = past30dNetIncome - tx.amount
+                }
+            }
+
+            val previousNetWorth = netWorth - past30dNetIncome
+            val growthRatePercentage = if (previousNetWorth > BigDecimal.ZERO && netWorth != previousNetWorth) {
+                (netWorth - previousNetWorth).divide(previousNetWorth, decimalMode).multiply(BigDecimal.fromInt(100))
+            } else if (netWorth > BigDecimal.ZERO && previousNetWorth <= BigDecimal.ZERO) {
+                BigDecimal.fromInt(100)
+            } else BigDecimal.ZERO
+
             Result.Success(
                 NetWorthSummary(
                     totalAssets = totalAssets,
                     totalLiabilities = totalLiabilities,
                     netWorth = netWorth,
-                    previousNetWorth = null,
-                    growthRatePercentage = BigDecimal.fromInt(12),
+                    previousNetWorth = previousNetWorth,
+                    growthRatePercentage = growthRatePercentage,
                     debtToAssetRatioPercentage = ratio,
                     financialHealthStatus = healthStatus,
                     assetBreakdown = assetItems,
