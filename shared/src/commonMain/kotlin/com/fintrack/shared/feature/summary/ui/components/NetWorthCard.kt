@@ -309,10 +309,122 @@ fun NetWorthCard(
 
 @Composable
 private fun NetWorthShimmerLoading() {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        AnimatedShimmerBox(modifier = Modifier.height(24.dp).fillMaxWidth(0.5f).clip(RoundedCornerShape(4.dp)))
-        AnimatedShimmerBox(modifier = Modifier.height(60.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp)))
-        AnimatedShimmerBox(modifier = Modifier.height(14.dp).fillMaxWidth().clip(RoundedCornerShape(4.dp)))
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // 1. Hero Readout Row Shimmer
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                AnimatedShimmerBox(
+                    modifier = Modifier
+                        .width(90.dp)
+                        .height(10.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                )
+                AnimatedShimmerBox(
+                    modifier = Modifier
+                        .width(140.dp)
+                        .height(22.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                )
+            }
+
+            // Dual growth badges shimmer
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                AnimatedShimmerBox(
+                    modifier = Modifier
+                        .width(52.dp)
+                        .height(20.dp)
+                        .clip(CircleShape)
+                )
+                AnimatedShimmerBox(
+                    modifier = Modifier
+                        .width(52.dp)
+                        .height(20.dp)
+                        .clip(CircleShape)
+                )
+            }
+        }
+
+        // 2. Inner 2-Column Assets vs Liabilities Tile Shimmer
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .width(70.dp)
+                            .height(10.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                    )
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .width(100.dp)
+                            .height(16.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                    )
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .width(80.dp)
+                            .height(10.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                    )
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .width(90.dp)
+                            .height(16.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                    )
+                }
+            }
+        }
+
+        // 3. Debt-to-Asset Gauge Bar Shimmer
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AnimatedShimmerBox(
+                    modifier = Modifier
+                        .width(110.dp)
+                        .height(10.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                )
+                AnimatedShimmerBox(
+                    modifier = Modifier
+                        .width(64.dp)
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                )
+            }
+
+            AnimatedShimmerBox(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+            )
+        }
     }
 }
 
