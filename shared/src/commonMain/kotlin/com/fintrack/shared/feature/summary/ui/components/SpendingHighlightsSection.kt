@@ -6,7 +6,12 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.IconButton
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +33,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -92,102 +101,116 @@ fun SpendingHighlightsSection(
         TabType.Expense -> "Spending Overview"
     }
 
-    Column(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(top = 8.dp, bottom = 12.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(18.dp)
+                .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy)),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = sectionTitle,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = onPreviousPeriod,
-                    enabled = hasPrevious,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "Previous Year",
-                        modifier = Modifier.size(20.dp),
-                        tint = if (hasPrevious)
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                    )
-                }
-
-                YearSelectorDropdown(
-                    selectedYear = selectedYear,
-                    availableYears = availableYears,
-                    onYearSelected = onYearSelected
+                Text(
+                    text = sectionTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
-                IconButton(
-                    onClick = onNextPeriod,
-                    enabled = hasNext,
-                    modifier = Modifier.size(32.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Next Year",
-                        modifier = Modifier.size(20.dp),
-                        tint = if (hasNext)
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                    )
-                }
-            }
-        }
-
-        Box(modifier = Modifier.heightIn(min = 264.dp)) {
-            Crossfade(
-                targetState = highlightsResult,
-                animationSpec = tween(durationMillis = 300)
-            ) { result ->
-                when (result) {
-                    is Result.Loading -> {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            LoadingHealthSummaryCard()
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                LoadingHighlightCard(modifier = Modifier.weight(1f))
-                                LoadingHighlightCard(modifier = Modifier.weight(1f))
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                LoadingHighlightCard(modifier = Modifier.weight(1f))
-                                LoadingHighlightCard(modifier = Modifier.weight(1f))
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                LoadingHighlightCard(modifier = Modifier.weight(1f))
-                                LoadingHighlightCard(modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
-
-                    is Result.Error -> {
-                        ErrorHighlightCard(
-                            message = result.exception.message ?: "Failed to load highlights",
-                            onRetry = loadHighlights
+                    IconButton(
+                        onClick = onPreviousPeriod,
+                        enabled = hasPrevious,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "Previous Year",
+                            modifier = Modifier.size(20.dp),
+                            tint = if (hasPrevious)
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                         )
                     }
 
-                    is Result.Success -> {
-                        SuccessContent(tabType, result.data)
+                    YearSelectorDropdown(
+                        selectedYear = selectedYear,
+                        availableYears = availableYears,
+                        onYearSelected = onYearSelected
+                    )
+
+                    IconButton(
+                        onClick = onNextPeriod,
+                        enabled = hasNext,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Next Year",
+                            modifier = Modifier.size(20.dp),
+                            tint = if (hasNext)
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+            Box(modifier = Modifier.heightIn(min = 220.dp)) {
+                Crossfade(
+                    targetState = highlightsResult,
+                    animationSpec = tween(durationMillis = 300)
+                ) { result ->
+                    when (result) {
+                        is Result.Loading -> {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                LoadingHealthSummaryCard()
+
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    LoadingHighlightCard(modifier = Modifier.weight(1f))
+                                    LoadingHighlightCard(modifier = Modifier.weight(1f))
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    LoadingHighlightCard(modifier = Modifier.weight(1f))
+                                    LoadingHighlightCard(modifier = Modifier.weight(1f))
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    LoadingHighlightCard(modifier = Modifier.weight(1f))
+                                    LoadingHighlightCard(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+
+                        is Result.Error -> {
+                            ErrorHighlightCard(
+                                message = result.exception.message ?: "Failed to load highlights",
+                                onRetry = loadHighlights
+                            )
+                        }
+
+                        is Result.Success -> {
+                            SuccessContent(tabType, result.data)
+                        }
                     }
                 }
             }
@@ -385,26 +408,26 @@ fun HighlightCard(
     badge: Pair<String, Color>? = null
 ) {
     Card(
-        modifier = modifier.height(134.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = modifier.height(112.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
         Column(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(12.dp)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(32.dp)
                         .background(color.copy(alpha = 0.15f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
@@ -412,19 +435,20 @@ fun HighlightCard(
                         imageVector = icon,
                         contentDescription = null,
                         tint = color,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
 
                 if (badge != null) {
                     Surface(
                         color = badge.second.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
                             text = badge.first,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall,
+                            fontSize = 10.sp,
                             color = badge.second,
                             fontWeight = FontWeight.Bold
                         )
@@ -432,15 +456,16 @@ fun HighlightCard(
                 }
             }
 
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -448,9 +473,12 @@ fun HighlightCard(
                 )
                 Text(
                     text = subValue,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Medium,
-                    color = color
+                    color = color,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -463,14 +491,14 @@ fun HealthSummaryCard(
     essentialRatio: BigDecimal?
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().height(134.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.fillMaxWidth().height(112.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (savingsRate != null) {
@@ -492,7 +520,7 @@ fun HealthSummaryCard(
                         .fillMaxHeight()
                         .width(1.dp)
                         .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
-                        .padding(vertical = 8.dp)
+                        .padding(vertical = 4.dp)
                 )
             }
 
@@ -588,13 +616,14 @@ private fun HealthMetricItem(
 @Composable
 fun LoadingHealthSummaryCard() {
     Card(
-        modifier = Modifier.fillMaxWidth().height(134.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+        modifier = Modifier.fillMaxWidth().height(112.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             LoadingHealthMetricItem(modifier = Modifier.weight(1f))
@@ -603,6 +632,7 @@ fun LoadingHealthSummaryCard() {
                     .fillMaxHeight()
                     .width(1.dp)
                     .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                    .padding(vertical = 4.dp)
             )
             LoadingHealthMetricItem(modifier = Modifier.weight(1f))
         }
@@ -613,10 +643,17 @@ fun LoadingHealthSummaryCard() {
 private fun LoadingHealthMetricItem(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.padding(horizontal = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        AnimatedShimmerBox(modifier = Modifier.size(36.dp).clip(CircleShape))
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            AnimatedShimmerBox(modifier = Modifier.size(32.dp).clip(CircleShape))
+            AnimatedShimmerBox(modifier = Modifier.width(44.dp).height(16.dp).clip(RoundedCornerShape(6.dp)))
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             AnimatedShimmerBox(
                 modifier = Modifier.width(60.dp).height(10.dp).clip(RoundedCornerShape(4.dp))
             )
@@ -633,35 +670,48 @@ private fun LoadingHealthMetricItem(modifier: Modifier = Modifier) {
 @Composable
 fun LoadingHighlightCard(modifier: Modifier = Modifier) {
     Card(
-        modifier = modifier.height(134.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = modifier.height(112.dp),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
         Column(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(12.dp)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        CircleShape
-                    ),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .clip(CircleShape)
+                    )
+                }
+
                 AnimatedShimmerBox(
                     modifier = Modifier
-                        .size(20.dp)
-                        .clip(CircleShape)
+                        .width(48.dp)
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(6.dp))
                 )
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 AnimatedShimmerBox(
                     modifier = Modifier
                         .width(60.dp)
@@ -670,13 +720,13 @@ fun LoadingHighlightCard(modifier: Modifier = Modifier) {
                 )
                 AnimatedShimmerBox(
                     modifier = Modifier
-                        .width(100.dp)
+                        .width(90.dp)
                         .height(14.dp)
                         .clip(RoundedCornerShape(4.dp))
                 )
                 AnimatedShimmerBox(
                     modifier = Modifier
-                        .width(80.dp)
+                        .width(70.dp)
                         .height(10.dp)
                         .clip(RoundedCornerShape(4.dp))
                 )
