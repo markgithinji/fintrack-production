@@ -9,8 +9,10 @@ import com.fintrack.shared.feature.summary.domain.model.CategoryComparisonSummar
 import com.fintrack.shared.feature.summary.domain.model.DistributionSummary
 import com.fintrack.shared.feature.summary.domain.model.Highlights
 import com.fintrack.shared.feature.summary.domain.model.MerchantSummary
+import com.fintrack.shared.feature.summary.domain.model.NetWorthSummary
 import com.fintrack.shared.feature.summary.domain.model.OverviewPeriod
 import com.fintrack.shared.feature.summary.domain.model.OverviewSummary
+import com.fintrack.shared.feature.summary.domain.usecase.GetNetWorthSummaryUseCase
 import com.fintrack.shared.feature.summary.domain.model.StatisticsSummary
 import com.fintrack.shared.feature.summary.domain.model.TabType
 import com.fintrack.shared.feature.summary.domain.model.TransactionCountSummary
@@ -45,8 +47,20 @@ class StatisticsViewModel(
     private val summaryRepository: SummaryRepository,
     private val accountRepository: AccountRepository,
     private val getCashflowRunwayUseCase: GetCashflowRunwayUseCase,
+    private val getNetWorthSummaryUseCase: GetNetWorthSummaryUseCase? = null,
     private val getMerchantAnalyticsUseCase: GetMerchantAnalyticsUseCase? = null
 ) : ViewModel() {
+
+    private val _netWorthSummary = MutableStateFlow<Result<NetWorthSummary>>(Result.Loading)
+    val netWorthSummary: StateFlow<Result<NetWorthSummary>> = _netWorthSummary.asStateFlow()
+
+    fun loadNetWorthSummary(accountId: String? = null, force: Boolean = false) {
+        if (getNetWorthSummaryUseCase == null) return
+        viewModelScope.launch {
+            if (force) _netWorthSummary.value = Result.Loading
+            _netWorthSummary.value = getNetWorthSummaryUseCase(accountId)
+        }
+    }
 
     private val _selectedOverviewPeriod = MutableStateFlow<Period?>(null)
     val selectedOverviewPeriod: StateFlow<Period?> = _selectedOverviewPeriod.asStateFlow()
@@ -115,6 +129,7 @@ class StatisticsViewModel(
                             loadAvailablePeriods(effectiveId, force = true)
                             loadOverview(effectiveId, force = true)
                             loadCashflowRunway(effectiveId, force = true)
+                            loadNetWorthSummary(effectiveId, force = true)
                             val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
                             loadHighlights(effectiveId, yearCode, force = true)
                             reloadDistributionForCurrentSelection(effectiveId, force = true)
@@ -148,6 +163,7 @@ class StatisticsViewModel(
         loadAvailablePeriods(effectiveAccountId, force = true)
         loadOverview(effectiveAccountId, force = true)
         loadCashflowRunway(effectiveAccountId, force = true)
+        loadNetWorthSummary(effectiveAccountId, force = true)
         val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
         loadHighlights(effectiveAccountId, yearCode, force = true)
         reloadDistributionForCurrentSelection(effectiveAccountId, force = true)

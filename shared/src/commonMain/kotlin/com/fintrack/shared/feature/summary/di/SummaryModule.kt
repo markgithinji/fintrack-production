@@ -4,6 +4,7 @@ import com.fintrack.shared.feature.summary.data.repository.SummaryRepositoryImpl
 import com.fintrack.shared.feature.summary.domain.repository.SummaryRepository
 import com.fintrack.shared.feature.summary.domain.usecase.GetCashflowRunwayUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.GetMerchantAnalyticsUseCase
+import com.fintrack.shared.feature.summary.domain.usecase.GetNetWorthSummaryUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.SimulateAffordabilityUseCase
 import com.fintrack.shared.feature.summary.ui.StatisticsViewModel
 import com.fintrack.shared.feature.summary.ui.custom.CustomAnalysisViewModel
@@ -22,6 +23,7 @@ val summaryModule = module {
     }
 
     singleOf(::GetCashflowRunwayUseCase)
+    singleOf(::GetNetWorthSummaryUseCase)
     singleOf(::SimulateAffordabilityUseCase)
     singleOf(::GetMerchantAnalyticsUseCase)
 
