@@ -267,17 +267,11 @@ class StatisticsViewModel(
 
     val hasNextOverviewPeriod: StateFlow<Boolean> = combine(
         _selectedOverviewPeriod,
-        _availableWeeks,
-        _availableMonths,
         _availableYears
-    ) { period, weeks, months, years ->
-        if (period == null) return@combine false
-        val list = when (period) {
-            is Period.Week -> weeks
-            is Period.Month -> months
-            is Period.Year -> years
-        }
-        val index = list.indexOf(period.code)
+    ) { period, years ->
+        if (period == null || years.isEmpty()) return@combine false
+        val currentYear = period.code.substringBefore("-")
+        val index = years.indexOf(currentYear)
         index > 0
     }.stateIn(
         scope = viewModelScope,
@@ -287,58 +281,44 @@ class StatisticsViewModel(
 
     val hasPreviousOverviewPeriod: StateFlow<Boolean> = combine(
         _selectedOverviewPeriod,
-        _availableWeeks,
-        _availableMonths,
         _availableYears
-    ) { period, weeks, months, years ->
-        if (period == null) return@combine false
-        val list = when (period) {
-            is Period.Week -> weeks
-            is Period.Month -> months
-            is Period.Year -> years
+    ) { period, years ->
+        if (period == null || years.isEmpty()) return@combine false
+        val currentYear = period.code.substringBefore("-")
+        val index = years.indexOf(currentYear)
+        if (index == -1) {
+            years.size > 1
+        } else {
+            index < years.size - 1
         }
-        val index = list.indexOf(period.code)
-        index != -1 && index < list.size - 1
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = false
+        initialValue = true
     )
 
     fun navigateToNextOverviewPeriod(accountId: String? = null) {
         val current = _selectedOverviewPeriod.value ?: return
-        val list = when (current) {
-            is Period.Week -> _availableWeeks.value
-            is Period.Month -> _availableMonths.value
-            is Period.Year -> _availableYears.value
-        }
-        val currentIndex = list.indexOf(current.code)
-        if (currentIndex > 0) {
-            val nextPeriod = when (current) {
-                is Period.Week -> Period.Week(list[currentIndex - 1])
-                is Period.Month -> Period.Month(list[currentIndex - 1])
-                is Period.Year -> Period.Year(list[currentIndex - 1])
-            }
-            onOverviewPeriodChanged(nextPeriod, accountId)
-        }
+        val years = _availableYears.value
+        if (years.isEmpty()) return
+
+        val currentYear = current.code.substringBefore("-")
+        val index = years.indexOf(currentYear)
+        val targetIndex = if (index > 0) index - 1 else 0
+        val targetYear = years[targetIndex]
+        onOverviewPeriodChanged(Period.Year(targetYear), accountId)
     }
 
     fun navigateToPreviousOverviewPeriod(accountId: String? = null) {
         val current = _selectedOverviewPeriod.value ?: return
-        val list = when (current) {
-            is Period.Week -> _availableWeeks.value
-            is Period.Month -> _availableMonths.value
-            is Period.Year -> _availableYears.value
-        }
-        val currentIndex = list.indexOf(current.code)
-        if (currentIndex != -1 && currentIndex < list.size - 1) {
-            val prevPeriod = when (current) {
-                is Period.Week -> Period.Week(list[currentIndex + 1])
-                is Period.Month -> Period.Month(list[currentIndex + 1])
-                is Period.Year -> Period.Year(list[currentIndex + 1])
-            }
-            onOverviewPeriodChanged(prevPeriod, accountId)
-        }
+        val years = _availableYears.value
+        if (years.isEmpty()) return
+
+        val currentYear = current.code.substringBefore("-")
+        val index = years.indexOf(currentYear)
+        val targetIndex = if (index != -1 && index < years.size - 1) index + 1 else if (years.size > 1) 1 else 0
+        val targetYear = years[targetIndex]
+        onOverviewPeriodChanged(Period.Year(targetYear), accountId)
     }
 
     private var lastHighlightsAccountId: String? = null
