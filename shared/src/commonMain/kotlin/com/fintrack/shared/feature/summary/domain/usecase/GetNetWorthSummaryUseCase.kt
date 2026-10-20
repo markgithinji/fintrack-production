@@ -45,24 +45,28 @@ class GetNetWorthSummaryUseCase(
                 }
             }
 
-            // 2. Savings Goal Vault Balances (Assets)
+            // 2. Savings Goal Vault Balances (Assets) - Deduplicated against account names
             val goalsResult = savingsGoalRepository?.getSavingsGoals()
             val savingsGoals = (goalsResult as? Result.Success)?.data ?: emptyList()
 
             savingsGoals.forEach { goal ->
                 val goalBal = BigDecimal.fromDouble(goal.currentAmount)
-                if (goalBal > BigDecimal.ZERO) {
+                val alreadyIncluded = assetItems.any { it.name.equals(goal.name, ignoreCase = true) }
+                if (goalBal > BigDecimal.ZERO && !alreadyIncluded) {
                     assetItems.add(AssetLiabilityItem(goal.id, "${goal.name} (Vault)", goalBal, isAsset = true))
                 }
             }
 
-            // 3. Recurring Liabilities & Overdrafts
+            // 3. Recurring Liabilities & Overdrafts - Deduplicated against account liabilities
             val billsResult = transactionRepository.getRecurringBills()
             val recurringBills = (billsResult as? Result.Success)?.data ?: emptyList()
 
             recurringBills.filter { it.isActive && (it.name.contains("loan", ignoreCase = true) || it.name.contains("fuliza", ignoreCase = true)) }
                 .forEach { bill ->
-                    liabilityItems.add(AssetLiabilityItem(bill.id, bill.name, bill.amount, isAsset = false))
+                    val alreadyInLiabilities = liabilityItems.any { it.name.contains(bill.name, ignoreCase = true) || bill.name.contains(it.name, ignoreCase = true) }
+                    if (!alreadyInLiabilities) {
+                        liabilityItems.add(AssetLiabilityItem(bill.id, bill.name, bill.amount, isAsset = false))
+                    }
                 }
 
             val totalAssets = assetItems.fold(BigDecimal.ZERO) { sum, item -> sum + item.amount }
