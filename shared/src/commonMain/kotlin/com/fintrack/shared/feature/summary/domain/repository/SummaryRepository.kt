@@ -28,7 +28,11 @@ interface SummaryRepository {
     suspend fun getAvailableWeeks(accountId: String?): Result<AvailableWeeks>
     suspend fun getAvailableMonths(accountId: String?): Result<AvailableMonths>
     suspend fun getAvailableYears(accountId: String?): Result<AvailableYears>
-    suspend fun getOverviewSummary(accountId: String?): Result<OverviewSummary>
+    suspend fun getOverviewSummary(
+        accountId: String?,
+        startDate: String? = null,
+        endDate: String? = null
+    ): Result<OverviewSummary>
     suspend fun getCategoryComparisons(
         accountId: String?,
         period: String? = null

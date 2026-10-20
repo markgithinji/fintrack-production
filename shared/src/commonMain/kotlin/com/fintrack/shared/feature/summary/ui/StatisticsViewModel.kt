@@ -9,6 +9,7 @@ import com.fintrack.shared.feature.summary.domain.model.CategoryComparisonSummar
 import com.fintrack.shared.feature.summary.domain.model.DistributionSummary
 import com.fintrack.shared.feature.summary.domain.model.Highlights
 import com.fintrack.shared.feature.summary.domain.model.MerchantSummary
+import com.fintrack.shared.feature.summary.domain.model.OverviewPeriod
 import com.fintrack.shared.feature.summary.domain.model.OverviewSummary
 import com.fintrack.shared.feature.summary.domain.model.StatisticsSummary
 import com.fintrack.shared.feature.summary.domain.model.TabType
@@ -21,7 +22,11 @@ import com.fintrack.shared.feature.summary.domain.usecase.GetCashflowRunwayUseCa
 import com.fintrack.shared.feature.summary.domain.usecase.GetMerchantAnalyticsUseCase
 import kotlinx.coroutines.flow.asStateFlow
 import com.fintrack.shared.feature.core.util.DateTimeHelper
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.CancellationException
@@ -42,6 +47,19 @@ class StatisticsViewModel(
     private val getCashflowRunwayUseCase: GetCashflowRunwayUseCase,
     private val getMerchantAnalyticsUseCase: GetMerchantAnalyticsUseCase? = null
 ) : ViewModel() {
+
+    private val _selectedOverviewPeriod = MutableStateFlow<Period?>(null)
+    val selectedOverviewPeriod: StateFlow<Period?> = _selectedOverviewPeriod.asStateFlow()
+
+    fun onOverviewPeriodChanged(period: Period, accountId: String? = null) {
+        _selectedOverviewPeriod.value = period
+        val yearCode = when (period) {
+            is Period.Week -> period.code.substringBefore("-")
+            is Period.Month -> period.code.substringBefore("-")
+            is Period.Year -> period.code
+        }
+        loadHighlights(accountId = accountId, period = yearCode, force = true)
+    }
 
     private val _selectedMerchantDays = MutableStateFlow(60)
     val selectedMerchantDays: StateFlow<Int> = _selectedMerchantDays.asStateFlow()
@@ -247,6 +265,82 @@ class StatisticsViewModel(
         initialValue = false
     )
 
+    val hasNextOverviewPeriod: StateFlow<Boolean> = combine(
+        _selectedOverviewPeriod,
+        _availableWeeks,
+        _availableMonths,
+        _availableYears
+    ) { period, weeks, months, years ->
+        if (period == null) return@combine false
+        val list = when (period) {
+            is Period.Week -> weeks
+            is Period.Month -> months
+            is Period.Year -> years
+        }
+        val index = list.indexOf(period.code)
+        index > 0
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
+
+    val hasPreviousOverviewPeriod: StateFlow<Boolean> = combine(
+        _selectedOverviewPeriod,
+        _availableWeeks,
+        _availableMonths,
+        _availableYears
+    ) { period, weeks, months, years ->
+        if (period == null) return@combine false
+        val list = when (period) {
+            is Period.Week -> weeks
+            is Period.Month -> months
+            is Period.Year -> years
+        }
+        val index = list.indexOf(period.code)
+        index != -1 && index < list.size - 1
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
+
+    fun navigateToNextOverviewPeriod(accountId: String? = null) {
+        val current = _selectedOverviewPeriod.value ?: return
+        val list = when (current) {
+            is Period.Week -> _availableWeeks.value
+            is Period.Month -> _availableMonths.value
+            is Period.Year -> _availableYears.value
+        }
+        val currentIndex = list.indexOf(current.code)
+        if (currentIndex > 0) {
+            val nextPeriod = when (current) {
+                is Period.Week -> Period.Week(list[currentIndex - 1])
+                is Period.Month -> Period.Month(list[currentIndex - 1])
+                is Period.Year -> Period.Year(list[currentIndex - 1])
+            }
+            onOverviewPeriodChanged(nextPeriod, accountId)
+        }
+    }
+
+    fun navigateToPreviousOverviewPeriod(accountId: String? = null) {
+        val current = _selectedOverviewPeriod.value ?: return
+        val list = when (current) {
+            is Period.Week -> _availableWeeks.value
+            is Period.Month -> _availableMonths.value
+            is Period.Year -> _availableYears.value
+        }
+        val currentIndex = list.indexOf(current.code)
+        if (currentIndex != -1 && currentIndex < list.size - 1) {
+            val prevPeriod = when (current) {
+                is Period.Week -> Period.Week(list[currentIndex + 1])
+                is Period.Month -> Period.Month(list[currentIndex + 1])
+                is Period.Year -> Period.Year(list[currentIndex + 1])
+            }
+            onOverviewPeriodChanged(prevPeriod, accountId)
+        }
+    }
+
     private var lastHighlightsAccountId: String? = null
     private var lastHighlightsPeriod: String? = null
     private var lastRunwayAccountId: String? = null
@@ -448,6 +542,15 @@ class StatisticsViewModel(
                     }
                 }
 
+                if (accountChanged || _selectedOverviewPeriod.value == null) {
+                    _selectedOverviewPeriod.value = when {
+                        weeks.isNotEmpty() -> Period.Week(weeks.first())
+                        months.isNotEmpty() -> Period.Month(months.first())
+                        years.isNotEmpty() -> Period.Year(years.first())
+                        else -> null
+                    }
+                }
+
                 reloadDistributionForCurrentSelection(accountId, force = force)
             } catch (e: Exception) {
                 if (e !is CancellationException) _metadataState.value = Result.Error(e)
@@ -460,33 +563,20 @@ class StatisticsViewModel(
         val paramsChanged = lastOverviewAccountId != accountId
         val current = _overview.value
         
-        println("[DEBUG_ANR] StatisticsViewModel.loadOverview(accountId=$accountId, force=$force)")
-        
         if (!force && !paramsChanged) {
-            if (current is Result.Success) {
-                println("[DEBUG_ANR] Skipping loadOverview - already success")
-                return
-            }
-            if (overviewJob?.isActive == true) {
-                println("[DEBUG_ANR] Skipping loadOverview - job active")
-                return
-            }
+            if (current is Result.Success) return
+            if (overviewJob?.isActive == true) return
         }
         
         overviewJob?.cancel()
         
-        // Immediately enter loading state if account changed or if forced
         if (paramsChanged || force) {
             _overview.value = Result.Loading
         }
 
         overviewJob = viewModelScope.launch {
-            val start = DateTimeHelper.now()
-            println("[DEBUG_ANR] Start fetching overview summary")
             lastOverviewAccountId = accountId
             _overview.value = summaryRepository.getOverviewSummary(accountId)
-            val end = DateTimeHelper.now()
-            println("[DEBUG_ANR] Finished fetching overview summary in ${end.toEpochMilliseconds() - start.toEpochMilliseconds()}ms")
         }
     }
 

@@ -641,7 +641,11 @@ class SummaryRepositoryImpl(
         }
     }
 
-    override suspend fun getOverviewSummary(accountId: String?): Result<OverviewSummary> = withContext(Dispatchers.IO) {
+    override suspend fun getOverviewSummary(
+        accountId: String?,
+        startDate: String?,
+        endDate: String?
+    ): Result<OverviewSummary> = withContext(Dispatchers.IO) {
         try {
             val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
             
@@ -650,12 +654,17 @@ class SummaryRepositoryImpl(
             val targetMonthCode = currentMonthCode
             val isCurrent = true
             
-            val monthStart = try { LocalDate.parse("$targetMonthCode-01") } catch(_: Exception) { now }
-            val monthEnd = monthStart.plus(DatePeriod(months = 1)).minus(DatePeriod(days = 1))
+            val monthStart = if (!startDate.isNullOrBlank()) {
+                try { LocalDate.parse(startDate) } catch (_: Exception) { now }
+            } else try { LocalDate.parse("$targetMonthCode-01") } catch(_: Exception) { now }
 
-            val trendEnd = if (isCurrent) now else monthEnd
+            val monthEnd = if (!endDate.isNullOrBlank()) {
+                try { LocalDate.parse(endDate) } catch (_: Exception) { now }
+            } else monthStart.plus(DatePeriod(months = 1)).minus(DatePeriod(days = 1))
+
+            val trendEnd = if (isCurrent && endDate.isNullOrBlank()) now else monthEnd
             val weeklyStart = trendEnd.minus(DatePeriod(days = 6))
-            val monthlyStart = trendEnd.minus(DatePeriod(days = 29))
+            val monthlyStart = if (!startDate.isNullOrBlank()) monthStart else trendEnd.minus(DatePeriod(days = 29))
 
             val weeklyData = queries.getDailyTotals(
                 userId = offlineUserId,

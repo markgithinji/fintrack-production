@@ -1,5 +1,10 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import Period
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.IconButton
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -20,6 +25,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -65,7 +77,14 @@ import com.ionspin.kotlin.bignum.decimal.BigDecimal
 @Composable
 fun SpendingHighlightsSection(
     tabType: TabType,
+    selectedYear: String,
     highlightsResult: Result<StatisticsSummary>,
+    availableYears: List<String> = emptyList(),
+    onYearSelected: (String) -> Unit = {},
+    onPreviousPeriod: () -> Unit = {},
+    onNextPeriod: () -> Unit = {},
+    hasNext: Boolean = false,
+    hasPrevious: Boolean = false,
     loadHighlights: () -> Unit
 ) {
     val sectionTitle = when (tabType) {
@@ -73,52 +92,67 @@ fun SpendingHighlightsSection(
         TabType.Expense -> "Spending Overview"
     }
 
-    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = sectionTitle,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+            Text(
+                text = sectionTitle,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End
+            ) {
+                IconButton(
+                    onClick = onPreviousPeriod,
+                    enabled = hasPrevious,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = "Previous Year",
+                        modifier = Modifier.size(20.dp),
+                        tint = if (hasPrevious)
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                    )
+                }
+
+                YearSelectorDropdown(
+                    selectedYear = selectedYear,
+                    availableYears = availableYears,
+                    onYearSelected = onYearSelected
                 )
 
-                if (highlightsResult is Result.Success && !highlightsResult.data.isCurrent) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = "From ${extractYear(highlightsResult.data.period)}",
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    }
+                IconButton(
+                    onClick = onNextPeriod,
+                    enabled = hasNext,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Next Year",
+                        modifier = Modifier.size(20.dp),
+                        tint = if (hasNext)
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                    )
                 }
             }
-
-            if (highlightsResult is Result.Success) {
-                Text(
-                    text = extractYear(highlightsResult.data.period),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (highlightsResult.data.isCurrent)
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    else
-                        MaterialTheme.colorScheme.onSecondaryContainer,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.padding(bottom = 2.dp)
-                )
-            }
         }
-        Spacer(modifier = Modifier.height(16.dp))
 
         Box(modifier = Modifier.heightIn(min = 264.dp)) {
             Crossfade(
@@ -674,4 +708,61 @@ fun ErrorHighlightCard(
 
 private fun extractYear(period: String): String {
     return period.split("-").firstOrNull() ?: period
+}
+
+@Composable
+fun YearSelectorDropdown(
+    selectedYear: String,
+    availableYears: List<String>,
+    onYearSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        Surface(
+            onClick = { if (availableYears.isNotEmpty()) expanded = true },
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = selectedYear.ifBlank { "2026" },
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = "Select Year",
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            availableYears.forEach { year ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = year,
+                            fontWeight = if (year == selectedYear) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
+                    onClick = {
+                        onYearSelected(year)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
 }

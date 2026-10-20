@@ -35,7 +35,7 @@ class GetMerchantAnalyticsUseCaseTest {
             override suspend fun getAvailableWeeks(accountId: String?): Result<AvailableWeeks> = Result.Success(AvailableWeeks(emptyList()))
             override suspend fun getAvailableMonths(accountId: String?): Result<AvailableMonths> = Result.Success(AvailableMonths(emptyList()))
             override suspend fun getAvailableYears(accountId: String?): Result<AvailableYears> = Result.Success(AvailableYears(emptyList()))
-            override suspend fun getOverviewSummary(accountId: String?): Result<OverviewSummary> = Result.Success(OverviewSummary("", false, emptyList(), emptyList()))
+            override suspend fun getOverviewSummary(accountId: String?, startDate: String?, endDate: String?): Result<OverviewSummary> = Result.Success(OverviewSummary("", false, emptyList(), emptyList()))
             override suspend fun getCategoryComparisons(accountId: String?, period: String?): Result<CategoryComparisonSummary> = Result.Success(CategoryComparisonSummary("", false, emptyList()))
             override suspend fun getTransactionCounts(accountId: String, isIncome: Boolean?, categoryId: String?, start: String?, end: String?, hasTransactionCost: Boolean?): Result<TransactionCountSummary> = Result.Success(TransactionCountSummary(0, 0, 0, BigDecimal.ZERO, BigDecimal.ZERO))
             override suspend fun getProfileMetrics(): Result<ProfileMetrics> = Result.Success(ProfileMetrics("", "", BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO))

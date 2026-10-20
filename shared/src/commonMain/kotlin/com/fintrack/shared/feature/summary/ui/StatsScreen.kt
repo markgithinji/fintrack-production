@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Tune
 import com.fintrack.shared.feature.summary.domain.model.MerchantSummary
+import com.fintrack.shared.feature.summary.domain.model.OverviewPeriod
 import com.fintrack.shared.feature.summary.ui.components.MerchantDetailBottomSheet
 import com.fintrack.shared.feature.summary.ui.components.TopMerchantsContainerCard
 import androidx.compose.material3.Card
@@ -94,6 +95,7 @@ fun StatisticsScreen(
     onCategoryClick: (categoryName: String, categoryId: String, isIncome: Boolean, startDate: String?, endDate: String?, accountId: String) -> Unit = { _, _, _, _, _, _ -> }
 ) {
     val selectedTab by viewModel.selectedTab.collectAsStateWithLifecycle()
+    val selectedOverviewPeriod by viewModel.selectedOverviewPeriod.collectAsStateWithLifecycle()
     val selectedPeriod by viewModel.selectedPeriod.collectAsStateWithLifecycle()
     val availableWeeks by viewModel.availableWeeks.collectAsStateWithLifecycle()
     val availableMonths by viewModel.availableMonths.collectAsStateWithLifecycle()
@@ -104,6 +106,8 @@ fun StatisticsScreen(
     val metadataState by viewModel.metadataState.collectAsStateWithLifecycle()
     val hasNextPeriod by viewModel.hasNextPeriod.collectAsStateWithLifecycle()
     val hasPreviousPeriod by viewModel.hasPreviousPeriod.collectAsStateWithLifecycle()
+    val hasNextOverviewPeriod by viewModel.hasNextOverviewPeriod.collectAsStateWithLifecycle()
+    val hasPreviousOverviewPeriod by viewModel.hasPreviousOverviewPeriod.collectAsStateWithLifecycle()
     val availableAccounts by viewModel.availableAccounts.collectAsStateWithLifecycle()
     val selectedAccountIds by viewModel.selectedAccountIds.collectAsStateWithLifecycle()
     val topMerchants by viewModel.topMerchants.collectAsStateWithLifecycle()
@@ -283,10 +287,23 @@ fun StatisticsScreen(
             item(key = "spendingHighlights") {
                 SpendingHighlightsSection(
                     tabType = selectedTab,
+                    selectedYear = selectedOverviewPeriod?.code?.split("-")?.firstOrNull() ?: selectedOverviewPeriod?.code ?: "2026",
                     highlightsResult = highlights,
+                    availableYears = availableYears,
+                    onYearSelected = { year: String ->
+                        viewModel.onOverviewPeriodChanged(Period.Year(year), activeAccountId)
+                    },
+                    onPreviousPeriod = {
+                        viewModel.navigateToPreviousOverviewPeriod(activeAccountId)
+                    },
+                    onNextPeriod = {
+                        viewModel.navigateToNextOverviewPeriod(activeAccountId)
+                    },
+                    hasNext = hasNextOverviewPeriod,
+                    hasPrevious = hasPreviousOverviewPeriod,
                     loadHighlights = {
                         val yearCode =
-                            selectedPeriod?.code?.split("-")?.firstOrNull() ?: selectedPeriod?.code
+                            selectedOverviewPeriod?.code?.split("-")?.firstOrNull() ?: selectedOverviewPeriod?.code
                         viewModel.loadHighlights(activeAccountId, yearCode, force = true)
                     }
                 )
