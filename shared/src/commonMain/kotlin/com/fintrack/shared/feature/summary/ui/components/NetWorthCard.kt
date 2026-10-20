@@ -68,6 +68,7 @@ fun NetWorthCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
             .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
             .clickable {
                 if (netWorthResult is Result.Success) showBottomSheet = true
             }
