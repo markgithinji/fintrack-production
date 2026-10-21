@@ -1,5 +1,10 @@
 package com.fintrack.shared.feature.navigation.ui
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
@@ -38,7 +43,18 @@ fun NavDestination.getAppBarState(entry: NavBackStackEntry?, navController: NavC
 
     return when {
         hasRoute<Screen.Home>() -> AppBarState(title = "Home")
-        hasRoute<Screen.Statistics>() -> AppBarState(title = "Statistics")
+        hasRoute<Screen.Statistics>() -> AppBarState(
+            title = "Statistics",
+            actions = {
+                IconButton(onClick = { navController.navigate(Screen.CustomAnalysis) }) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = "Custom Financial Analysis",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        )
         hasRoute<Screen.Budget>() -> AppBarState(title = "Budget")
         hasRoute<Screen.Profile>() -> AppBarState(title = "Profile")
         hasRoute<Screen.EditProfile>() -> AppBarState(
