@@ -31,7 +31,12 @@ val summaryModule = module {
     singleOf(::GetEmergencyFundScoreUseCase)
     singleOf(::SimulateAffordabilityUseCase)
     singleOf(::GetMerchantAnalyticsUseCase)
-    singleOf(::GetBudgetOptimizerUseCase)
+    single {
+        GetBudgetOptimizerUseCase(
+            transactionRepository = get(),
+            savingsGoalRepository = getOrNull()
+        )
+    }
 
     viewModelOf(::StatisticsViewModel)
     viewModelOf(::CustomAnalysisViewModel)

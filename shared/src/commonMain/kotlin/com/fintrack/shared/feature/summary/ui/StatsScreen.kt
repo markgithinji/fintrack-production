@@ -113,6 +113,7 @@ fun StatisticsScreen(
     val spendSpikes by viewModel.spendSpikes.collectAsStateWithLifecycle()
     val emergencyFundScore by viewModel.emergencyFundScore.collectAsStateWithLifecycle()
     val budgetOptimizer by viewModel.budgetOptimizer.collectAsStateWithLifecycle()
+    val selectedBudgetOptimizerDays by viewModel.selectedBudgetOptimizerDays.collectAsStateWithLifecycle()
     val metadataState by viewModel.metadataState.collectAsStateWithLifecycle()
     val hasNextPeriod by viewModel.hasNextPeriod.collectAsStateWithLifecycle()
     val hasPreviousPeriod by viewModel.hasPreviousPeriod.collectAsStateWithLifecycle()
@@ -364,6 +365,8 @@ fun StatisticsScreen(
                 item(key = "budgetOptimizerCard") {
                     BudgetOptimizerCard(
                         optimizerResult = budgetOptimizer,
+                        selectedDays = selectedBudgetOptimizerDays,
+                        onDaysSelected = { viewModel.setBudgetOptimizerDays(it, activeAccountId) },
                         onRetry = {
                             viewModel.loadBudgetOptimizer(activeAccountId, force = true)
                         }

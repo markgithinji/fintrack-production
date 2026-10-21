@@ -14,13 +14,20 @@ enum class TrimPriority {
     LOW
 }
 
+data class CategorySpendItem(
+    val name: String,
+    val amount: BigDecimal,
+    val percentageOfBucket: BigDecimal
+)
+
 data class BudgetBucketSummary(
     val bucketType: BudgetBucketType,
     val actualAmount: BigDecimal,
     val actualPercentage: BigDecimal,
     val targetPercentage: BigDecimal,
     val targetAmount: BigDecimal,
-    val varianceAmount: BigDecimal
+    val varianceAmount: BigDecimal,
+    val categories: List<CategorySpendItem> = emptyList()
 )
 
 data class TrimRecommendation(
@@ -43,5 +50,6 @@ data class BudgetOptimizerSummary(
     val savings: BudgetBucketSummary,
     val recommendations: List<TrimRecommendation>,
     val healthScore: Int,
-    val primaryActionableInsight: String
+    val primaryActionableInsight: String,
+    val selectedDays: Int = 30
 )

@@ -66,14 +66,29 @@ class StatisticsViewModel(
     private val _budgetOptimizer = MutableStateFlow<Result<BudgetOptimizerSummary>>(Result.Loading)
     val budgetOptimizer: StateFlow<Result<BudgetOptimizerSummary>> = _budgetOptimizer.asStateFlow()
 
+    private val _selectedBudgetOptimizerDays = MutableStateFlow(30)
+    val selectedBudgetOptimizerDays: StateFlow<Int> = _selectedBudgetOptimizerDays.asStateFlow()
+
     private var budgetOptimizerJob: Job? = null
+
+    fun setBudgetOptimizerDays(days: Int, accountId: String? = null) {
+        println("[BUDGET_OPTIMIZER_LOG] Duration chip tapped: days=$days, accountId=$accountId")
+        _selectedBudgetOptimizerDays.value = days
+        loadBudgetOptimizer(accountId, force = true)
+    }
 
     fun loadBudgetOptimizer(accountId: String? = null, force: Boolean = false) {
         if (getBudgetOptimizerUseCase == null) return
+        val days = _selectedBudgetOptimizerDays.value
+        val dateRange = _selectedPeriod.value?.getDateRange()
+        val startDate = dateRange?.first
+        val endDate = dateRange?.second
+
         budgetOptimizerJob?.cancel()
         budgetOptimizerJob = viewModelScope.launch {
             if (force) _budgetOptimizer.value = Result.Loading
-            _budgetOptimizer.value = getBudgetOptimizerUseCase(accountId)
+            println("[BUDGET_OPTIMIZER_LOG] Calling getBudgetOptimizerUseCase with accountId=$accountId, days=$days, startDate=$startDate, endDate=$endDate")
+            _budgetOptimizer.value = getBudgetOptimizerUseCase(accountId, days, startDate, endDate)
         }
     }
 
@@ -700,6 +715,7 @@ class StatisticsViewModel(
         _selectedPeriod.value = period
         // Load BOTH income and expense data for the new period
         reloadDistributionForCurrentSelection(accountId, force = true)
+        loadBudgetOptimizer(accountId, force = true)
     }
 
     fun navigateToNextPeriod(accountId: String? = null) {

@@ -1,5 +1,7 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,8 +15,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContentCut
@@ -28,7 +32,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
@@ -51,9 +54,10 @@ import com.fintrack.shared.feature.core.ui.CommonErrorState
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.core.util.toInt
 import com.fintrack.shared.feature.navigation.ui.toCurrencyString
+import com.fintrack.shared.feature.summary.domain.model.BudgetBucketSummary
 import com.fintrack.shared.feature.summary.domain.model.BudgetBucketType
 import com.fintrack.shared.feature.summary.domain.model.BudgetOptimizerSummary
-import com.fintrack.shared.feature.summary.domain.model.TrimPriority
+import com.fintrack.shared.feature.summary.domain.model.CategorySpendItem
 import com.fintrack.shared.feature.summary.domain.model.TrimRecommendation
 import com.fintrack.shared.ui.theme.GreenIncome
 import com.fintrack.shared.ui.theme.PinkExpense
@@ -64,6 +68,8 @@ import com.fintrack.shared.ui.theme.SegmentColor3
 @Composable
 fun BudgetOptimizerCard(
     optimizerResult: Result<BudgetOptimizerSummary>,
+    selectedDays: Int = 30,
+    onDaysSelected: (Int) -> Unit = {},
     onRetry: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -107,6 +113,41 @@ fun BudgetOptimizerCard(
                         modifier = Modifier.size(15.dp),
                         tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                     )
+                }
+            }
+
+            // Duration Filter Chips Row
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(30 to "30d", 60 to "60d", 90 to "90d", 180 to "6mo", 365 to "1yr").forEach { (days, label) ->
+                    val isSelected = selectedDays == days
+                    val animatedBgColor by animateColorAsState(
+                        targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                        animationSpec = tween(150),
+                        label = "chipBg"
+                    )
+                    val animatedContentColor by animateColorAsState(
+                        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                        animationSpec = tween(150),
+                        label = "chipContent"
+                    )
+
+                    Surface(
+                        onClick = { onDaysSelected(days) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = animatedBgColor,
+                        border = BorderStroke(
+                            width = if (isSelected) 1.5.dp else 1.dp,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Text(
+                            text = label,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = animatedContentColor
+                        )
+                    }
                 }
             }
 
@@ -182,21 +223,18 @@ fun BudgetOptimizerCard(
                                 modifier = Modifier.weight(1f),
                                 label = "Needs (50%)",
                                 percentage = "${summary.needs.actualPercentage.toInt()}%",
-                                isOver = summary.needs.actualPercentage.toInt() > 55,
                                 color = SegmentColor1
                             )
                             BucketChip(
                                 modifier = Modifier.weight(1f),
                                 label = "Wants (30%)",
                                 percentage = "${summary.wants.actualPercentage.toInt()}%",
-                                isOver = summary.wants.actualPercentage.toInt() > 35,
                                 color = SegmentColor3
                             )
                             BucketChip(
                                 modifier = Modifier.weight(1f),
                                 label = "Savings (20%)",
                                 percentage = "${summary.savings.actualPercentage.toInt()}%",
-                                isOver = summary.savings.actualPercentage.toInt() < 15,
                                 color = GreenIncome
                             )
                         }
@@ -261,7 +299,6 @@ fun BudgetOptimizerCard(
 private fun BucketChip(
     label: String,
     percentage: String,
-    isOver: Boolean,
     color: Color,
     modifier: Modifier = Modifier
 ) {
@@ -392,6 +429,7 @@ fun BudgetOptimizerBottomSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val colorScheme = MaterialTheme.colorScheme
+    val scrollState = rememberScrollState()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -403,7 +441,8 @@ fun BudgetOptimizerBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp),
+                .padding(bottom = 32.dp)
+                .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Header
@@ -433,13 +472,13 @@ fun BudgetOptimizerBottomSheet(
 
                     Column {
                         Text(
-                            text = "50/30/20 Budget Rule Guide",
+                            text = "50/30/20 Budget Breakdown",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = colorScheme.onSurface
                         )
                         Text(
-                            text = "Smart Discretionary Spending Trims",
+                            text = "Itemized Category & Planning Vault Ledgers",
                             style = MaterialTheme.typography.bodySmall,
                             color = colorScheme.onSurfaceVariant
                         )
@@ -453,30 +492,24 @@ fun BudgetOptimizerBottomSheet(
 
             HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-            // Explanation Card
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-                border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.3f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "How the 50/30/20 Rule Works:",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = colorScheme.onSurface
-                    )
-                    Text(
-                        text = "• 50% Needs: Essential living expenses like Rent, Groceries, Utilities, and Bills.\n• 30% Wants: Flexible lifestyle expenses like Dining Out, Entertainment, and Shopping.\n• 20% Savings: Vault contributions, debt paydowns, and emergency buffers.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            // Itemized Bucket Breakdown Cards (Needs, Wants, Savings)
+            BucketCategoryBreakdownCard(
+                title = "Needs (Target: 50%)",
+                bucketSummary = summary.needs,
+                accentColor = SegmentColor1
+            )
+
+            BucketCategoryBreakdownCard(
+                title = "Wants (Target: 30%)",
+                bucketSummary = summary.wants,
+                accentColor = SegmentColor3
+            )
+
+            BucketCategoryBreakdownCard(
+                title = "Savings & Planning Vaults (Target: 20%)",
+                bucketSummary = summary.savings,
+                accentColor = GreenIncome
+            )
 
             // All Trim Recommendations Detailed List
             if (summary.recommendations.isNotEmpty()) {
@@ -541,6 +574,74 @@ fun BudgetOptimizerBottomSheet(
                     text = "Done",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BucketCategoryBreakdownCard(
+    title: String,
+    bucketSummary: BudgetBucketSummary,
+    accentColor: Color
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor
+                )
+                Text(
+                    text = "${bucketSummary.actualAmount.toCurrencyString()} (${bucketSummary.actualPercentage.toInt()}%)",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor
+                )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+
+            if (bucketSummary.categories.isNotEmpty()) {
+                bucketSummary.categories.forEach { item ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = item.name,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "${item.amount.toCurrencyString()} (${item.percentageOfBucket.toInt()}%)",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = "No tracked entries in this bucket.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

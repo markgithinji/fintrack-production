@@ -240,8 +240,10 @@ class TransactionRepositoryImpl(
         accountId: String?
     ): Result<List<Transaction>> = withContext(Dispatchers.IO) {
         try {
-            val transactions = if (accountId != null) {
-                queries.selectTransactionsWithRawMessageByAccount(accountId).executeAsList().map { row ->
+            val targetAccountIds = accountId?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+
+            val transactions = if (targetAccountIds.size == 1) {
+                queries.selectTransactionsWithRawMessageByAccount(targetAccountIds.first()).executeAsList().map { row ->
                     Transaction(
                         id = row.id,
                         accountId = row.accountId,
@@ -259,7 +261,7 @@ class TransactionRepositoryImpl(
                     )
                 }
             } else {
-                queries.selectAllTransactionsWithRawMessage(offlineUserId).executeAsList().map { row ->
+                val all = queries.selectAllTransactionsWithRawMessage(offlineUserId).executeAsList().map { row ->
                     Transaction(
                         id = row.id,
                         accountId = row.accountId,
@@ -276,8 +278,22 @@ class TransactionRepositoryImpl(
                         rawMessage = row.rawMessage
                     )
                 }
+                if (targetAccountIds.size > 1) {
+                    all.filter { targetAccountIds.contains(it.accountId) }
+                } else all
             }
-            Result.Success(transactions)
+
+            val filtered = if (!startDate.isNullOrBlank() || !endDate.isNullOrBlank()) {
+                val tz = TimeZone.currentSystemDefault()
+                transactions.filter { tx ->
+                    val txDateStr = tx.dateTime.toLocalDateTime(tz).date.toString()
+                    val afterStart = startDate.isNullOrBlank() || txDateStr >= startDate
+                    val beforeEnd = endDate.isNullOrBlank() || txDateStr <= endDate
+                    afterStart && beforeEnd
+                }
+            } else transactions
+
+            Result.Success(filtered)
         } catch (e: Exception) {
             logger.error(TAG, "Error fetching all transactions", e)
             Result.Error(e)
