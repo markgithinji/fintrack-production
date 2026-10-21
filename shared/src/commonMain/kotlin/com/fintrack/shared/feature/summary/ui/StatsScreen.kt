@@ -207,7 +207,7 @@ fun StatisticsScreen(
                             .weight(1f)
                             .height(48.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .background(if (activeSubTab == 0) Color.White else Color.Transparent)
+                            .background(if (activeSubTab == 0) MaterialTheme.colorScheme.surface else Color.Transparent)
                             .clickable { activeSubTab = 0 },
                         contentAlignment = Alignment.Center
                     ) {
@@ -225,7 +225,7 @@ fun StatisticsScreen(
                             .weight(1f)
                             .height(48.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .background(if (activeSubTab == 1) Color.White else Color.Transparent)
+                            .background(if (activeSubTab == 1) MaterialTheme.colorScheme.surface else Color.Transparent)
                             .clickable { activeSubTab = 1 },
                         contentAlignment = Alignment.Center
                     ) {
@@ -358,16 +358,15 @@ fun StatisticsScreen(
                     )
                 }
 
-                if (selectedTab is TabType.Expense) {
-                    item(key = "topMerchantsContainerCard") {
-                        TopMerchantsContainerCard(
-                            merchantsResult = topMerchants,
-                            selectedDays = selectedMerchantDays,
-                            onDaysSelected = { viewModel.setMerchantDays(it, activeAccountId) },
-                            onMerchantClick = { selectedMerchant = it },
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
-                    }
+                item(key = "topMerchantsContainerCard") {
+                    TopMerchantsContainerCard(
+                        merchantsResult = topMerchants,
+                        selectedDays = selectedMerchantDays,
+                        isIncome = selectedTab is TabType.Income,
+                        onDaysSelected = { viewModel.setMerchantDays(it, activeAccountId) },
+                        onMerchantClick = { selectedMerchant = it },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
                 }
             } else {
                 // Sub-Tab 2: NET WORTH & PORTFOLIO (Net Worth, Forecaster, Emergency Shield, Custom Analysis)

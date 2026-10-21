@@ -12,8 +12,10 @@ object MerchantNameCleaner {
         text = text.replace(Regex("""(?i)\(acc[^)]*\)"""), "").trim()
         text = text.replace(Regex("""[\(\)]"""), " ").trim()
 
-        // 2. Strip transaction prefixes
+        // 2. Strip transaction prefixes (Expenses & Income)
         val prefixes = listOf(
+            "you have received", "funds received from", "money received from", "received from", "received",
+            "deposit from", "payment from", "transfer from", "transferred from", "inflow from",
             "sent to", "paid to", "payment to", "transfer to", "transferred to",
             "pay bill to", "paybill to", "buy goods to", "bought from",
             "withdrawal from", "withdrawal at", "agent withdrawal at", "deposit at",

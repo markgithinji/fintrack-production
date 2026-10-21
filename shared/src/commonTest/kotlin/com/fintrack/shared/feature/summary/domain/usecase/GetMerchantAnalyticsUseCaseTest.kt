@@ -40,7 +40,7 @@ class GetMerchantAnalyticsUseCaseTest {
             override suspend fun getTransactionCounts(accountId: String, isIncome: Boolean?, categoryId: String?, start: String?, end: String?, hasTransactionCost: Boolean?): Result<TransactionCountSummary> = Result.Success(TransactionCountSummary(0, 0, 0, BigDecimal.ZERO, BigDecimal.ZERO))
             override suspend fun getProfileMetrics(): Result<ProfileMetrics> = Result.Success(ProfileMetrics("", "", BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO))
 
-            override suspend fun getTopMerchants(accountId: String?, days: Int, limit: Long): Result<List<MerchantSummary>> {
+            override suspend fun getTopMerchants(accountId: String?, days: Int, limit: Long, isIncome: Boolean): Result<List<MerchantSummary>> {
                 return Result.Success(
                     listOf(
                         MerchantSummary(

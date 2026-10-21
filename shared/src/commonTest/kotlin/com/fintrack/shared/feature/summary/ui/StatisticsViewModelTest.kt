@@ -40,7 +40,7 @@ class StatisticsViewModelTest {
             override suspend fun getCategoryComparisons(accountId: String?, period: String?): Result<com.fintrack.shared.feature.summary.domain.model.CategoryComparisonSummary> = Result.Success(com.fintrack.shared.feature.summary.domain.model.CategoryComparisonSummary("", false, emptyList()))
             override suspend fun getTransactionCounts(accountId: String, isIncome: Boolean?, categoryId: String?, start: String?, end: String?, hasTransactionCost: Boolean?): Result<com.fintrack.shared.feature.summary.domain.model.TransactionCountSummary> = Result.Success(com.fintrack.shared.feature.summary.domain.model.TransactionCountSummary(0, 0, 0, BigDecimal.ZERO, BigDecimal.ZERO))
             override suspend fun getProfileMetrics(): Result<com.fintrack.shared.feature.summary.domain.model.ProfileMetrics> = Result.Success(com.fintrack.shared.feature.summary.domain.model.ProfileMetrics("", "", BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO))
-            override suspend fun getTopMerchants(accountId: String?, days: Int, limit: Long): Result<List<com.fintrack.shared.feature.summary.domain.model.MerchantSummary>> = Result.Success(emptyList())
+            override suspend fun getTopMerchants(accountId: String?, days: Int, limit: Long, isIncome: Boolean): Result<List<com.fintrack.shared.feature.summary.domain.model.MerchantSummary>> = Result.Success(emptyList())
         }
 
         viewModel = StatisticsViewModel(

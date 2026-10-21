@@ -57,10 +57,13 @@ import com.fintrack.shared.ui.theme.PinkExpense
 fun TopMerchantsContainerCard(
     merchantsResult: Result<List<MerchantSummary>>,
     selectedDays: Int,
+    isIncome: Boolean = false,
     onDaysSelected: (Int) -> Unit,
     onMerchantClick: (MerchantSummary) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val cardTitle = if (isIncome) "Top Income Sources & Payers" else "Top Merchants & Vendors"
+
     Card(
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -75,9 +78,9 @@ fun TopMerchantsContainerCard(
                 .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy)),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Header Title (Line 1 - Stays permanently mounted!)
+            // Header Title
             Text(
-                text = "Top Merchants & Vendors",
+                text = cardTitle,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface

@@ -120,9 +120,10 @@ class StatisticsViewModel(
     fun loadTopMerchants(accountId: String? = null, days: Int? = null) {
         if (getMerchantAnalyticsUseCase == null) return
         val targetDays = days ?: _selectedMerchantDays.value
+        val isIncomeMode = _selectedTab.value is TabType.Income
         viewModelScope.launch {
             _topMerchants.value = Result.Loading
-            _topMerchants.value = getMerchantAnalyticsUseCase(accountId, targetDays)
+            _topMerchants.value = getMerchantAnalyticsUseCase(accountId, targetDays, isIncome = isIncomeMode)
         }
     }
 
@@ -673,6 +674,7 @@ class StatisticsViewModel(
 
     fun onTabChanged(tab: TabType, accountId: String? = null) {
         _selectedTab.value = tab
+        loadTopMerchants(accountId)
     }
 
     fun onPeriodChanged(period: Period, accountId: String? = null) {

@@ -386,7 +386,7 @@ class SummaryRepositoryImpl(
                 .groupBy { it.categoryId }
                 .mapValues { (_, txs) ->
                     val catName = txs.firstOrNull()?.let { queries.selectCategoryById(it.categoryId).executeAsOneOrNull()?.name } ?: "Unknown"
-                    txs.mapNotNull { it.description }
+                    txs.mapNotNull { it.merchantName.takeIf { m -> !m.isNullOrBlank() } ?: it.description }
                         .filter { MerchantInsightUtils.isDescriptionMeaningful(it, catName) }
                         .map { MerchantInsightUtils.cleanMerchantName(it) }
                         .groupBy { it }
@@ -406,7 +406,7 @@ class SummaryRepositoryImpl(
                 otherCategories.flatMap { cat -> 
                     allTransactionsForPeriod.filter { it.categoryId == cat.catId }
                 }
-                .mapNotNull { it.description }
+                .mapNotNull { it.merchantName.takeIf { m -> !m.isNullOrBlank() } ?: it.description }
                 .filter { MerchantInsightUtils.isDescriptionMeaningful(it, "Others") }
                 .map { MerchantInsightUtils.cleanMerchantName(it) }
                 .groupBy { it }
@@ -1012,7 +1012,8 @@ class SummaryRepositoryImpl(
     override suspend fun getTopMerchants(
         accountId: String?,
         days: Int,
-        limit: Long
+        limit: Long,
+        isIncome: Boolean
     ): Result<List<MerchantSummary>> = withContext(Dispatchers.IO) {
         try {
             val nowInstant = kotlin.time.Clock.System.now()
@@ -1020,18 +1021,40 @@ class SummaryRepositoryImpl(
 
             val targetAccountIds = accountId?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
 
-            val allTxResult = queries.selectTransactionsByRange(
-                userId = offlineUserId,
-                dateTime = startDaysAgo,
-                dateTime_ = nowInstant
-            ).executeAsList()
+            data class TempTxRow(
+                val isIncome: Long,
+                val accountId: String,
+                val description: String?,
+                val merchantName: String?,
+                val amount: String,
+                val dateTime: kotlinx.datetime.Instant
+            )
 
-            val filteredTx = allTxResult.filter { tx ->
-                val isExpense = tx.isIncome == 0L
+            val filteredTx: List<TempTxRow> = if (days >= 365) {
+                queries.selectAllTransactionsWithRawMessage(offlineUserId).executeAsList().map {
+                    TempTxRow(it.isIncome, it.accountId, it.description, it.merchantName, it.amount, it.dateTime)
+                }
+            } else {
+                val rangeRes = queries.selectTransactionsByRange(
+                    userId = offlineUserId,
+                    dateTime = startDaysAgo,
+                    dateTime_ = nowInstant
+                ).executeAsList()
+                if (rangeRes.isEmpty()) {
+                    queries.selectAllTransactionsWithRawMessage(offlineUserId).executeAsList().map {
+                        TempTxRow(it.isIncome, it.accountId, it.description, it.merchantName, it.amount, it.dateTime)
+                    }
+                } else {
+                    rangeRes.map {
+                        TempTxRow(it.isIncome, it.accountId, it.description, it.merchantName, it.amount, it.dateTime)
+                    }
+                }
+            }.filter { tx ->
+                val matchesType = if (isIncome) tx.isIncome != 0L else tx.isIncome == 0L
                 val matchesAccount = if (targetAccountIds.isNotEmpty()) {
                     targetAccountIds.contains(tx.accountId)
                 } else true
-                isExpense && matchesAccount
+                matchesType && matchesAccount
             }
 
             class MerchantAccumulator(
@@ -1045,8 +1068,13 @@ class SummaryRepositoryImpl(
             val map = mutableMapOf<String, MerchantAccumulator>()
 
             for (tx in filteredTx) {
-                val rawDesc = tx.description ?: "Other"
-                val cleanName = com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(rawDesc)
+                val cleanName = if (!tx.merchantName.isNullOrBlank()) {
+                    tx.merchantName
+                } else {
+                    val rawDesc = tx.description ?: "Other"
+                    com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(rawDesc)
+                }
+
                 val mapKey = cleanName.lowercase()
 
                 val acc = map.getOrPut(mapKey) { MerchantAccumulator(cleanName) }
