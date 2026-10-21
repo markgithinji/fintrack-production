@@ -267,13 +267,21 @@ fun StatisticsScreen(
 
             if (activeSubTab == 0) {
                 // Sub-Tab 1: ANALYTICS (Expenses vs Income, Highlights, Category Donut Chart, Merchants)
-                item(key = "tabSwitcher") {
-                    TabSwitcher(
-                        selectedTab = selectedTab,
-                        onTabSelected = { 
-                            viewModel.onTabChanged(it, activeAccountId)
-                        }
-                    )
+                stickyHeader(key = "tabSwitcherHeader") {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.background,
+                        tonalElevation = 2.dp
+                    ) {
+                        TabSwitcher(
+                            selectedTab = selectedTab,
+                            onTabSelected = { 
+                                viewModel.onTabChanged(it, activeAccountId)
+                            }
+                        )
+                    }
                 }
 
                 item(key = "spendingHighlights") {
