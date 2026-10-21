@@ -51,7 +51,11 @@ class GetNetWorthSummaryUseCase(
 
             savingsGoals.forEach { goal ->
                 val goalBal = BigDecimal.fromDouble(goal.currentAmount)
-                val alreadyIncluded = assetItems.any { it.name.equals(goal.name, ignoreCase = true) }
+                val alreadyIncluded = assetItems.any {
+                    it.name.equals(goal.name, ignoreCase = true) ||
+                    it.name.contains(goal.name, ignoreCase = true) ||
+                    goal.name.contains(it.name, ignoreCase = true)
+                }
                 if (goalBal > BigDecimal.ZERO && !alreadyIncluded) {
                     assetItems.add(AssetLiabilityItem(goal.id, "${goal.name} (Vault)", goalBal, isAsset = true))
                 }

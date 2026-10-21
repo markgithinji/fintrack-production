@@ -219,6 +219,7 @@ fun NetWorthCard(
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
+                        val hasDebt = summary.totalLiabilities > BigDecimal.ZERO
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -228,12 +229,12 @@ fun NetWorthCard(
                         ) {
                             Column {
                                 Text(
-                                    text = "Total Assets",
+                                    text = if (hasDebt) "Gross Assets" else "Asset Portfolio",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = summary.totalAssets.toCurrencyString(),
+                                    text = if (hasDebt) summary.totalAssets.toCurrencyString() else "${summary.assetBreakdown.size} Accounts & Vaults",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = GreenIncome
@@ -247,10 +248,10 @@ fun NetWorthCard(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = summary.totalLiabilities.toCurrencyString(),
+                                    text = if (hasDebt) summary.totalLiabilities.toCurrencyString() else "$0 (Debt-Free)",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = PinkExpense
+                                    color = if (hasDebt) PinkExpense else GreenIncome
                                 )
                             }
                         }
@@ -505,17 +506,19 @@ fun NetWorthBreakdownBottomSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Assets",
+                        text = "Assets Breakdown",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = GreenIncome
                     )
-                    Text(
-                        text = summary.totalAssets.toCurrencyString(),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = GreenIncome
-                    )
+                    if (summary.assetBreakdown.size > 1) {
+                        Text(
+                            text = summary.totalAssets.toCurrencyString(),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = GreenIncome
+                        )
+                    }
                 }
 
                 summary.assetBreakdown.forEach { item ->

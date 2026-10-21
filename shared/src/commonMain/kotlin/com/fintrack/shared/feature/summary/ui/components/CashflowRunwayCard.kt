@@ -88,20 +88,20 @@ fun CashflowRunwayCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(202.dp)
+            .height(210.dp)
             .padding(horizontal = 16.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(10.dp),
+                .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            // Sleeker Compact Header Row
+            // Standardized Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -113,15 +113,15 @@ fun CashflowRunwayCard(
                 ) {
                     Text(
                         text = "Cashflow Runway",
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                         imageVector = Icons.Outlined.Info,
                         contentDescription = "Runway Info",
-                        modifier = Modifier.size(13.dp),
+                        modifier = Modifier.size(15.dp),
                         tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                     )
                 }
