@@ -179,7 +179,7 @@ fun StatisticsScreen(
             .background(MaterialTheme.colorScheme.background)
             .padding(top = paddingValues.calculateTopPadding())
     ) {
-        // Unified Top Control Panel Container (Account Filter Bar)
+        // Unified Top Control Panel Container (Row 1: Sub-Tabs, Row 2: Account Chips)
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = MaterialTheme.colorScheme.background,
@@ -188,9 +188,57 @@ fun StatisticsScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Account Selection Filter Bar
+                // Row 1: Top Segmented Sub-Tab Switcher (Pure White #FFFFFF Pill, 0 Shadow)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 2.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Analytics Sub-Tab
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (activeSubTab == 0) Color.White else Color.Transparent)
+                            .clickable { activeSubTab = 0 },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Analytics",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = if (activeSubTab == 0) FontWeight.Bold else FontWeight.Medium,
+                            color = if (activeSubTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Portfolio Sub-Tab
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (activeSubTab == 1) Color.White else Color.Transparent)
+                            .clickable { activeSubTab = 1 },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Portfolio",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = if (activeSubTab == 1) FontWeight.Bold else FontWeight.Medium,
+                            color = if (activeSubTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Row 2: Account Selection Filter Bar
                 if (availableAccounts.isNotEmpty()) {
                     AccountFilterChipBar(
                         accounts = availableAccounts,
@@ -215,60 +263,7 @@ fun StatisticsScreen(
             state = listState,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Top Segmented Sub-Tab Switcher (Text-Only, Exact PlanningScreen track style!)
-            item(key = "sub_tab_switcher") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                        .padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    // Analytics Sub-Tab
-                    Surface(
-                        onClick = { activeSubTab = 0 },
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (activeSubTab == 0) MaterialTheme.colorScheme.surface else Color.Transparent,
-                        shadowElevation = if (activeSubTab == 0) 2.dp else 0.dp,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(
-                            modifier = Modifier.padding(vertical = 10.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Analytics",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (activeSubTab == 0) FontWeight.Bold else FontWeight.Medium,
-                                color = if (activeSubTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    // Portfolio Sub-Tab
-                    Surface(
-                        onClick = { activeSubTab = 1 },
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (activeSubTab == 1) MaterialTheme.colorScheme.surface else Color.Transparent,
-                        shadowElevation = if (activeSubTab == 1) 2.dp else 0.dp,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(
-                            modifier = Modifier.padding(vertical = 10.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Portfolio",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (activeSubTab == 1) FontWeight.Bold else FontWeight.Medium,
-                                color = if (activeSubTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
+            item { Spacer(Modifier.height(4.dp)) }
 
             if (activeSubTab == 0) {
                 // Sub-Tab 1: ANALYTICS (Expenses vs Income, Highlights, Category Donut Chart, Merchants)
@@ -519,12 +514,12 @@ fun TabButton(
 
     Box(
         modifier = modifier
-            .height(44.dp)
+            .height(38.dp)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
             }
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(backgroundColor)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
@@ -533,7 +528,7 @@ fun TabButton(
             text = text,
             color = contentColor,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            fontSize = 15.sp
+            style = MaterialTheme.typography.labelMedium
         )
     }
 }
