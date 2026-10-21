@@ -79,6 +79,7 @@ import com.fintrack.shared.feature.core.ui.AnimatedShimmerBox
 import com.fintrack.shared.feature.core.ui.CommonErrorState
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.summary.domain.model.TabType
+import com.fintrack.shared.feature.summary.ui.components.BudgetOptimizerCard
 import com.fintrack.shared.feature.summary.ui.components.CashflowRunwayCard
 import com.fintrack.shared.feature.summary.ui.components.CategoryTotalsCardWithTabs
 import com.fintrack.shared.feature.summary.ui.components.SpendingHighlightsSection
@@ -111,6 +112,7 @@ fun StatisticsScreen(
     val netWorthSummary by viewModel.netWorthSummary.collectAsStateWithLifecycle()
     val spendSpikes by viewModel.spendSpikes.collectAsStateWithLifecycle()
     val emergencyFundScore by viewModel.emergencyFundScore.collectAsStateWithLifecycle()
+    val budgetOptimizer by viewModel.budgetOptimizer.collectAsStateWithLifecycle()
     val metadataState by viewModel.metadataState.collectAsStateWithLifecycle()
     val hasNextPeriod by viewModel.hasNextPeriod.collectAsStateWithLifecycle()
     val hasPreviousPeriod by viewModel.hasPreviousPeriod.collectAsStateWithLifecycle()
@@ -156,6 +158,7 @@ fun StatisticsScreen(
         viewModel.loadNetWorthSummary(activeAccountId, force = force)
         viewModel.loadSpendSpikes(activeAccountId, force = force)
         viewModel.loadEmergencyFundScore(activeAccountId, force = force)
+        viewModel.loadBudgetOptimizer(activeAccountId, force = force)
         viewModel.loadTopMerchants(activeAccountId)
         lastProcessedRefreshTrigger = refreshTrigger
     }
@@ -354,6 +357,15 @@ fun StatisticsScreen(
                                 dateRange?.second,
                                 activeAccountId ?: ""
                             )
+                        }
+                    )
+                }
+
+                item(key = "budgetOptimizerCard") {
+                    BudgetOptimizerCard(
+                        optimizerResult = budgetOptimizer,
+                        onRetry = {
+                            viewModel.loadBudgetOptimizer(activeAccountId, force = true)
                         }
                     )
                 }

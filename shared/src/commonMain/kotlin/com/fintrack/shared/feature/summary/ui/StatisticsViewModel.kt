@@ -26,6 +26,8 @@ import com.fintrack.shared.feature.account.domain.repository.AccountRepository
 import com.fintrack.shared.feature.summary.domain.repository.SummaryRepository
 import com.fintrack.shared.feature.summary.domain.usecase.GetCashflowRunwayUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.GetMerchantAnalyticsUseCase
+import com.fintrack.shared.feature.summary.domain.model.BudgetOptimizerSummary
+import com.fintrack.shared.feature.summary.domain.usecase.GetBudgetOptimizerUseCase
 import kotlinx.coroutines.flow.asStateFlow
 import com.fintrack.shared.feature.core.util.DateTimeHelper
 import kotlinx.datetime.DatePeriod
@@ -54,11 +56,26 @@ class StatisticsViewModel(
     private val getNetWorthSummaryUseCase: GetNetWorthSummaryUseCase? = null,
     private val detectSpendSpikesUseCase: DetectSpendSpikesUseCase? = null,
     private val getEmergencyFundScoreUseCase: GetEmergencyFundScoreUseCase? = null,
-    private val getMerchantAnalyticsUseCase: GetMerchantAnalyticsUseCase? = null
+    private val getMerchantAnalyticsUseCase: GetMerchantAnalyticsUseCase? = null,
+    private val getBudgetOptimizerUseCase: GetBudgetOptimizerUseCase? = null
 ) : ViewModel() {
 
     private val _spendSpikes = MutableStateFlow<Result<List<SpendSpikeAnomaly>>>(Result.Loading)
     val spendSpikes: StateFlow<Result<List<SpendSpikeAnomaly>>> = _spendSpikes.asStateFlow()
+
+    private val _budgetOptimizer = MutableStateFlow<Result<BudgetOptimizerSummary>>(Result.Loading)
+    val budgetOptimizer: StateFlow<Result<BudgetOptimizerSummary>> = _budgetOptimizer.asStateFlow()
+
+    private var budgetOptimizerJob: Job? = null
+
+    fun loadBudgetOptimizer(accountId: String? = null, force: Boolean = false) {
+        if (getBudgetOptimizerUseCase == null) return
+        budgetOptimizerJob?.cancel()
+        budgetOptimizerJob = viewModelScope.launch {
+            if (force) _budgetOptimizer.value = Result.Loading
+            _budgetOptimizer.value = getBudgetOptimizerUseCase(accountId)
+        }
+    }
 
     private val _emergencyFundScore = MutableStateFlow<Result<EmergencyFundScore>>(Result.Loading)
     val emergencyFundScore: StateFlow<Result<EmergencyFundScore>> = _emergencyFundScore.asStateFlow()
@@ -168,6 +185,7 @@ class StatisticsViewModel(
                     loadNetWorthSummary(effectiveId, force = true)
                     loadSpendSpikes(effectiveId, force = true)
                     loadEmergencyFundScore(effectiveId, force = true)
+                    loadBudgetOptimizer(effectiveId, force = true)
                     loadTopMerchants(effectiveId)
                     val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
                     loadHighlights(effectiveId, yearCode, force = true)
@@ -203,6 +221,7 @@ class StatisticsViewModel(
         loadNetWorthSummary(effectiveAccountId, force = true)
         loadSpendSpikes(effectiveAccountId, force = true)
         loadEmergencyFundScore(effectiveAccountId, force = true)
+        loadBudgetOptimizer(effectiveAccountId, force = true)
         val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
         loadHighlights(effectiveAccountId, yearCode, force = true)
         reloadDistributionForCurrentSelection(effectiveAccountId, force = true)
