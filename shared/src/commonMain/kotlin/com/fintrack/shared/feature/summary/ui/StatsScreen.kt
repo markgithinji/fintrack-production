@@ -36,7 +36,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Tune
 import com.fintrack.shared.feature.summary.domain.model.MerchantSummary
@@ -137,6 +139,7 @@ fun StatisticsScreen(
 
     // Keep track of the last processed refresh trigger to avoid redundant refreshes
     var lastProcessedRefreshTrigger by rememberSaveable { mutableIntStateOf(-1) }
+    var activeSubTab by rememberSaveable { mutableIntStateOf(0) }
 
     val safePeriod = selectedPeriod ?: remember(availableWeeks, availableMonths, availableYears) {
         getDefaultPeriod(availableWeeks, availableMonths, availableYears)
@@ -176,7 +179,7 @@ fun StatisticsScreen(
             .background(MaterialTheme.colorScheme.background)
             .padding(top = paddingValues.calculateTopPadding())
     ) {
-        // Unified Top Control Panel Container
+        // Unified Top Control Panel Container (Account Filter Bar)
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = MaterialTheme.colorScheme.background,
@@ -185,17 +188,8 @@ fun StatisticsScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(vertical = 8.dp)
             ) {
-                // Top Tab Switcher
-                TabSwitcher(
-                    selectedTab = selectedTab,
-                    onTabSelected = { 
-                        viewModel.onTabChanged(it, activeAccountId)
-                    }
-                )
-
                 // Account Selection Filter Bar
                 if (availableAccounts.isNotEmpty()) {
                     AccountFilterChipBar(
@@ -221,192 +215,253 @@ fun StatisticsScreen(
             state = listState,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { Spacer(Modifier.height(8.dp)) }
-
-            item(key = "customAnalysisBanner") {
-                Card(
+            // Top Segmented Sub-Tab Switcher (Text-Only, Exact PlanningScreen track style!)
+            item(key = "sub_tab_switcher") {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .clickable { onNavigateToCustomAnalysis() },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                    // Analytics Sub-Tab
+                    Surface(
+                        onClick = { activeSubTab = 0 },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (activeSubTab == 0) MaterialTheme.colorScheme.surface else Color.Transparent,
+                        shadowElevation = if (activeSubTab == 0) 2.dp else 0.dp,
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.weight(1f)
+                        Box(
+                            modifier = Modifier.padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.Tune,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onPrimary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                            Column {
-                                Text(
-                                    text = "Custom Financial Analysis",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Filter by date, category, account & amount",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            Text(
+                                text = "Analytics",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (activeSubTab == 0) FontWeight.Bold else FontWeight.Medium,
+                                color = if (activeSubTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
+                    }
+
+                    // Portfolio Sub-Tab
+                    Surface(
+                        onClick = { activeSubTab = 1 },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (activeSubTab == 1) MaterialTheme.colorScheme.surface else Color.Transparent,
+                        shadowElevation = if (activeSubTab == 1) 2.dp else 0.dp,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Portfolio",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (activeSubTab == 1) FontWeight.Bold else FontWeight.Medium,
+                                color = if (activeSubTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
 
-            item(key = "spendSpikeAlert") {
-                SpendSpikeAlertCard(
-                    spikesResult = spendSpikes,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-            }
+            if (activeSubTab == 0) {
+                // Sub-Tab 1: ANALYTICS (Expenses vs Income, Highlights, Category Donut Chart, Merchants)
+                item(key = "tabSwitcher") {
+                    TabSwitcher(
+                        selectedTab = selectedTab,
+                        onTabSelected = { 
+                            viewModel.onTabChanged(it, activeAccountId)
+                        }
+                    )
+                }
 
-            item(key = "cashflowRunway") {
-                CashflowRunwayCard(
-                    runwayResult = runway,
-                    onRetry = {
-                        viewModel.loadCashflowRunway(activeAccountId, force = true)
-                    }
-                )
-            }
+                item(key = "spendingHighlights") {
+                    SpendingHighlightsSection(
+                        tabType = selectedTab,
+                        selectedYear = selectedOverviewPeriod?.code?.split("-")?.firstOrNull() ?: selectedOverviewPeriod?.code ?: "2026",
+                        highlightsResult = highlights,
+                        availableYears = availableYears,
+                        onYearSelected = { year: String ->
+                            viewModel.onOverviewPeriodChanged(Period.Year(year), activeAccountId)
+                        },
+                        onPreviousPeriod = {
+                            viewModel.navigateToPreviousOverviewPeriod(activeAccountId)
+                        },
+                        onNextPeriod = {
+                            viewModel.navigateToNextOverviewPeriod(activeAccountId)
+                        },
+                        hasNext = hasNextOverviewPeriod,
+                        hasPrevious = hasPreviousOverviewPeriod,
+                        loadHighlights = {
+                            val yearCode =
+                                selectedOverviewPeriod?.code?.split("-")?.firstOrNull() ?: selectedOverviewPeriod?.code
+                            viewModel.loadHighlights(activeAccountId, yearCode, force = true)
+                        }
+                    )
+                }
 
-            item(key = "netWorthCard") {
-                NetWorthCard(
-                    netWorthResult = netWorthSummary,
-                    onRetry = {
-                        viewModel.loadNetWorthSummary(activeAccountId, force = true)
-                    }
-                )
-            }
+                item(key = "categoryTotals") {
+                    CategoryTotalsCardWithTabs(
+                        tabType = selectedTab,
+                        period = safePeriod,
+                        distributionResult = distributionResult,
+                        availableWeeks = availableWeeks,
+                        availableMonths = availableMonths,
+                        availableYears = availableYears,
+                        animatedVisibilityScope = animatedVisibilityScope,
+                        onWeekSelected = { week ->
+                            viewModel.onPeriodChanged(Period.Week(week), activeAccountId)
+                        },
+                        onMonthSelected = { month ->
+                            viewModel.onPeriodChanged(Period.Month(month), activeAccountId)
+                        },
+                        onYearSelected = { year ->
+                            viewModel.onPeriodChanged(Period.Year(year), activeAccountId)
+                        },
+                        onPeriodSelected = { period ->
+                            viewModel.onPeriodChanged(period, activeAccountId)
+                        },
+                        onPreviousPeriod = {
+                            viewModel.navigateToPreviousPeriod(activeAccountId)
+                        },
+                        onNextPeriod = {
+                            viewModel.navigateToNextPeriod(activeAccountId)
+                        },
+                        hasNext = hasNextPeriod,
+                        hasPrevious = hasPreviousPeriod,
+                        onRetry = {
+                            viewModel.reloadDistributionForCurrentSelection(
+                                activeAccountId,
+                                force = true
+                            )
+                        },
+                        onCategoryClick = { categoryName, categoryId ->
+                            val dateRange = safePeriod.getDateRange()
+                            onCategoryClick(
+                                categoryName,
+                                categoryId,
+                                selectedTab is TabType.Income,
+                                dateRange?.first,
+                                dateRange?.second,
+                                activeAccountId ?: ""
+                            )
+                        }
+                    )
+                }
 
-            item(key = "emergencyFundScore") {
-                EmergencyFundScoreCard(
-                    scoreResult = emergencyFundScore,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-            }
-
-            item(key = "spendingHighlights") {
-                SpendingHighlightsSection(
-                    tabType = selectedTab,
-                    selectedYear = selectedOverviewPeriod?.code?.split("-")?.firstOrNull() ?: selectedOverviewPeriod?.code ?: "2026",
-                    highlightsResult = highlights,
-                    availableYears = availableYears,
-                    onYearSelected = { year: String ->
-                        viewModel.onOverviewPeriodChanged(Period.Year(year), activeAccountId)
-                    },
-                    onPreviousPeriod = {
-                        viewModel.navigateToPreviousOverviewPeriod(activeAccountId)
-                    },
-                    onNextPeriod = {
-                        viewModel.navigateToNextOverviewPeriod(activeAccountId)
-                    },
-                    hasNext = hasNextOverviewPeriod,
-                    hasPrevious = hasPreviousOverviewPeriod,
-                    loadHighlights = {
-                        val yearCode =
-                            selectedOverviewPeriod?.code?.split("-")?.firstOrNull() ?: selectedOverviewPeriod?.code
-                        viewModel.loadHighlights(activeAccountId, yearCode, force = true)
-                    }
-                )
-            }
-
-            item(key = "categoryTotals") {
-                CategoryTotalsCardWithTabs(
-                    tabType = selectedTab,
-                    period = safePeriod,
-                    distributionResult = distributionResult,
-                    availableWeeks = availableWeeks,
-                    availableMonths = availableMonths,
-                    availableYears = availableYears,
-                    animatedVisibilityScope = animatedVisibilityScope,
-                    onWeekSelected = { week ->
-                        viewModel.onPeriodChanged(Period.Week(week), activeAccountId)
-                    },
-                    onMonthSelected = { month ->
-                        viewModel.onPeriodChanged(Period.Month(month), activeAccountId)
-                    },
-                    onYearSelected = { year ->
-                        viewModel.onPeriodChanged(Period.Year(year), activeAccountId)
-                    },
-                    onPeriodSelected = { period ->
-                        viewModel.onPeriodChanged(period, activeAccountId)
-                    },
-                    onPreviousPeriod = {
-                        viewModel.navigateToPreviousPeriod(activeAccountId)
-                    },
-                    onNextPeriod = {
-                        viewModel.navigateToNextPeriod(activeAccountId)
-                    },
-                    hasNext = hasNextPeriod,
-                    hasPrevious = hasPreviousPeriod,
-                    onRetry = {
-                        viewModel.reloadDistributionForCurrentSelection(
-                            activeAccountId,
-                            force = true
-                        )
-                    },
-                    onCategoryClick = { categoryName, categoryId ->
-                        val dateRange = safePeriod.getDateRange()
-                        onCategoryClick(
-                            categoryName,
-                            categoryId,
-                            selectedTab is TabType.Income,
-                            dateRange?.first,
-                            dateRange?.second,
-                            activeAccountId ?: ""
+                if (selectedTab is TabType.Expense) {
+                    item(key = "topMerchantsContainerCard") {
+                        TopMerchantsContainerCard(
+                            merchantsResult = topMerchants,
+                            selectedDays = selectedMerchantDays,
+                            onDaysSelected = { viewModel.setMerchantDays(it, activeAccountId) },
+                            onMerchantClick = { selectedMerchant = it },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                         )
                     }
-                )
-            }
+                }
+            } else {
+                // Sub-Tab 2: NET WORTH & PORTFOLIO (Net Worth, Forecaster, Emergency Shield, Custom Analysis)
+                item(key = "netWorthCard") {
+                    NetWorthCard(
+                        netWorthResult = netWorthSummary,
+                        onRetry = {
+                            viewModel.loadNetWorthSummary(activeAccountId, force = true)
+                        }
+                    )
+                }
 
-            item(key = "topMerchantsContainerCard") {
-                TopMerchantsContainerCard(
-                    merchantsResult = topMerchants,
-                    selectedDays = selectedMerchantDays,
-                    onDaysSelected = { viewModel.setMerchantDays(it, activeAccountId) },
-                    onMerchantClick = { selectedMerchant = it },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
+                item(key = "cashflowRunway") {
+                    CashflowRunwayCard(
+                        runwayResult = runway,
+                        onRetry = {
+                            viewModel.loadCashflowRunway(activeAccountId, force = true)
+                        }
+                    )
+                }
+
+                item(key = "emergencyFundScore") {
+                    EmergencyFundScoreCard(
+                        scoreResult = emergencyFundScore,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+
+                item(key = "customAnalysisBanner") {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable { onNavigateToCustomAnalysis() },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.Tune,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onPrimary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                Column {
+                                    Text(
+                                        text = "Custom Financial Analysis",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Filter by date, category, account & amount",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
-    }
 
-    if (selectedMerchant != null) {
-        MerchantDetailBottomSheet(
-            merchant = selectedMerchant!!,
-            onDismiss = { selectedMerchant = null }
-        )
+        if (selectedMerchant != null) {
+            MerchantDetailBottomSheet(
+                merchant = selectedMerchant!!,
+                onDismiss = { selectedMerchant = null }
+            )
+        }
     }
 }
 
