@@ -12,6 +12,9 @@ object MerchantNameCleaner {
         text = text.replace(Regex("""(?i)\(acc[^)]*\)"""), "").trim()
         text = text.replace(Regex("""[\(\)]"""), " ").trim()
 
+        // 1.5 Strip Ksh / KES amount strings e.g., "Ksh 5,000.00 from", "Ksh 500 from", "KSh1,500.00"
+        text = text.replace(Regex("""(?i)(?:Ksh|KES)\.?\s*[\d,]+(?:\.\d{1,2})?\s*(?:from|to)?"""), "").trim()
+
         // 2. Strip transaction prefixes (Expenses & Income)
         val prefixes = listOf(
             "you have received", "funds received from", "money received from", "received from", "received",
@@ -28,16 +31,16 @@ object MerchantNameCleaner {
             }
         }
 
-        // 3. Remove 10-digit / 12-digit phone numbers
-        text = text.replace(Regex("""\b(254[71]\d{8}|0[71]\d{8})\b"""), "").trim()
+        // 3. Remove 10-digit / 12-digit phone numbers (including masked ones with asterisks e.g., 07****1234, 2547****5678, +2547****1234)
+        text = text.replace(Regex("""(?i)\+?\b(254|0)[71][0-9*]{7,10}\b"""), "").trim()
 
         // 4. Remove Paybill / Till / Account / Ref prefixes & numbers
         text = text.replace(Regex("""(?i)\bfor\s+(account|acc|ount)\b"""), "").trim()
-        text = text.replace(Regex("""(?i)\b(paybill|till|acc\.?|account|ount|ref\.?|reference|receipt)\s*#?\d*"""), "").trim()
+        text = text.replace(Regex("""(?i)\b(paybill|till|acc\.?|account|ount|ref\.?|reference|receipt)\s*#?[0-9*]*"""), "").trim()
 
-        // 5. Remove trailing ref codes / numbers
-        text = text.replace(Regex("""\b[A-Z0-9]{8,12}\b"""), "").trim()
-        text = text.replace(Regex("""\b\d{5,12}\b"""), "").trim()
+        // 5. Remove trailing ref codes / numbers (must contain at least one digit or asterisk)
+        text = text.replace(Regex("""\b(?=.*\d)[A-Z0-9*]{8,12}\b"""), "").trim()
+        text = text.replace(Regex("""\b[0-9*]{5,12}\b"""), "").trim()
 
         // 6. Strip punctuation
         text = text.replace(":", "").replace(";", "").replace("?", "").replace("!", "")
