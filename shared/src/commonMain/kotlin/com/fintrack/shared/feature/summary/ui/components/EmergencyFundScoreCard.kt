@@ -287,6 +287,50 @@ fun EmergencyFundHelpBottomSheet(
                 }
             }
 
+            // Asset Sources Breakdown Card
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Liquid Asset Sources Included:",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.onSurface
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("📱 Liquid Cash & Accounts", style = MaterialTheme.typography.bodySmall, color = colorScheme.onSurface)
+                        Text(score.liquidCashTotal.toCurrencyString(), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = GreenIncome)
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("🎯 Savings Goal Vaults", style = MaterialTheme.typography.bodySmall, color = colorScheme.onSurface)
+                        Text(score.savingsVaultsTotal.toCurrencyString(), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = GreenIncome)
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("📈 Investments (Portfolio)", style = MaterialTheme.typography.bodySmall, color = colorScheme.onSurfaceVariant)
+                        Text(score.investmentsTotal.toCurrencyString(), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+
             // Calculation Guide Card
             Card(
                 shape = RoundedCornerShape(16.dp),

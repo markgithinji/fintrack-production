@@ -117,6 +117,9 @@ class GetEmergencyFundScoreUseCase(
             Result.Success(
                 EmergencyFundScore(
                     liquidAssetsTotal = totalLiquidAssets,
+                    liquidCashTotal = accountsBalance,
+                    savingsVaultsTotal = vaultsBalance,
+                    investmentsTotal = BigDecimal.ZERO,
                     monthlyEssentialExpenses = monthlyEssentialExpenses,
                     monthsCovered = monthsCovered,
                     targetMonths = BigDecimal.fromInt(6),
