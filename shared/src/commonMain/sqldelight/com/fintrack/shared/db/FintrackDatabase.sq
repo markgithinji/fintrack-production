@@ -464,3 +464,51 @@ DELETE FROM DebtEntity WHERE id = ?;
 
 deleteAllDebts:
 DELETE FROM DebtEntity WHERE userId = ?;
+
+-- Asset Queries
+CREATE TABLE IF NOT EXISTS AssetEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    assetType TEXT NOT NULL,
+    currentBalance REAL NOT NULL,
+    annualYieldPercentage REAL,
+    categoryId TEXT,
+    accountId TEXT,
+    colorHex TEXT NOT NULL DEFAULT '#2979FF',
+    createdAt TEXT NOT NULL
+);
+
+createAssetTableIfNotExists:
+CREATE TABLE IF NOT EXISTS AssetEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    assetType TEXT NOT NULL,
+    currentBalance REAL NOT NULL,
+    annualYieldPercentage REAL,
+    categoryId TEXT,
+    accountId TEXT,
+    colorHex TEXT NOT NULL DEFAULT '#2979FF',
+    createdAt TEXT NOT NULL
+);
+
+insertAsset:
+INSERT OR REPLACE INTO AssetEntity(id, userId, name, assetType, currentBalance, annualYieldPercentage, categoryId, accountId, colorHex, createdAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectAllAssets:
+SELECT * FROM AssetEntity WHERE userId = ?;
+
+selectAssetById:
+SELECT * FROM AssetEntity WHERE id = ?;
+
+updateAssetBalance:
+UPDATE AssetEntity SET currentBalance = ? WHERE id = ?;
+
+deleteAsset:
+DELETE FROM AssetEntity WHERE id = ?;
+
+deleteAllAssets:
+DELETE FROM AssetEntity WHERE userId = ?;
+

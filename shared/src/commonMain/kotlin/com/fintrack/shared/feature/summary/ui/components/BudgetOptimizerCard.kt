@@ -506,7 +506,7 @@ fun BudgetOptimizerBottomSheet(
             )
 
             BucketCategoryBreakdownCard(
-                title = "Savings & Planning Vaults (Target: 20%)",
+                title = "Savings & Investments (Target: 20%)",
                 bucketSummary = summary.savings,
                 accentColor = GreenIncome
             )

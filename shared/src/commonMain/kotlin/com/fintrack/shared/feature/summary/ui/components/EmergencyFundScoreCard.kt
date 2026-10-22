@@ -259,7 +259,7 @@ fun EmergencyFundHelpBottomSheet(
                 ) {
                     Column {
                         Text(
-                            text = "Total Liquid Cash + Vaults",
+                            text = "Total Liquid Cash & Savings",
                             style = MaterialTheme.typography.labelSmall,
                             color = colorScheme.onSurfaceVariant
                         )
@@ -317,7 +317,7 @@ fun EmergencyFundHelpBottomSheet(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("🎯 Savings Goal Vaults", style = MaterialTheme.typography.bodySmall, color = colorScheme.onSurface)
+                        Text("🎯 Savings Goals & Assets", style = MaterialTheme.typography.bodySmall, color = colorScheme.onSurface)
                         Text(score.savingsVaultsTotal.toCurrencyString(), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = GreenIncome)
                     }
 

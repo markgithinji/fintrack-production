@@ -82,10 +82,10 @@ class GetNetWorthSummaryUseCase(
                 if (goalBal > BigDecimal.ZERO && !alreadyIncluded) {
                     val group = when (goal.goalType) {
                         GoalType.INVESTMENT_MMF -> PortfolioGroup.INVESTMENTS_MMF
-                        GoalType.SACCO_DEPOSIT -> PortfolioGroup.SACCO_VAULT
+                        GoalType.SACCO_DEPOSIT -> PortfolioGroup.SAVINGS_SACCO
                         GoalType.PROPERTY_ASSET -> PortfolioGroup.REAL_ESTATE
                         GoalType.DEBT_LOAN -> PortfolioGroup.LIABILITIES_DEBT
-                        GoalType.SAVINGS_VAULT -> PortfolioGroup.SACCO_VAULT
+                        GoalType.SAVINGS_ASSET -> PortfolioGroup.SAVINGS_SACCO
                     }
 
                     if (goal.goalType == GoalType.DEBT_LOAN) {
@@ -154,7 +154,7 @@ class GetNetWorthSummaryUseCase(
                         val (name, color) = when (group) {
                             PortfolioGroup.LIQUID_CASH -> "Liquid Cash" to "#00E676"
                             PortfolioGroup.INVESTMENTS_MMF -> "MMFs & Investments" to "#2979FF"
-                            PortfolioGroup.SACCO_VAULT -> "Sacco & Savings Vaults" to "#AA00FF"
+                            PortfolioGroup.SAVINGS_SACCO -> "Sacco & Savings Assets" to "#AA00FF"
                             PortfolioGroup.REAL_ESTATE -> "Real Estate & Assets" to "#FF9100"
                             PortfolioGroup.LIABILITIES_DEBT -> "Liabilities" to "#FF1744"
                         }

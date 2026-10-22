@@ -30,6 +30,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CreditCard
@@ -45,8 +47,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import com.fintrack.shared.feature.account.ui.AccountsViewModel
 import com.fintrack.shared.feature.budget.domain.model.SavingsGoalWithCalculation
-import com.fintrack.shared.feature.planning.ui.components.AffordabilityToolCard
+import com.fintrack.shared.feature.planning.ui.components.AddEditAssetDialog
 import com.fintrack.shared.feature.planning.ui.components.AddEditDebtDialog
+import com.fintrack.shared.feature.planning.ui.components.AffordabilityToolCard
+import com.fintrack.shared.feature.planning.ui.components.AssetCard
+import com.fintrack.shared.feature.planning.ui.components.AssetsSummaryCard
 import com.fintrack.shared.feature.planning.ui.components.DebtCard
 import com.fintrack.shared.feature.planning.ui.components.DebtPayoffSummaryCard
 import com.fintrack.shared.feature.planning.ui.components.DebtStrategySwitcher
@@ -112,6 +117,7 @@ fun PlanningScreen(
     val categories by viewModel.categories.collectAsStateWithLifecycle()
     val selectedTab by viewModel.selectedTab.collectAsStateWithLifecycle()
     val savingsGoals by viewModel.savingsGoals.collectAsStateWithLifecycle()
+    val assets by viewModel.assets.collectAsStateWithLifecycle()
     val debts by viewModel.debts.collectAsStateWithLifecycle()
     val selectedStrategy by viewModel.selectedStrategy.collectAsStateWithLifecycle()
     val extraMonthlyPayment by viewModel.extraMonthlyPayment.collectAsStateWithLifecycle()
@@ -120,6 +126,7 @@ fun PlanningScreen(
     val accounts = (accountsResult as? Result.Success)?.data ?: emptyList()
 
     var showAddGoalDialog by remember { mutableStateOf(false) }
+    var showAddAssetDialog by remember { mutableStateOf(false) }
     var depositTargetGoal by remember { mutableStateOf<SavingsGoalWithCalculation?>(null) }
     var showAffordabilitySimulator by remember { mutableStateOf(false) }
     var showAddDebtDialog by remember { mutableStateOf(false) }
@@ -134,6 +141,8 @@ fun PlanningScreen(
             viewModel.reloadBudgets(showLoading = false)
             if (selectedTab == BudgetTab.SAVINGS_GOALS) {
                 viewModel.loadSavingsGoals()
+            } else if (selectedTab == BudgetTab.ASSETS_PORTFOLIO) {
+                viewModel.loadAssets()
             } else if (selectedTab == BudgetTab.DEBT_PAYOFF) {
                 viewModel.loadDebts()
             }
@@ -210,10 +219,37 @@ fun PlanningScreen(
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                text = "Savings",
+                                text = "Goals",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (selectedTab == BudgetTab.SAVINGS_GOALS) FontWeight.Bold else FontWeight.Medium,
                                 color = if (selectedTab == BudgetTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Surface(
+                        onClick = { viewModel.selectTab(BudgetTab.ASSETS_PORTFOLIO) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (selectedTab == BudgetTab.ASSETS_PORTFOLIO) MaterialTheme.colorScheme.surface else Color.Transparent,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(vertical = 10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = if (selectedTab == BudgetTab.ASSETS_PORTFOLIO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Assets",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (selectedTab == BudgetTab.ASSETS_PORTFOLIO) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selectedTab == BudgetTab.ASSETS_PORTFOLIO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -386,13 +422,100 @@ fun PlanningScreen(
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Text(
-                                            text = "No Savings Goals Yet",
+                                            text = "No Assets or Savings Goals",
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
-                                            text = "Create a goal for your emergency fund, vacation, or big purchase. FinTrack will auto-calculate required monthly savings and cashflow feasibility!",
+                                            text = "Set up a goal for emergency savings, MMF yields, Sacco deposits, or real estate assets. FinTrack will auto-calculate required monthly savings and cashflow feasibility!",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else if (selectedTab == BudgetTab.ASSETS_PORTFOLIO) {
+                // ASSETS & INVESTMENTS PORTFOLIO TAB
+                when (val currentAssets = assets) {
+                    is Result.Loading -> {
+                        item(key = "assets_loading_shimmer") {
+                            SavingsGoalShimmerLoading()
+                        }
+                    }
+                    is Result.Error -> {
+                        item(key = "assets_error") {
+                            CommonErrorState(
+                                title = "Unable to load assets",
+                                error = currentAssets.exception,
+                                onRetry = { viewModel.loadAssets() }
+                            )
+                        }
+                    }
+                    is Result.Success -> {
+                        val assetList = currentAssets.data
+                        val totalVal = assetList.sumOf { it.currentBalance }
+                        val totalYield = assetList.sumOf { it.annualPassiveYield }
+
+                        item(key = "assets_summary_card") {
+                            AssetsSummaryCard(
+                                totalValue = totalVal,
+                                totalAnnualYield = totalYield,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        item(key = "add_asset_button") {
+                            Button(
+                                onClick = { showAddAssetDialog = true },
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    .height(48.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Add Asset or Investment", fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        if (assetList.isNotEmpty()) {
+                            items(assetList, key = { "asset_${it.id}" }) { asset ->
+                                AssetCard(
+                                    asset = asset,
+                                    onDeleteClick = { viewModel.deleteAsset(asset.id) },
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                                )
+                            }
+                        } else {
+                            item(key = "assets_empty_state") {
+                                Surface(
+                                    shape = RoundedCornerShape(22.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(24.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "No Investment Assets Logged",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Log Money Market Funds (MMFs), Saccos, Real Estate, and Stock holdings to track passive returns & net worth.",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             textAlign = TextAlign.Center
@@ -504,14 +627,12 @@ fun PlanningScreen(
     if (showAddGoalDialog) {
         AddSavingsGoalDialog(
             categories = categories,
-            onGoalCreated = { name, targetAmount, targetDate, categoryId, goalType, annualRate ->
+            onGoalCreated = { name, targetAmount, targetDate, categoryId ->
                 viewModel.createSavingsGoal(
                     name = name,
                     targetAmount = targetAmount,
                     targetDate = targetDate,
-                    categoryId = categoryId,
-                    goalType = goalType,
-                    annualRatePercentage = annualRate
+                    categoryId = categoryId
                 )
             },
             onDismiss = { showAddGoalDialog = false }
@@ -540,6 +661,15 @@ fun PlanningScreen(
                 viewModel.createDebt(name, balance, rate, minPay)
             },
             onDismiss = { showAddDebtDialog = false }
+        )
+    }
+
+    if (showAddAssetDialog) {
+        AddEditAssetDialog(
+            onAssetCreated = { name, type, balance, yieldPct ->
+                viewModel.createAsset(name, type, balance, yieldPct)
+            },
+            onDismiss = { showAddAssetDialog = false }
         )
     }
 }
@@ -831,7 +961,7 @@ fun SexyAddSavingsGoalButton(
 
                 Column {
                     Text(
-                        text = "New Savings Goal",
+                        text = "New Asset or Savings Goal",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondary

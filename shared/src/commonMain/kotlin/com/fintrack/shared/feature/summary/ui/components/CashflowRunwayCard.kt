@@ -609,7 +609,7 @@ fun CashflowRunwayBottomSheet(
                         text = if (runway.isOverdraftRisk) {
                             "Pausing or rescheduling upcoming non-essential bills will immediately prevent your cash balance from dipping into overdraft before month end."
                         } else {
-                            "Your cash runway is healthy! Route any remaining month-end surplus into your Savings Vaults to build your emergency buffer."
+                            "Your cash runway is healthy! Route any remaining month-end surplus into your Savings Assets to build your emergency buffer."
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = colorScheme.onSurfaceVariant

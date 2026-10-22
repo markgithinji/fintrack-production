@@ -19,7 +19,7 @@ data class Account(
 enum class PortfolioGroup {
     LIQUID_CASH,
     INVESTMENTS_MMF,
-    SACCO_VAULT,
+    SAVINGS_SACCO,
     REAL_ESTATE,
     LIABILITIES_DEBT
 }
@@ -42,5 +42,5 @@ val AccountType.isAsset: Boolean
 val AccountType.portfolioGroup: PortfolioGroup
     get() = when (this) {
         AccountType.MPESA, AccountType.BANK, AccountType.CASH, AccountType.WALLET, AccountType.OTHER -> PortfolioGroup.LIQUID_CASH
-        AccountType.SAVINGS -> PortfolioGroup.SACCO_VAULT
+        AccountType.SAVINGS -> PortfolioGroup.SAVINGS_SACCO
     }

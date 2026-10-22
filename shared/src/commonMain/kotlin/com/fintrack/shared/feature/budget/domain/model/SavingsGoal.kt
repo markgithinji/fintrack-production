@@ -3,7 +3,7 @@ package com.fintrack.shared.feature.budget.domain.model
 import kotlinx.serialization.Serializable
 
 enum class GoalType {
-    SAVINGS_VAULT,
+    SAVINGS_ASSET,
     INVESTMENT_MMF,
     SACCO_DEPOSIT,
     PROPERTY_ASSET,
@@ -23,7 +23,7 @@ data class SavingsGoal(
     val iconName: String = "Savings",
     val colorHex: String = "#2E7D32",
     val createdAt: String,
-    val goalType: GoalType = GoalType.SAVINGS_VAULT,
+    val goalType: GoalType = GoalType.SAVINGS_ASSET,
     val annualRatePercentage: Double? = null
 ) {
     val remainingAmount: Double

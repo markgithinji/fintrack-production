@@ -37,6 +37,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
+import com.fintrack.shared.feature.planning.domain.model.Asset
+import com.fintrack.shared.feature.planning.domain.model.AssetType
+import com.fintrack.shared.feature.planning.domain.repository.AssetRepository
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
@@ -45,6 +48,7 @@ import kotlinx.datetime.toLocalDateTime
 enum class BudgetTab {
     SPENDING_BUDGETS,
     SAVINGS_GOALS,
+    ASSETS_PORTFOLIO,
     DEBT_PAYOFF
 }
 
@@ -57,7 +61,8 @@ class PlanningViewModel(
     private val syncCategoriesUseCase: SyncCategoriesUseCase,
     private val debtRepository: DebtRepository? = null,
     private val calculateDebtPayoffPlanUseCase: CalculateDebtPayoffPlanUseCase = CalculateDebtPayoffPlanUseCase(),
-    private val receiptScanner: ReceiptScanner? = null
+    private val receiptScanner: ReceiptScanner? = null,
+    private val assetRepository: AssetRepository? = null
 ) : ViewModel() {
 
     private val _selectedTab = MutableStateFlow(BudgetTab.SPENDING_BUDGETS)
@@ -65,6 +70,9 @@ class PlanningViewModel(
 
     private val _savingsGoals = MutableStateFlow<Result<List<SavingsGoalWithCalculation>>>(Result.Loading)
     val savingsGoals: StateFlow<Result<List<SavingsGoalWithCalculation>>> = _savingsGoals.asStateFlow()
+
+    private val _assets = MutableStateFlow<Result<List<Asset>>>(Result.Loading)
+    val assets: StateFlow<Result<List<Asset>>> = _assets.asStateFlow()
 
     private val _debts = MutableStateFlow<Result<List<Debt>>>(Result.Loading)
     val debts: StateFlow<Result<List<Debt>>> = _debts.asStateFlow()
@@ -82,8 +90,52 @@ class PlanningViewModel(
         _selectedTab.value = tab
         if (tab == BudgetTab.SAVINGS_GOALS && _savingsGoals.value is Result.Loading) {
             loadSavingsGoals()
+        } else if (tab == BudgetTab.ASSETS_PORTFOLIO && _assets.value is Result.Loading) {
+            loadAssets()
         } else if (tab == BudgetTab.DEBT_PAYOFF && _debts.value is Result.Loading) {
             loadDebts()
+        }
+    }
+
+    fun loadAssets() {
+        if (assetRepository == null) return
+        viewModelScope.launch {
+            _assets.value = Result.Loading
+            _assets.value = assetRepository.getAssets()
+        }
+    }
+
+    fun createAsset(
+        name: String,
+        assetType: AssetType,
+        balance: Double,
+        annualYieldPercentage: Double?
+    ) {
+        if (assetRepository == null) return
+        viewModelScope.launch {
+            val asset = Asset(
+                id = randomUUID(),
+                userId = "local_user",
+                name = name,
+                assetType = assetType,
+                currentBalance = balance,
+                annualYieldPercentage = annualYieldPercentage,
+                createdAt = kotlin.time.Clock.System.now().toString()
+            )
+            val res = assetRepository.saveAsset(asset)
+            if (res is Result.Success) {
+                loadAssets()
+            }
+        }
+    }
+
+    fun deleteAsset(assetId: String) {
+        if (assetRepository == null) return
+        viewModelScope.launch {
+            val res = assetRepository.deleteAsset(assetId)
+            if (res is Result.Success) {
+                loadAssets()
+            }
         }
     }
 
@@ -164,7 +216,7 @@ class PlanningViewModel(
         accountId: String? = null,
         iconName: String = "Savings",
         colorHex: String = "#2E7D32",
-        goalType: com.fintrack.shared.feature.budget.domain.model.GoalType = com.fintrack.shared.feature.budget.domain.model.GoalType.SAVINGS_VAULT,
+        goalType: com.fintrack.shared.feature.budget.domain.model.GoalType = com.fintrack.shared.feature.budget.domain.model.GoalType.SAVINGS_ASSET,
         annualRatePercentage: Double? = null
     ) {
         viewModelScope.launch {

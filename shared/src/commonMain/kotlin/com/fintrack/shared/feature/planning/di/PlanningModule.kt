@@ -7,7 +7,9 @@ import com.fintrack.shared.feature.budget.domain.repository.SavingsGoalRepositor
 import com.fintrack.shared.feature.budget.domain.usecase.BudgetValidationUseCase
 import com.fintrack.shared.feature.budget.domain.usecase.CheckBudgetThresholdsUseCase
 import com.fintrack.shared.feature.budget.domain.usecase.GetSavingsGoalsUseCase
+import com.fintrack.shared.feature.planning.data.repository.AssetRepositoryImpl
 import com.fintrack.shared.feature.planning.data.repository.DebtRepositoryImpl
+import com.fintrack.shared.feature.planning.domain.repository.AssetRepository
 import com.fintrack.shared.feature.planning.domain.repository.DebtRepository
 import com.fintrack.shared.feature.planning.domain.usecase.CalculateDebtPayoffPlanUseCase
 import com.fintrack.shared.feature.planning.ui.PlanningViewModel
@@ -20,6 +22,7 @@ val planningModule = module {
     single<BudgetRepository> { BudgetRepositoryImpl(database = get(), logger = get()) }
     single<SavingsGoalRepository> { SavingsGoalRepositoryImpl(database = get()) }
     single<DebtRepository> { DebtRepositoryImpl(database = get()) }
+    single<AssetRepository> { AssetRepositoryImpl(database = get()) }
     singleOf(::BudgetValidationUseCase)
     singleOf(::CheckBudgetThresholdsUseCase)
     singleOf(::GetSavingsGoalsUseCase)
@@ -34,7 +37,8 @@ val planningModule = module {
             syncCategoriesUseCase = get(),
             debtRepository = get(),
             calculateDebtPayoffPlanUseCase = get(),
-            receiptScanner = getOrNull<ReceiptScanner>()
+            receiptScanner = getOrNull<ReceiptScanner>(),
+            assetRepository = getOrNull()
         )
     }
 }

@@ -77,16 +77,16 @@ class GetBudgetOptimizerUseCase(
                 }
             }
 
-            // Factor in Planning Screen Savings Vault Balances
+            // Factor in Planning Screen Savings & Asset Balances
             val goalsResult = savingsGoalRepository?.getSavingsGoals()
             val savingsGoals = (goalsResult as? Result.Success)?.data ?: emptyList()
 
             savingsGoals.forEach { goal ->
                 val goalBal = BigDecimal.fromDouble(goal.currentAmount)
-                val vaultKey = "${goal.name} (Vault)"
-                val alreadyInMap = categorySpendMap.keys.any { it.equals(goal.name, ignoreCase = true) || it.equals(vaultKey, ignoreCase = true) }
+                val savingsKey = if (goal.name.contains("savings", ignoreCase = true)) goal.name else "${goal.name} (Savings)"
+                val alreadyInMap = categorySpendMap.keys.any { it.equals(goal.name, ignoreCase = true) || it.equals(savingsKey, ignoreCase = true) }
                 if (goalBal > BigDecimal.ZERO && !alreadyInMap) {
-                    categorySpendMap[vaultKey] = goalBal
+                    categorySpendMap[savingsKey] = goalBal
                 }
             }
 
