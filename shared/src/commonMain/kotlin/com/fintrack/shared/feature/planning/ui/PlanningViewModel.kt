@@ -163,7 +163,9 @@ class PlanningViewModel(
         categoryId: String? = null,
         accountId: String? = null,
         iconName: String = "Savings",
-        colorHex: String = "#2E7D32"
+        colorHex: String = "#2E7D32",
+        goalType: com.fintrack.shared.feature.budget.domain.model.GoalType = com.fintrack.shared.feature.budget.domain.model.GoalType.SAVINGS_VAULT,
+        annualRatePercentage: Double? = null
     ) {
         viewModelScope.launch {
             val goal = SavingsGoal(
@@ -177,7 +179,9 @@ class PlanningViewModel(
                 accountId = accountId,
                 iconName = iconName,
                 colorHex = colorHex,
-                createdAt = kotlin.time.Clock.System.now().toString()
+                createdAt = kotlin.time.Clock.System.now().toString(),
+                goalType = goalType,
+                annualRatePercentage = annualRatePercentage
             )
             val res = savingsGoalRepository.saveSavingsGoal(goal)
             if (res is Result.Success) {

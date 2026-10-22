@@ -2,6 +2,14 @@ package com.fintrack.shared.feature.budget.domain.model
 
 import kotlinx.serialization.Serializable
 
+enum class GoalType {
+    SAVINGS_VAULT,
+    INVESTMENT_MMF,
+    SACCO_DEPOSIT,
+    PROPERTY_ASSET,
+    DEBT_LOAN
+}
+
 @Serializable
 data class SavingsGoal(
     val id: String,
@@ -14,7 +22,9 @@ data class SavingsGoal(
     val accountId: String? = null,
     val iconName: String = "Savings",
     val colorHex: String = "#2E7D32",
-    val createdAt: String
+    val createdAt: String,
+    val goalType: GoalType = GoalType.SAVINGS_VAULT,
+    val annualRatePercentage: Double? = null
 ) {
     val remainingAmount: Double
         get() = (targetAmount - currentAmount).coerceAtLeast(0.0)
@@ -24,4 +34,10 @@ data class SavingsGoal(
 
     val isCompleted: Boolean
         get() = currentAmount >= targetAmount
+
+    val isLiability: Boolean
+        get() = goalType == GoalType.DEBT_LOAN
+
+    val isAsset: Boolean
+        get() = !isLiability
 }

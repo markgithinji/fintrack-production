@@ -504,8 +504,15 @@ fun PlanningScreen(
     if (showAddGoalDialog) {
         AddSavingsGoalDialog(
             categories = categories,
-            onGoalCreated = { name, targetAmount, targetDate, categoryId ->
-                viewModel.createSavingsGoal(name, targetAmount, targetDate, categoryId = categoryId)
+            onGoalCreated = { name, targetAmount, targetDate, categoryId, goalType, annualRate ->
+                viewModel.createSavingsGoal(
+                    name = name,
+                    targetAmount = targetAmount,
+                    targetDate = targetDate,
+                    categoryId = categoryId,
+                    goalType = goalType,
+                    annualRatePercentage = annualRate
+                )
             },
             onDismiss = { showAddGoalDialog = false }
         )

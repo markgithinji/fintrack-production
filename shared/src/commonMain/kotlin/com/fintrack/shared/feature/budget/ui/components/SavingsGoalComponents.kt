@@ -284,12 +284,21 @@ fun SavingsGoalCard(
 @Composable
 fun AddSavingsGoalDialog(
     categories: List<com.fintrack.shared.feature.category.domain.model.Category> = emptyList(),
-    onGoalCreated: (name: String, targetAmount: Double, targetDate: String, categoryId: String?) -> Unit,
+    onGoalCreated: (
+        name: String,
+        targetAmount: Double,
+        targetDate: String,
+        categoryId: String?,
+        goalType: com.fintrack.shared.feature.budget.domain.model.GoalType,
+        annualRatePercentage: Double?
+    ) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var targetAmountText by remember { mutableStateOf("") }
     var targetDate by remember { mutableStateOf("2025-12-31") }
+    var selectedGoalType by remember { mutableStateOf(com.fintrack.shared.feature.budget.domain.model.GoalType.SAVINGS_VAULT) }
+    var annualRateText by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<com.fintrack.shared.feature.category.domain.model.Category?>(categories.find { it.name.contains("savings", ignoreCase = true) }) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
@@ -334,13 +343,13 @@ fun AddSavingsGoalDialog(
 
                     Column {
                         Text(
-                            text = "New Savings Goal",
+                            text = "New Wealth & Savings Goal",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Set a target for emergency fund or big purchase",
+                            text = "Set up a savings vault, MMF yield, or Sacco deposit",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -349,13 +358,49 @@ fun AddSavingsGoalDialog(
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
 
+                // Goal Type Selector Chips
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Portfolio Asset Category",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(
+                            com.fintrack.shared.feature.budget.domain.model.GoalType.SAVINGS_VAULT to "Vault",
+                            com.fintrack.shared.feature.budget.domain.model.GoalType.INVESTMENT_MMF to "MMF Yield",
+                            com.fintrack.shared.feature.budget.domain.model.GoalType.SACCO_DEPOSIT to "Sacco",
+                            com.fintrack.shared.feature.budget.domain.model.GoalType.PROPERTY_ASSET to "Property"
+                        ).forEach { (type, label) ->
+                            val isSelected = selectedGoalType == type
+                            Surface(
+                                onClick = { selectedGoalType = type },
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                            ) {
+                                Text(
+                                    text = label,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = name,
                     onValueChange = {
                         name = it
                         errorMsg = null
                     },
-                    label = { Text("Goal Name (e.g. Emergency Fund)") },
+                    label = { Text("Goal Name (e.g. Sanlam MMF or Emergency Vault)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -367,12 +412,27 @@ fun AddSavingsGoalDialog(
                         targetAmountText = it
                         errorMsg = null
                     },
-                    label = { Text("Target Amount") },
+                    label = { Text("Target Goal Amount") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
+
+                if (selectedGoalType == com.fintrack.shared.feature.budget.domain.model.GoalType.INVESTMENT_MMF) {
+                    OutlinedTextField(
+                        value = annualRateText,
+                        onValueChange = {
+                            annualRateText = it
+                            errorMsg = null
+                        },
+                        label = { Text("Expected Annual Yield % (e.g. 11.5)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
 
                 OutlinedTextField(
                     value = targetDate,
@@ -380,7 +440,7 @@ fun AddSavingsGoalDialog(
                         targetDate = it
                         errorMsg = null
                     },
-                    label = { Text("Target Date (YYYY-MM-DD)") },
+                    label = { Text("Target Completion Date (YYYY-MM-DD)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -405,12 +465,20 @@ fun AddSavingsGoalDialog(
                     Button(
                         onClick = {
                             val amount = targetAmountText.toDoubleOrNull()
+                            val rate = annualRateText.toDoubleOrNull()
                             if (name.isBlank()) {
-                                errorMsg = "Please enter a goal name"
+                                errorMsg = "Please enter a name"
                             } else if (amount == null || amount <= 0) {
                                 errorMsg = "Please enter a valid target amount"
                             } else {
-                                onGoalCreated(name.trim(), amount, targetDate.trim(), selectedCategory?.id)
+                                onGoalCreated(
+                                    name.trim(),
+                                    amount,
+                                    targetDate.trim(),
+                                    selectedCategory?.id,
+                                    selectedGoalType,
+                                    rate
+                                )
                                 onDismiss()
                             }
                         },

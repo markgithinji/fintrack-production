@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
@@ -52,7 +53,9 @@ import com.fintrack.shared.feature.core.ui.AnimatedShimmerBox
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.core.util.toInt
 import com.fintrack.shared.feature.navigation.ui.toCurrencyString
+import com.fintrack.shared.feature.summary.domain.model.NetWorthMilestone
 import com.fintrack.shared.feature.summary.domain.model.NetWorthSummary
+import com.fintrack.shared.feature.summary.domain.model.PortfolioAllocationGroup
 import com.fintrack.shared.ui.theme.GreenIncome
 import com.fintrack.shared.ui.theme.PinkExpense
 
@@ -212,6 +215,75 @@ fun NetWorthCard(
                         }
                     }
 
+                    // Net Worth Milestone Goal Progress Tracker
+                    if (summary.milestone != null) {
+                        val milestone = summary.milestone
+                        val progressFloat = (milestone.currentProgressPercentage.doubleValue(false) / 100.0).toFloat().coerceIn(0f, 1f)
+
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Flag,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = "Milestone Goal: ${milestone.targetAmount.toCurrencyString()}",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+
+                                    Text(
+                                        text = "${milestone.currentProgressPercentage.toInt()}% Achieved",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
+                                LinearProgressIndicator(
+                                    progress = { progressFloat },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp)),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    drawStopIndicator = {}
+                                )
+
+                                if (milestone.estimatedMonthsToTarget != null) {
+                                    Text(
+                                        text = "Est. completion in ~${milestone.estimatedMonthsToTarget} months based on cashflow surplus",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     // 2-Column Assets vs Liabilities Tile
                     Surface(
                         shape = RoundedCornerShape(16.dp),
@@ -253,6 +325,51 @@ fun NetWorthCard(
                                     fontWeight = FontWeight.Bold,
                                     color = if (hasDebt) PinkExpense else GreenIncome
                                 )
+                            }
+                        }
+                    }
+
+                    // Portfolio Asset Allocation Groups
+                    if (summary.portfolioAllocations.isNotEmpty()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Asset Class Allocation",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                summary.portfolioAllocations.take(3).forEach { group ->
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(8.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Text(
+                                                text = group.displayName,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontSize = 9.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Text(
+                                                text = "${group.percentageOfAssets.toInt()}%",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

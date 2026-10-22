@@ -1,9 +1,17 @@
 package com.fintrack.shared.feature.summary.domain.usecase
 
+import com.fintrack.shared.feature.account.domain.model.AccountType
+import com.fintrack.shared.feature.account.domain.model.PortfolioGroup
+import com.fintrack.shared.feature.account.domain.model.portfolioGroup
 import com.fintrack.shared.feature.account.domain.repository.AccountRepository
+import com.fintrack.shared.feature.budget.domain.model.GoalType
 import com.fintrack.shared.feature.core.util.Result
+import com.fintrack.shared.feature.core.util.toDouble
+import com.fintrack.shared.feature.core.util.toInt
 import com.fintrack.shared.feature.summary.domain.model.AssetLiabilityItem
+import com.fintrack.shared.feature.summary.domain.model.NetWorthMilestone
 import com.fintrack.shared.feature.summary.domain.model.NetWorthSummary
+import com.fintrack.shared.feature.summary.domain.model.PortfolioAllocationGroup
 import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import com.ionspin.kotlin.bignum.decimal.DecimalMode
@@ -17,11 +25,15 @@ import kotlinx.datetime.toLocalDateTime
 class GetNetWorthSummaryUseCase(
     private val accountRepository: AccountRepository,
     private val transactionRepository: TransactionRepository,
-    private val savingsGoalRepository: com.fintrack.shared.feature.budget.domain.repository.SavingsGoalRepository? = null
+    private val savingsGoalRepository: com.fintrack.shared.feature.budget.domain.repository.SavingsGoalRepository? = null,
+    private val debtRepository: com.fintrack.shared.feature.planning.domain.repository.DebtRepository? = null
 ) {
     private val decimalMode = DecimalMode(decimalPrecision = 20, roundingMode = RoundingMode.ROUND_HALF_CEILING)
 
-    suspend operator fun invoke(accountId: String? = null): Result<NetWorthSummary> = withContext(Dispatchers.IO) {
+    suspend operator fun invoke(
+        accountId: String? = null,
+        targetMilestoneAmount: BigDecimal? = null
+    ): Result<NetWorthSummary> = withContext(Dispatchers.IO) {
         try {
             val targetAccountIds = accountId?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
 
@@ -32,20 +44,27 @@ class GetNetWorthSummaryUseCase(
                 accounts.filter { targetAccountIds.contains(it.id) }
             } else accounts
 
-            // Assets: Positive Account Balances
+            // Assets vs Liabilities Items and Portfolio Allocation Map
             val assetItems = mutableListOf<AssetLiabilityItem>()
             val liabilityItems = mutableListOf<AssetLiabilityItem>()
+            val groupAmountMap = mutableMapOf<PortfolioGroup, BigDecimal>()
 
             targetAccounts.forEach { acc ->
                 val bal = acc.balance ?: BigDecimal.ZERO
+                val group = acc.type.portfolioGroup
+
                 if (bal >= BigDecimal.ZERO) {
                     assetItems.add(AssetLiabilityItem(acc.id, acc.name, bal, isAsset = true))
+                    val currentGroupSum = groupAmountMap[group] ?: BigDecimal.ZERO
+                    groupAmountMap[group] = currentGroupSum + bal
                 } else {
                     liabilityItems.add(AssetLiabilityItem(acc.id, acc.name, bal.abs(), isAsset = false))
+                    val currentGroupSum = groupAmountMap[PortfolioGroup.LIABILITIES_DEBT] ?: BigDecimal.ZERO
+                    groupAmountMap[PortfolioGroup.LIABILITIES_DEBT] = currentGroupSum + bal.abs()
                 }
             }
 
-            // 2. Savings Goal Vault Balances (Assets) - Deduplicated against account names
+            // 2. Planning Screen Goals, MMFs, Saccos & Assets
             val goalsResult = savingsGoalRepository?.getSavingsGoals()
             val savingsGoals = (goalsResult as? Result.Success)?.data ?: emptyList()
 
@@ -55,20 +74,59 @@ class GetNetWorthSummaryUseCase(
                     it.name.equals(goal.name, ignoreCase = true) ||
                     it.name.contains(goal.name, ignoreCase = true) ||
                     goal.name.contains(it.name, ignoreCase = true)
+                } || liabilityItems.any {
+                    it.name.equals(goal.name, ignoreCase = true) ||
+                    it.name.contains(goal.name, ignoreCase = true)
                 }
+
                 if (goalBal > BigDecimal.ZERO && !alreadyIncluded) {
-                    assetItems.add(AssetLiabilityItem(goal.id, "${goal.name} (Vault)", goalBal, isAsset = true))
+                    val group = when (goal.goalType) {
+                        GoalType.INVESTMENT_MMF -> PortfolioGroup.INVESTMENTS_MMF
+                        GoalType.SACCO_DEPOSIT -> PortfolioGroup.SACCO_VAULT
+                        GoalType.PROPERTY_ASSET -> PortfolioGroup.REAL_ESTATE
+                        GoalType.DEBT_LOAN -> PortfolioGroup.LIABILITIES_DEBT
+                        GoalType.SAVINGS_VAULT -> PortfolioGroup.SACCO_VAULT
+                    }
+
+                    if (goal.goalType == GoalType.DEBT_LOAN) {
+                        liabilityItems.add(AssetLiabilityItem(goal.id, "${goal.name} (Loan)", goalBal, isAsset = false))
+                        val currentSum = groupAmountMap[PortfolioGroup.LIABILITIES_DEBT] ?: BigDecimal.ZERO
+                        groupAmountMap[PortfolioGroup.LIABILITIES_DEBT] = currentSum + goalBal
+                    } else {
+                        val labelExtra = if (goal.annualRatePercentage != null && goal.annualRatePercentage > 0) " (${goal.annualRatePercentage}% p.a.)" else ""
+                        assetItems.add(AssetLiabilityItem(goal.id, "${goal.name}$labelExtra", goalBal, isAsset = true))
+                        val currentSum = groupAmountMap[group] ?: BigDecimal.ZERO
+                        groupAmountMap[group] = currentSum + goalBal
+                    }
                 }
             }
 
-            // 3. Recurring Liabilities & Overdrafts - Deduplicated against account liabilities
+            // 3. Planning Screen Debts & Loans
+            val debtsResult = debtRepository?.getDebts()
+            val debts = (debtsResult as? Result.Success)?.data ?: emptyList()
+
+            debts.forEach { debt ->
+                val debtBal = BigDecimal.fromDouble(debt.balance)
+                val alreadyInLiabilities = liabilityItems.any {
+                    it.name.equals(debt.name, ignoreCase = true) ||
+                    it.name.contains(debt.name, ignoreCase = true) ||
+                    debt.name.contains(it.name, ignoreCase = true)
+                }
+                if (debtBal > BigDecimal.ZERO && !alreadyInLiabilities) {
+                    liabilityItems.add(AssetLiabilityItem(debt.id, debt.name, debtBal, isAsset = false))
+                    val currentDebtSum = groupAmountMap[PortfolioGroup.LIABILITIES_DEBT] ?: BigDecimal.ZERO
+                    groupAmountMap[PortfolioGroup.LIABILITIES_DEBT] = currentDebtSum + debtBal
+                }
+            }
+
+            // 3. Recurring Liabilities & Overdrafts -> LIABILITIES_DEBT Group
             val billsResult = transactionRepository.getRecurringBills()
             val recurringBills = (billsResult as? Result.Success)?.data ?: emptyList()
 
             val accountFilteredBills = if (targetAccountIds.isNotEmpty()) {
                 recurringBills.filter { bill ->
                     val isBankDebt = bill.name.contains("bank", ignoreCase = true) || bill.name.contains("kcb", ignoreCase = true) || bill.name.contains("equity", ignoreCase = true)
-                    val isMpesaSelected = targetAccounts.any { it.name.contains("mpesa", ignoreCase = true) || it.type == com.fintrack.shared.feature.account.domain.model.AccountType.MPESA }
+                    val isMpesaSelected = targetAccounts.any { it.name.contains("mpesa", ignoreCase = true) || it.type == AccountType.MPESA }
                     if (isMpesaSelected && isBankDebt) false else true
                 }
             } else recurringBills
@@ -78,12 +136,40 @@ class GetNetWorthSummaryUseCase(
                     val alreadyInLiabilities = liabilityItems.any { it.name.contains(bill.name, ignoreCase = true) || bill.name.contains(it.name, ignoreCase = true) }
                     if (!alreadyInLiabilities) {
                         liabilityItems.add(AssetLiabilityItem(bill.id, bill.name, bill.amount, isAsset = false))
+                        val currentDebtSum = groupAmountMap[PortfolioGroup.LIABILITIES_DEBT] ?: BigDecimal.ZERO
+                        groupAmountMap[PortfolioGroup.LIABILITIES_DEBT] = currentDebtSum + bill.amount
                     }
                 }
 
             val totalAssets = assetItems.fold(BigDecimal.ZERO) { sum, item -> sum + item.amount }
             val totalLiabilities = liabilityItems.fold(BigDecimal.ZERO) { sum, item -> sum + item.amount }
             val netWorth = totalAssets - totalLiabilities
+
+            // Build Portfolio Allocation Groups
+            val portfolioAllocations = mutableListOf<PortfolioAllocationGroup>()
+            if (totalAssets > BigDecimal.ZERO) {
+                groupAmountMap.forEach { (group, amount) ->
+                    if (group != PortfolioGroup.LIABILITIES_DEBT && amount > BigDecimal.ZERO) {
+                        val pct = amount.divide(totalAssets, decimalMode).multiply(BigDecimal.fromInt(100))
+                        val (name, color) = when (group) {
+                            PortfolioGroup.LIQUID_CASH -> "Liquid Cash" to "#00E676"
+                            PortfolioGroup.INVESTMENTS_MMF -> "MMFs & Investments" to "#2979FF"
+                            PortfolioGroup.SACCO_VAULT -> "Sacco & Savings Vaults" to "#AA00FF"
+                            PortfolioGroup.REAL_ESTATE -> "Real Estate & Assets" to "#FF9100"
+                            PortfolioGroup.LIABILITIES_DEBT -> "Liabilities" to "#FF1744"
+                        }
+                        portfolioAllocations.add(
+                            PortfolioAllocationGroup(
+                                group = group,
+                                displayName = name,
+                                totalAmount = amount,
+                                percentageOfAssets = pct,
+                                hexColor = color
+                            )
+                        )
+                    }
+                }
+            }
 
             // Debt-to-Asset Ratio
             val ratio = if (totalAssets > BigDecimal.ZERO) {
@@ -124,7 +210,7 @@ class GetNetWorthSummaryUseCase(
                 BigDecimal.fromInt(100)
             } else BigDecimal.ZERO
 
-            // 4. YTD (Jan 1st to Today) Net Worth Calculation
+            // YTD Net Worth Calculation
             val janFirstStr = "${today.year}-01-01"
             val ytdTxResult = transactionRepository.getAllTransactions(startDate = janFirstStr, endDate = todayStr, accountId = singleAccountId)
             val ytdRawTx = (ytdTxResult as? Result.Success)?.data ?: emptyList()
@@ -148,6 +234,30 @@ class GetNetWorthSummaryUseCase(
                 BigDecimal.fromInt(100)
             } else BigDecimal.ZERO
 
+            // Net Worth Milestone Calculation
+            val targetMilestone = targetMilestoneAmount ?: when {
+                netWorth < BigDecimal.fromInt(1_000_000) -> BigDecimal.fromInt(1_000_000)
+                netWorth < BigDecimal.fromInt(5_000_000) -> BigDecimal.fromInt(5_000_000)
+                netWorth < BigDecimal.fromInt(10_000_000) -> BigDecimal.fromInt(10_000_000)
+                else -> netWorth.multiply(BigDecimal.fromDouble(1.5))
+            }
+
+            val progressPct = if (targetMilestone > BigDecimal.ZERO) {
+                netWorth.divide(targetMilestone, decimalMode).multiply(BigDecimal.fromInt(100))
+            } else BigDecimal.ZERO
+
+            val remainingMilestone = if (targetMilestone > netWorth) targetMilestone - netWorth else BigDecimal.ZERO
+            val estMonths = if (past30dNetIncome > BigDecimal.ZERO && remainingMilestone > BigDecimal.ZERO) {
+                (remainingMilestone.toDouble() / past30dNetIncome.toDouble()).toInt().coerceAtLeast(1)
+            } else null
+
+            val milestone = NetWorthMilestone(
+                targetAmount = targetMilestone,
+                currentProgressPercentage = progressPct,
+                remainingAmount = remainingMilestone,
+                estimatedMonthsToTarget = estMonths
+            )
+
             Result.Success(
                 NetWorthSummary(
                     totalAssets = totalAssets,
@@ -159,7 +269,9 @@ class GetNetWorthSummaryUseCase(
                     debtToAssetRatioPercentage = ratio,
                     financialHealthStatus = healthStatus,
                     assetBreakdown = assetItems,
-                    liabilityBreakdown = liabilityItems
+                    liabilityBreakdown = liabilityItems,
+                    portfolioAllocations = portfolioAllocations.sortedByDescending { it.totalAmount.toDouble() },
+                    milestone = milestone
                 )
             )
         } catch (e: Exception) {
