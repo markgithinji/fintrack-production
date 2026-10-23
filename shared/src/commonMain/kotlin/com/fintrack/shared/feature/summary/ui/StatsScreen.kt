@@ -362,17 +362,6 @@ fun StatisticsScreen(
                     )
                 }
 
-                item(key = "budgetOptimizerCard") {
-                    BudgetOptimizerCard(
-                        optimizerResult = budgetOptimizer,
-                        selectedDays = selectedBudgetOptimizerDays,
-                        onDaysSelected = { viewModel.setBudgetOptimizerDays(it, activeAccountId) },
-                        onRetry = {
-                            viewModel.loadBudgetOptimizer(activeAccountId, force = true)
-                        }
-                    )
-                }
-
                 item(key = "topMerchantsContainerCard") {
                     TopMerchantsContainerCard(
                         merchantsResult = topMerchants,
@@ -384,12 +373,23 @@ fun StatisticsScreen(
                     )
                 }
             } else {
-                // Sub-Tab 2: NET WORTH & PORTFOLIO (Net Worth, Forecaster, Emergency Shield, Custom Analysis)
+                // Sub-Tab 2: NET WORTH & PORTFOLIO (Net Worth, 50/30/20 Optimizer, Cashflow Runway, Emergency Shield)
                 item(key = "netWorthCard") {
                     NetWorthCard(
                         netWorthResult = netWorthSummary,
                         onRetry = {
                             viewModel.loadNetWorthSummary(activeAccountId, force = true)
+                        }
+                    )
+                }
+
+                item(key = "budgetOptimizerCard") {
+                    BudgetOptimizerCard(
+                        optimizerResult = budgetOptimizer,
+                        selectedDays = selectedBudgetOptimizerDays,
+                        onDaysSelected = { viewModel.setBudgetOptimizerDays(it, activeAccountId) },
+                        onRetry = {
+                            viewModel.loadBudgetOptimizer(activeAccountId, force = true)
                         }
                     )
                 }
