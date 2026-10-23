@@ -77,16 +77,25 @@ class StatisticsViewModel(
         loadBudgetOptimizer(accountId, force = true)
     }
 
+    private var lastOptimizerAccountId: String? = null
+
     fun loadBudgetOptimizer(accountId: String? = null, force: Boolean = false) {
         if (getBudgetOptimizerUseCase == null) return
+        val accountChanged = lastOptimizerAccountId != accountId
+        if (!force && !accountChanged && _budgetOptimizer.value is Result.Success) return
+
         val days = _selectedBudgetOptimizerDays.value
         val dateRange = _selectedPeriod.value?.getDateRange()
         val startDate = dateRange?.first
         val endDate = dateRange?.second
 
         budgetOptimizerJob?.cancel()
+        if (accountChanged || force) {
+            _budgetOptimizer.value = Result.Loading
+        }
+
         budgetOptimizerJob = viewModelScope.launch {
-            if (force) _budgetOptimizer.value = Result.Loading
+            lastOptimizerAccountId = accountId
             println("[BUDGET_OPTIMIZER_LOG] Calling getBudgetOptimizerUseCase with accountId=$accountId, days=$days, startDate=$startDate, endDate=$endDate")
             _budgetOptimizer.value = getBudgetOptimizerUseCase(accountId, days, startDate, endDate)
         }
@@ -95,18 +104,36 @@ class StatisticsViewModel(
     private val _emergencyFundScore = MutableStateFlow<Result<EmergencyFundScore>>(Result.Loading)
     val emergencyFundScore: StateFlow<Result<EmergencyFundScore>> = _emergencyFundScore.asStateFlow()
 
+    private var lastSpendSpikesAccountId: String? = null
+
     fun loadSpendSpikes(accountId: String? = null, force: Boolean = false) {
         if (detectSpendSpikesUseCase == null) return
+        val accountChanged = lastSpendSpikesAccountId != accountId
+        if (!force && !accountChanged && _spendSpikes.value is Result.Success) return
+
+        if (accountChanged || force) {
+            _spendSpikes.value = Result.Loading
+        }
+
         viewModelScope.launch {
-            if (force) _spendSpikes.value = Result.Loading
+            lastSpendSpikesAccountId = accountId
             _spendSpikes.value = detectSpendSpikesUseCase(accountId)
         }
     }
 
+    private var lastEmergencyScoreAccountId: String? = null
+
     fun loadEmergencyFundScore(accountId: String? = null, force: Boolean = false) {
         if (getEmergencyFundScoreUseCase == null) return
+        val accountChanged = lastEmergencyScoreAccountId != accountId
+        if (!force && !accountChanged && _emergencyFundScore.value is Result.Success) return
+
+        if (accountChanged || force) {
+            _emergencyFundScore.value = Result.Loading
+        }
+
         viewModelScope.launch {
-            if (force) _emergencyFundScore.value = Result.Loading
+            lastEmergencyScoreAccountId = accountId
             _emergencyFundScore.value = getEmergencyFundScoreUseCase(accountId)
         }
     }
@@ -114,13 +141,21 @@ class StatisticsViewModel(
     private val _netWorthSummary = MutableStateFlow<Result<NetWorthSummary>>(Result.Loading)
     val netWorthSummary: StateFlow<Result<NetWorthSummary>> = _netWorthSummary.asStateFlow()
 
+    private var lastNetWorthAccountId: String? = null
     private var netWorthJob: Job? = null
 
     fun loadNetWorthSummary(accountId: String? = null, force: Boolean = false) {
         if (getNetWorthSummaryUseCase == null) return
+        val accountChanged = lastNetWorthAccountId != accountId
+        if (!force && !accountChanged && _netWorthSummary.value is Result.Success) return
+
         netWorthJob?.cancel()
+        if (accountChanged || force) {
+            _netWorthSummary.value = Result.Loading
+        }
+
         netWorthJob = viewModelScope.launch {
-            if (force) _netWorthSummary.value = Result.Loading
+            lastNetWorthAccountId = accountId
             _netWorthSummary.value = getNetWorthSummaryUseCase(accountId)
         }
     }
@@ -177,6 +212,7 @@ class StatisticsViewModel(
             when (val res = accountRepository.getAccounts()) {
                 is Result.Success -> {
                     val accounts = res.data
+                    val isFirstLoad = _availableAccounts.value.isEmpty()
 
                     // Default to M-Pesa account on initial load if no filter selected yet
                     if (_selectedAccountIds.value.isEmpty()) {
@@ -192,19 +228,20 @@ class StatisticsViewModel(
 
                     _availableAccounts.value = accounts
 
-                    val effectiveId = getEffectiveAccountId()
-                    resetStats()
-                    loadAvailablePeriods(effectiveId, force = true)
-                    loadOverview(effectiveId, force = true)
-                    loadCashflowRunway(effectiveId, force = true)
-                    loadNetWorthSummary(effectiveId, force = true)
-                    loadSpendSpikes(effectiveId, force = true)
-                    loadEmergencyFundScore(effectiveId, force = true)
-                    loadBudgetOptimizer(effectiveId, force = true)
-                    loadTopMerchants(effectiveId)
-                    val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
-                    loadHighlights(effectiveId, yearCode, force = true)
-                    reloadDistributionForCurrentSelection(effectiveId, force = true)
+                    if (isFirstLoad) {
+                        val effectiveId = getEffectiveAccountId()
+                        loadAvailablePeriods(effectiveId)
+                        loadOverview(effectiveId)
+                        loadCashflowRunway(effectiveId)
+                        loadNetWorthSummary(effectiveId)
+                        loadSpendSpikes(effectiveId)
+                        loadEmergencyFundScore(effectiveId)
+                        loadBudgetOptimizer(effectiveId)
+                        loadTopMerchants(effectiveId)
+                        val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
+                        loadHighlights(effectiveId, yearCode)
+                        reloadDistributionForCurrentSelection(effectiveId)
+                    }
                 }
                 else -> {}
             }
