@@ -8,6 +8,7 @@ import com.fintrack.shared.feature.summary.domain.usecase.GetCashflowRunwayUseCa
 import com.fintrack.shared.feature.summary.domain.usecase.GetEmergencyFundScoreUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.GetMerchantAnalyticsUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.GetNetWorthSummaryUseCase
+import com.fintrack.shared.feature.summary.domain.usecase.GetPassiveIncomeCoverageUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.SimulateAffordabilityUseCase
 import com.fintrack.shared.feature.summary.ui.StatisticsViewModel
 import com.fintrack.shared.feature.summary.ui.custom.CustomAnalysisViewModel
@@ -36,6 +37,7 @@ val summaryModule = module {
     }
     singleOf(::DetectSpendSpikesUseCase)
     singleOf(::GetEmergencyFundScoreUseCase)
+    singleOf(::GetPassiveIncomeCoverageUseCase)
     single {
         SimulateAffordabilityUseCase(
             getCashflowRunwayUseCase = get(),

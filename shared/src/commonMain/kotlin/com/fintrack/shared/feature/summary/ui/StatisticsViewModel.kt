@@ -48,6 +48,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+import com.fintrack.shared.feature.summary.domain.model.PassiveIncomeCoverage
+import com.fintrack.shared.feature.summary.domain.usecase.GetPassiveIncomeCoverageUseCase
+
 @OptIn(FlowPreview::class)
 class StatisticsViewModel(
     private val summaryRepository: SummaryRepository,
@@ -57,7 +60,8 @@ class StatisticsViewModel(
     private val detectSpendSpikesUseCase: DetectSpendSpikesUseCase? = null,
     private val getEmergencyFundScoreUseCase: GetEmergencyFundScoreUseCase? = null,
     private val getMerchantAnalyticsUseCase: GetMerchantAnalyticsUseCase? = null,
-    private val getBudgetOptimizerUseCase: GetBudgetOptimizerUseCase? = null
+    private val getBudgetOptimizerUseCase: GetBudgetOptimizerUseCase? = null,
+    private val getPassiveIncomeCoverageUseCase: GetPassiveIncomeCoverageUseCase? = null
 ) : ViewModel() {
 
     private val _spendSpikes = MutableStateFlow<Result<List<SpendSpikeAnomaly>>>(Result.Loading)
@@ -135,6 +139,26 @@ class StatisticsViewModel(
         viewModelScope.launch {
             lastEmergencyScoreAccountId = accountId
             _emergencyFundScore.value = getEmergencyFundScoreUseCase(accountId)
+        }
+    }
+
+    private val _passiveIncomeCoverage = MutableStateFlow<Result<PassiveIncomeCoverage>>(Result.Loading)
+    val passiveIncomeCoverage: StateFlow<Result<PassiveIncomeCoverage>> = _passiveIncomeCoverage.asStateFlow()
+
+    private var lastPassiveCoverageAccountId: String? = null
+
+    fun loadPassiveIncomeCoverage(accountId: String? = null, force: Boolean = false) {
+        if (getPassiveIncomeCoverageUseCase == null) return
+        val accountChanged = lastPassiveCoverageAccountId != accountId
+        if (!force && !accountChanged && _passiveIncomeCoverage.value is Result.Success) return
+
+        if (accountChanged || force) {
+            _passiveIncomeCoverage.value = Result.Loading
+        }
+
+        viewModelScope.launch {
+            lastPassiveCoverageAccountId = accountId
+            _passiveIncomeCoverage.value = getPassiveIncomeCoverageUseCase(accountId)
         }
     }
 
@@ -237,6 +261,7 @@ class StatisticsViewModel(
                         loadSpendSpikes(effectiveId)
                         loadEmergencyFundScore(effectiveId)
                         loadBudgetOptimizer(effectiveId)
+                        loadPassiveIncomeCoverage(effectiveId)
                         loadTopMerchants(effectiveId)
                         val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
                         loadHighlights(effectiveId, yearCode)

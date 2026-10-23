@@ -47,6 +47,7 @@ import com.fintrack.shared.feature.summary.ui.components.EmergencyFundScoreCard
 import com.fintrack.shared.feature.summary.ui.components.MerchantDetailBottomSheet
 import com.fintrack.shared.feature.summary.ui.components.NetWorthCard
 import com.fintrack.shared.feature.summary.ui.components.SpendSpikeAlertCard
+import com.fintrack.shared.feature.summary.ui.components.PassiveIncomeCoverageCard
 import com.fintrack.shared.feature.summary.ui.components.TopMerchantsContainerCard
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -122,6 +123,7 @@ fun StatisticsScreen(
     val availableAccounts by viewModel.availableAccounts.collectAsStateWithLifecycle()
     val selectedAccountIds by viewModel.selectedAccountIds.collectAsStateWithLifecycle()
     val topMerchants by viewModel.topMerchants.collectAsStateWithLifecycle()
+    val passiveIncomeCoverage by viewModel.passiveIncomeCoverage.collectAsStateWithLifecycle()
     val selectedMerchantDays by viewModel.selectedMerchantDays.collectAsStateWithLifecycle()
     var selectedMerchant by remember { mutableStateOf<MerchantSummary?>(null) }
     val listState = rememberLazyListState()
@@ -159,6 +161,7 @@ fun StatisticsScreen(
         viewModel.loadNetWorthSummary(activeAccountId, force = force)
         viewModel.loadSpendSpikes(activeAccountId, force = force)
         viewModel.loadEmergencyFundScore(activeAccountId, force = force)
+        viewModel.loadPassiveIncomeCoverage(activeAccountId, force = force)
         viewModel.loadBudgetOptimizer(activeAccountId, force = force)
         viewModel.loadTopMerchants(activeAccountId)
         lastProcessedRefreshTrigger = refreshTrigger
@@ -380,6 +383,16 @@ fun StatisticsScreen(
                         onRetry = {
                             viewModel.loadNetWorthSummary(activeAccountId, force = true)
                         }
+                    )
+                }
+
+                item(key = "passiveIncomeCoverage") {
+                    PassiveIncomeCoverageCard(
+                        coverageResult = passiveIncomeCoverage,
+                        onRetry = {
+                            viewModel.loadPassiveIncomeCoverage(activeAccountId, force = true)
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
 

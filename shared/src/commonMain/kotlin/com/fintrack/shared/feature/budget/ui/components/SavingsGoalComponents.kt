@@ -295,7 +295,7 @@ fun AddSavingsGoalDialog(
     var name by remember { mutableStateOf("") }
     var targetAmountText by remember { mutableStateOf("") }
     var targetDate by remember { mutableStateOf("2025-12-31") }
-    var selectedCategory by remember { mutableStateOf<com.fintrack.shared.feature.category.domain.model.Category?>(categories.find { it.name.contains("savings", ignoreCase = true) }) }
+    var selectedCategory by remember { mutableStateOf(categories.find { it.name.contains("savings", ignoreCase = true) }) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
     BasicAlertDialog(
