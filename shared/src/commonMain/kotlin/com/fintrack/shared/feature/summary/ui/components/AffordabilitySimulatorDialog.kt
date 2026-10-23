@@ -14,9 +14,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CheckCircle
@@ -24,7 +28,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -32,7 +35,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,25 +45,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import com.fintrack.shared.feature.account.domain.model.Account
 import com.fintrack.shared.feature.account.domain.model.AccountType
 import com.fintrack.shared.feature.account.domain.repository.AccountRepository
 import com.fintrack.shared.feature.core.ui.AnimatedShimmerBox
+import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.navigation.ui.toCurrencyString
 import com.fintrack.shared.feature.summary.domain.model.AffordabilitySimulationResult
 import com.fintrack.shared.feature.summary.domain.model.AffordabilityVerdict
 import com.fintrack.shared.feature.summary.domain.usecase.SimulateAffordabilityUseCase
-import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.ui.theme.GreenIncome
 import com.fintrack.shared.ui.theme.PinkExpense
 import org.koin.compose.koinInject
@@ -218,7 +215,7 @@ fun AffordabilitySimulatorDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(260.dp)
+                        .height(310.dp)
                 ) {
                     when (val result = simulationResult) {
                         is Result.Loading -> {
@@ -306,6 +303,7 @@ fun AffordabilitySimulatorDialog(
                                 AffordabilityVerdict.RISKY,
                                 AffordabilityVerdict.IMMEDIATE_DEFICIT -> PinkExpense
                             }
+                            val scrollState = rememberScrollState()
 
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
@@ -316,8 +314,9 @@ fun AffordabilitySimulatorDialog(
                                 Column(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .padding(16.dp),
-                                    verticalArrangement = Arrangement.SpaceBetween
+                                        .padding(16.dp)
+                                        .verticalScroll(scrollState),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -365,13 +364,45 @@ fun AffordabilitySimulatorDialog(
                                         )
                                     }
 
+                                    // Itemized Considered Metrics Breakdown Card
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(10.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(
+                                                text = "Considered Financial Variables:",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+
+                                            MetricRow("Checking Cash Today", sim.currentAccountCash.toCurrencyString(), GreenIncome)
+                                            MetricRow("Scheduled Upcoming Bills", "-${sim.upcomingBillsTotal.toCurrencyString()}", PinkExpense)
+                                            if (sim.requiredMonthlySavingsTotal > 0) {
+                                                MetricRow("Active Savings Goals Target", "-${sim.requiredMonthlySavingsTotal.toCurrencyString()}", Color(0xFFFF9800))
+                                            }
+                                            if (sim.liquidAssetsTotal > 0) {
+                                                MetricRow("Liquid MMF / Asset Reserves", "+${sim.liquidAssetsTotal.toCurrencyString()}", GreenIncome)
+                                            }
+                                            if (sim.activeDebtsTotal > 0) {
+                                                MetricRow("Active Debts Owed", sim.activeDebtsTotal.toCurrencyString(), PinkExpense)
+                                            }
+                                        }
+                                    }
+
                                     if (sim.remainingBurnDaysAfterPurchase != null) {
                                         Surface(
                                             shape = RoundedCornerShape(8.dp),
                                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                         ) {
                                             Text(
-                                                text = "Covers ${sim.remainingBurnDaysAfterPurchase} days of daily spending after bills",
+                                                text = "Leftover cash lasts ~${sim.remainingBurnDaysAfterPurchase} days for daily living expenses",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 10.sp,
@@ -380,17 +411,6 @@ fun AffordabilitySimulatorDialog(
                                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                             )
                                         }
-                                    }
-
-                                    if (sim.savingsGoalImpactMessage != null) {
-                                        Text(
-                                            text = sim.savingsGoalImpactMessage,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            lineHeight = 13.sp,
-                                            color = Color(0xFFFF9800)
-                                        )
                                     }
 
                                     HorizontalDivider(color = verdictColor.copy(alpha = 0.2f))
@@ -449,5 +469,28 @@ fun AffordabilitySimulatorDialog(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MetricRow(label: String, value: String, valueColor: Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            color = valueColor
+        )
     }
 }

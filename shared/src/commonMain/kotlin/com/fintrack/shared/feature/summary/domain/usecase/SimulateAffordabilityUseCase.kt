@@ -2,13 +2,17 @@ package com.fintrack.shared.feature.summary.domain.usecase
 
 import com.fintrack.shared.feature.budget.domain.usecase.GetSavingsGoalsUseCase
 import com.fintrack.shared.feature.core.util.Result
+import com.fintrack.shared.feature.planning.domain.repository.AssetRepository
+import com.fintrack.shared.feature.planning.domain.repository.DebtRepository
 import com.fintrack.shared.feature.summary.domain.model.AffordabilitySimulationResult
 import com.fintrack.shared.feature.summary.domain.model.AffordabilityVerdict
 import com.fintrack.shared.feature.summary.domain.model.CashflowRunway
 
 class SimulateAffordabilityUseCase(
     private val getCashflowRunwayUseCase: GetCashflowRunwayUseCase,
-    private val getSavingsGoalsUseCase: GetSavingsGoalsUseCase? = null
+    private val getSavingsGoalsUseCase: GetSavingsGoalsUseCase? = null,
+    private val assetRepository: AssetRepository? = null,
+    private val debtRepository: DebtRepository? = null
 ) {
     suspend operator fun invoke(itemPrice: Double, accountId: String? = null): Result<AffordabilitySimulationResult> {
         if (itemPrice <= 0.0) {
@@ -24,7 +28,19 @@ class SimulateAffordabilityUseCase(
                 // Fetch total active savings goals monthly requirement
                 val totalRequiredMonthlySavings = fetchTotalRequiredSavings()
 
-                val result = runSimulation(itemPrice, runway, totalRequiredMonthlySavings)
+                // Fetch liquid MMF & asset reserves
+                val liquidAssetsTotal = fetchLiquidAssetsTotal()
+
+                // Fetch active debts total
+                val activeDebtsTotal = fetchActiveDebtsTotal()
+
+                val result = runSimulation(
+                    itemPrice = itemPrice,
+                    runway = runway,
+                    requiredMonthlySavings = totalRequiredMonthlySavings,
+                    liquidAssetsTotal = liquidAssetsTotal,
+                    activeDebtsTotal = activeDebtsTotal
+                )
                 Result.Success(result)
             }
         }
@@ -40,10 +56,28 @@ class SimulateAffordabilityUseCase(
         }
     }
 
+    private suspend fun fetchLiquidAssetsTotal(): Double {
+        if (assetRepository == null) return 0.0
+        return when (val assetsRes = assetRepository.getAssets()) {
+            is Result.Success -> assetsRes.data.sumOf { it.currentBalance }
+            else -> 0.0
+        }
+    }
+
+    private suspend fun fetchActiveDebtsTotal(): Double {
+        if (debtRepository == null) return 0.0
+        return when (val debtsRes = debtRepository.getDebts()) {
+            is Result.Success -> debtsRes.data.sumOf { it.balance }
+            else -> 0.0
+        }
+    }
+
     private fun runSimulation(
         itemPrice: Double,
         runway: CashflowRunway,
-        requiredMonthlySavings: Double
+        requiredMonthlySavings: Double,
+        liquidAssetsTotal: Double,
+        activeDebtsTotal: Double
     ): AffordabilitySimulationResult {
         val currentCash = runway.currentBalance.doubleValue(false)
         val eomBefore = runway.projectedEomBalance.doubleValue(false)
@@ -69,9 +103,19 @@ class SimulateAffordabilityUseCase(
         val recommendation: String
 
         if (itemPrice > currentCash) {
-            verdict = AffordabilityVerdict.IMMEDIATE_DEFICIT
-            message = "Immediate Cash Deficit: Today's account balance (KES ${currentCash.toFormattedString()}) is less than item price."
-            recommendation = "You cannot afford this purchase today without using credit or overdraft."
+            if (liquidAssetsTotal >= itemPrice) {
+                verdict = AffordabilityVerdict.CAUTION
+                message = "Checking Cash Deficit: Today's checking cash (KES ${currentCash.toFormattedString()}) is less than item price, but you have KES ${liquidAssetsTotal.toFormattedString()} in MMFs/Assets."
+                recommendation = "Doable via MMF withdrawal! Transfer KES ${itemPrice.toFormattedString()} from your MMF Asset to cover this purchase without taking on high-interest loan debt."
+            } else {
+                verdict = AffordabilityVerdict.IMMEDIATE_DEFICIT
+                message = "Immediate Cash Deficit: Today's available cash (KES ${currentCash.toFormattedString()}) is less than item price."
+                recommendation = if (activeDebtsTotal > 0) {
+                    "You have KES ${activeDebtsTotal.toFormattedString()} in active debts. Avoid taking on new credit or overdrafts for non-essential purchases."
+                } else {
+                    "You cannot afford this purchase today without using credit or overdraft."
+                }
+            }
         } else if (eomAfter < 0.0) {
             verdict = AffordabilityVerdict.RISKY
             message = "High Risk: Will cause an estimated overdraft of KES ${kotlin.math.abs(eomAfter).toFormattedString()} before month-end."
@@ -98,6 +142,9 @@ class SimulateAffordabilityUseCase(
             projectedEomBalanceAfter = eomAfter,
             cushionRemaining = cushion,
             upcomingBillsTotal = billsTotal,
+            requiredMonthlySavingsTotal = requiredMonthlySavings,
+            liquidAssetsTotal = liquidAssetsTotal,
+            activeDebtsTotal = activeDebtsTotal,
             remainingDaysInMonth = runway.remainingDaysInMonth,
             remainingBurnDaysAfterPurchase = remainingBurnDays,
             savingsGoalImpactMessage = savingsGoalImpact,

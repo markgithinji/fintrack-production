@@ -283,16 +283,15 @@ fun PlanningScreen(
                 }
             }
 
-            // Dedicated Decision Tool Card
-            item(key = "affordability_tool_card") {
-                AffordabilityToolCard(
-                    onSimulateClick = { showAffordabilitySimulator = true },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-            }
-
             if (selectedTab == BudgetTab.SPENDING_BUDGETS) {
                 // SPENDING BUDGETS TAB
+                item(key = "affordability_tool_card") {
+                    AffordabilityToolCard(
+                        onSimulateClick = { showAffordabilitySimulator = true },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+
                 when (val currentBudgets = budgets) {
                     is Result.Loading -> {
                         spendingBudgetsShimmerItems()

@@ -36,7 +36,14 @@ val summaryModule = module {
     }
     singleOf(::DetectSpendSpikesUseCase)
     singleOf(::GetEmergencyFundScoreUseCase)
-    singleOf(::SimulateAffordabilityUseCase)
+    single {
+        SimulateAffordabilityUseCase(
+            getCashflowRunwayUseCase = get(),
+            getSavingsGoalsUseCase = getOrNull(),
+            assetRepository = getOrNull(),
+            debtRepository = getOrNull()
+        )
+    }
     singleOf(::GetMerchantAnalyticsUseCase)
     single {
         GetBudgetOptimizerUseCase(
