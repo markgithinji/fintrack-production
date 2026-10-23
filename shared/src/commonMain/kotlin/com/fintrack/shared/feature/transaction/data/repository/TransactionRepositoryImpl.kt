@@ -476,9 +476,9 @@ class TransactionRepositoryImpl(
 
             val recurringBills = mutableListOf<RecurringBill>()
 
-            // 3. Detect regular intervals (~30 days)
+            // 3. Detect regular intervals (Weekly ~7d, Bi-Weekly ~14d, Monthly ~30d)
             groups.forEach { (_, txns) ->
-                if (txns.size >= 3) {
+                if (txns.size >= 2) {
                     val sortedTxns = txns.sortedBy { it.dateTime.toEpochMilliseconds() }
                     
                     val intervals = mutableListOf<Long>()
@@ -488,15 +488,27 @@ class TransactionRepositoryImpl(
                     }
 
                     val avgInterval = if (intervals.isEmpty()) 0.0 else intervals.average()
-                    val isRegular = if (intervals.isEmpty()) false 
-                        else intervals.all { abs(it - avgInterval) <= 3 } && avgInterval in 25.0..35.0
+
+                    val (isRegular, frequency, intervalDays) = when {
+                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 2.5 } && avgInterval in 5.0..9.0 -> Triple(true, "Weekly", 7)
+                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 3.5 } && avgInterval in 12.0..16.0 -> Triple(true, "Bi-Weekly", 14)
+                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 5.0 } && avgInterval in 25.0..35.0 -> Triple(true, "Monthly", 30)
+                        else -> Triple(false, "Custom", 30)
+                    }
 
                     if (isRegular) {
                         val lastTxn = sortedTxns.last()
                         val avgAmountRaw = sortedTxns.sumOf { BigDecimal.parseString(it.amount).toDouble() } / sortedTxns.size
                         
                         val name = lastTxn.description?.split("(Ref:")?.get(0)?.trim() ?: "Recurring Bill"
-                        val nextDueDate = lastTxn.dateTime.toLocalDateTime(TimeZone.currentSystemDefault()).date.plus(DatePeriod(days = 30))
+                        
+                        val tz = TimeZone.currentSystemDefault()
+                        val today = DateTimeHelper.now().toLocalDateTime(tz).date
+                        var nextDueDate = lastTxn.dateTime.toLocalDateTime(tz).date.plus(DatePeriod(days = intervalDays))
+
+                        while (nextDueDate < today) {
+                            nextDueDate = nextDueDate.plus(DatePeriod(days = intervalDays))
+                        }
 
                         recurringBills.add(
                             RecurringBill(
@@ -505,7 +517,7 @@ class TransactionRepositoryImpl(
                                 amount = BigDecimal.fromDouble(avgAmountRaw),
                                 category = lastTxn.categoryName ?: "General",
                                 categoryId = lastTxn.categoryId,
-                                frequency = "Monthly",
+                                frequency = frequency,
                                 nextDueDate = nextDueDate,
                                 isActive = true
                             )
