@@ -47,6 +47,7 @@ import com.fintrack.shared.feature.summary.ui.components.EmergencyFundScoreCard
 import com.fintrack.shared.feature.summary.ui.components.MerchantDetailBottomSheet
 import com.fintrack.shared.feature.summary.ui.components.NetWorthCard
 import com.fintrack.shared.feature.summary.ui.components.SpendSpikeAlertCard
+import com.fintrack.shared.feature.summary.ui.components.FinancialHealthIndexCard
 import com.fintrack.shared.feature.summary.ui.components.PassiveIncomeCoverageCard
 import com.fintrack.shared.feature.summary.ui.components.TopMerchantsContainerCard
 import androidx.compose.material3.Card
@@ -124,6 +125,7 @@ fun StatisticsScreen(
     val selectedAccountIds by viewModel.selectedAccountIds.collectAsStateWithLifecycle()
     val topMerchants by viewModel.topMerchants.collectAsStateWithLifecycle()
     val passiveIncomeCoverage by viewModel.passiveIncomeCoverage.collectAsStateWithLifecycle()
+    val financialHealthIndex by viewModel.financialHealthIndex.collectAsStateWithLifecycle()
     val selectedMerchantDays by viewModel.selectedMerchantDays.collectAsStateWithLifecycle()
     var selectedMerchant by remember { mutableStateOf<MerchantSummary?>(null) }
     val listState = rememberLazyListState()
@@ -162,6 +164,7 @@ fun StatisticsScreen(
         viewModel.loadSpendSpikes(activeAccountId, force = force)
         viewModel.loadEmergencyFundScore(activeAccountId, force = force)
         viewModel.loadPassiveIncomeCoverage(activeAccountId, force = force)
+        viewModel.loadFinancialHealthIndex(activeAccountId, force = force)
         viewModel.loadBudgetOptimizer(activeAccountId, force = force)
         viewModel.loadTopMerchants(activeAccountId)
         lastProcessedRefreshTrigger = refreshTrigger
@@ -383,6 +386,16 @@ fun StatisticsScreen(
                         onRetry = {
                             viewModel.loadNetWorthSummary(activeAccountId, force = true)
                         }
+                    )
+                }
+
+                item(key = "financialHealthIndex") {
+                    FinancialHealthIndexCard(
+                        healthIndexResult = financialHealthIndex,
+                        onRetry = {
+                            viewModel.loadFinancialHealthIndex(activeAccountId, force = true)
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
 

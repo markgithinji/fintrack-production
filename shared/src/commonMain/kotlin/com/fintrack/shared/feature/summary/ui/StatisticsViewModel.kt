@@ -48,7 +48,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+import com.fintrack.shared.feature.summary.domain.model.FinancialHealthIndex
 import com.fintrack.shared.feature.summary.domain.model.PassiveIncomeCoverage
+import com.fintrack.shared.feature.summary.domain.usecase.GetFinancialHealthIndexUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.GetPassiveIncomeCoverageUseCase
 
 @OptIn(FlowPreview::class)
@@ -61,7 +63,8 @@ class StatisticsViewModel(
     private val getEmergencyFundScoreUseCase: GetEmergencyFundScoreUseCase? = null,
     private val getMerchantAnalyticsUseCase: GetMerchantAnalyticsUseCase? = null,
     private val getBudgetOptimizerUseCase: GetBudgetOptimizerUseCase? = null,
-    private val getPassiveIncomeCoverageUseCase: GetPassiveIncomeCoverageUseCase? = null
+    private val getPassiveIncomeCoverageUseCase: GetPassiveIncomeCoverageUseCase? = null,
+    private val getFinancialHealthIndexUseCase: GetFinancialHealthIndexUseCase? = null
 ) : ViewModel() {
 
     private val _spendSpikes = MutableStateFlow<Result<List<SpendSpikeAnomaly>>>(Result.Loading)
@@ -159,6 +162,26 @@ class StatisticsViewModel(
         viewModelScope.launch {
             lastPassiveCoverageAccountId = accountId
             _passiveIncomeCoverage.value = getPassiveIncomeCoverageUseCase(accountId)
+        }
+    }
+
+    private val _financialHealthIndex = MutableStateFlow<Result<FinancialHealthIndex>>(Result.Loading)
+    val financialHealthIndex: StateFlow<Result<FinancialHealthIndex>> = _financialHealthIndex.asStateFlow()
+
+    private var lastHealthIndexAccountId: String? = null
+
+    fun loadFinancialHealthIndex(accountId: String? = null, force: Boolean = false) {
+        if (getFinancialHealthIndexUseCase == null) return
+        val accountChanged = lastHealthIndexAccountId != accountId
+        if (!force && !accountChanged && _financialHealthIndex.value is Result.Success) return
+
+        if (accountChanged || force) {
+            _financialHealthIndex.value = Result.Loading
+        }
+
+        viewModelScope.launch {
+            lastHealthIndexAccountId = accountId
+            _financialHealthIndex.value = getFinancialHealthIndexUseCase(accountId)
         }
     }
 
@@ -262,6 +285,7 @@ class StatisticsViewModel(
                         loadEmergencyFundScore(effectiveId)
                         loadBudgetOptimizer(effectiveId)
                         loadPassiveIncomeCoverage(effectiveId)
+                        loadFinancialHealthIndex(effectiveId)
                         loadTopMerchants(effectiveId)
                         val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
                         loadHighlights(effectiveId, yearCode)

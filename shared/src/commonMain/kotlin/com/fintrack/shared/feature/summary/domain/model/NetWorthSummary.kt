@@ -37,5 +37,6 @@ data class NetWorthSummary(
     val assetBreakdown: List<AssetLiabilityItem> = emptyList(),
     val liabilityBreakdown: List<AssetLiabilityItem> = emptyList(),
     val portfolioAllocations: List<PortfolioAllocationGroup> = emptyList(),
-    val milestone: NetWorthMilestone? = null
+    val milestone: NetWorthMilestone? = null,
+    val fireScore: FireScore? = null
 )

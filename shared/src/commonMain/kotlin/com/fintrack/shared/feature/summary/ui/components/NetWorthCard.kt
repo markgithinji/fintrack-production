@@ -422,6 +422,66 @@ fun NetWorthCard(
                         }
                     }
 
+                    // FIRE Score Target Tracker (25x Annual Living Expenses)
+                    if (summary.fireScore != null) {
+                        val fire = summary.fireScore
+                        val fireFloat = (fire.fireProgressPercentage / 100.0).toFloat().coerceIn(0f, 1f)
+                        val fireTargetStr = fire.fireTargetAmount.toCurrencyString()
+
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "🛡️ FIRE Target ($fireTargetStr)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "${fire.fireProgressPercentage}%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = GreenIncome
+                                )
+                            }
+
+                            LinearProgressIndicator(
+                                progress = { fireFloat },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
+                                color = GreenIncome,
+                                trackColor = GreenIncome.copy(alpha = 0.15f),
+                                drawStopIndicator = {}
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = fire.phaseName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = GreenIncome
+                                )
+                                if (fire.estimatedYearsToFire != null) {
+                                    Text(
+                                        text = "Est. FI in ~${fire.estimatedYearsToFire} yrs",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     // Debt-to-Asset Gauge Bar
                     val ratioFloat = (summary.debtToAssetRatioPercentage.doubleValue(false) / 100.0).toFloat().coerceIn(0f, 1f)
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {

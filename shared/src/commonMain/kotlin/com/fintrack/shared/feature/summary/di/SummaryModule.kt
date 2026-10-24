@@ -39,6 +39,14 @@ val summaryModule = module {
     singleOf(::GetEmergencyFundScoreUseCase)
     singleOf(::GetPassiveIncomeCoverageUseCase)
     single {
+        com.fintrack.shared.feature.summary.domain.usecase.GetFinancialHealthIndexUseCase(
+            getCashflowRunwayUseCase = get(),
+            getNetWorthSummaryUseCase = getOrNull(),
+            getEmergencyFundScoreUseCase = getOrNull(),
+            getBudgetOptimizerUseCase = getOrNull()
+        )
+    }
+    single {
         SimulateAffordabilityUseCase(
             getCashflowRunwayUseCase = get(),
             getSavingsGoalsUseCase = getOrNull(),

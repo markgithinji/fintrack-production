@@ -9,6 +9,7 @@ import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.core.util.toDouble
 import com.fintrack.shared.feature.core.util.toInt
 import com.fintrack.shared.feature.summary.domain.model.AssetLiabilityItem
+import com.fintrack.shared.feature.summary.domain.model.FireScore
 import com.fintrack.shared.feature.summary.domain.model.NetWorthMilestone
 import com.fintrack.shared.feature.summary.domain.model.NetWorthSummary
 import com.fintrack.shared.feature.summary.domain.model.PortfolioAllocationGroup
@@ -258,6 +259,56 @@ class GetNetWorthSummaryUseCase(
                 estimatedMonthsToTarget = estMonths
             )
 
+            // FIRE Score Calculation (25x Annual Living Expenses Rule)
+            val realLivingExpenses = filteredTx.filter { tx ->
+                if (tx.isIncome) return@filter false
+                val amt = tx.amount.doubleValue(false)
+                if (amt <= 0.0 || amt > 150000.0) return@filter false
+
+                val catName = (tx.category ?: "").lowercase()
+                val desc = (tx.description ?: "").lowercase()
+
+                if (catName.contains("reversal") || desc.contains("reversal of")) return@filter false
+                if (catName.contains("savings") || desc.contains("m-shwari") || desc.contains("lock savings") || desc.contains("vault")) return@filter false
+                if (desc.contains("transfer to own account") || desc.contains("internal transfer") || desc.contains("transfer between")) return@filter false
+                if (catName.contains("property") || catName.contains("investment") || catName.contains("asset") || desc.contains("property purchase") || desc.contains("land purchase")) return@filter false
+
+                true
+            }
+
+            val total30dExpenses = realLivingExpenses.sumOf { it.amount.doubleValue(false) }
+            val monthlyExpenses = if (total30dExpenses > 0) total30dExpenses else 20000.0
+            val annualExpenses = monthlyExpenses * 12.0
+            val fireTarget = annualExpenses * 25.0
+            val netWorthVal = netWorth.doubleValue(false).coerceAtLeast(0.0)
+            val firePct = if (fireTarget > 0) (netWorthVal / fireTarget * 100.0).coerceAtMost(1000.0) else 0.0
+            val firePctRounded = kotlin.math.round(firePct * 10.0) / 10.0
+
+            val phase = when {
+                firePctRounded >= 100.0 -> "FIRE Unlocked! Financial Independence Achieved 🏆"
+                firePctRounded >= 75.0 -> "Phase 4: Near Financial Independence"
+                firePctRounded >= 50.0 -> "Phase 3: Halfway To FIRE Independence"
+                firePctRounded >= 25.0 -> "Phase 2: Coast FI Growth Momentum"
+                else -> "Phase 1: Wealth Foundation Building"
+            }
+
+            val netMonthlySavings = past30dNetIncome.doubleValue(false)
+            val remainingFireCash = (fireTarget - netWorthVal).coerceAtLeast(0.0)
+            val estYears = if (netMonthlySavings > 0 && remainingFireCash > 0) {
+                val yrs = remainingFireCash / (netMonthlySavings * 12.0)
+                kotlin.math.round(yrs * 10.0) / 10.0
+            } else null
+
+            val fireScore = FireScore(
+                netWorth = netWorthVal,
+                monthlyLivingExpenses = monthlyExpenses,
+                annualLivingExpenses = annualExpenses,
+                fireTargetAmount = fireTarget,
+                fireProgressPercentage = firePctRounded,
+                phaseName = phase,
+                estimatedYearsToFire = estYears
+            )
+
             Result.Success(
                 NetWorthSummary(
                     totalAssets = totalAssets,
@@ -271,7 +322,8 @@ class GetNetWorthSummaryUseCase(
                     assetBreakdown = assetItems,
                     liabilityBreakdown = liabilityItems,
                     portfolioAllocations = portfolioAllocations.sortedByDescending { it.totalAmount.toDouble() },
-                    milestone = milestone
+                    milestone = milestone,
+                    fireScore = fireScore
                 )
             )
         } catch (e: Exception) {
