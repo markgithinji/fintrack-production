@@ -852,9 +852,10 @@ fun SexyAddBudgetButton(
                         color = MaterialTheme.colorScheme.onSecondary
                     )
                     Text(
-                        text = "Plan your spending strategically",
+                        text = "Auto-tracks matching transactions across accounts",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.6f)
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.85f)
                     )
                 }
             }
@@ -1180,7 +1181,7 @@ fun BudgetEmptyState(
         Spacer(Modifier.height(12.dp))
 
         Text(
-            text = "Create your first budget to gain clarity on your spending habits and achieve your financial goals.",
+            text = "Set category limits for Dining, Utilities, or Fuel. FinTrack auto-detects matching transactions across all accounts and tracks remaining limits in real-time.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

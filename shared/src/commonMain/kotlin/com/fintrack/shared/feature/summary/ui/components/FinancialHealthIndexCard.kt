@@ -226,7 +226,7 @@ fun FinancialHealthIndexCard(
                                     verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Text(
-                                        text = "💡 Actionable Advice:",
+                                        text = "Actionable Advice:",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary

@@ -387,7 +387,7 @@ fun NetWorthCard(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "🎯 Target Milestone ($targetStr)",
+                                    text = "Target Milestone ($targetStr)",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -435,7 +435,7 @@ fun NetWorthCard(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "🛡️ FIRE Target ($fireTargetStr)",
+                                    text = "FIRE Target ($fireTargetStr)",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -810,7 +810,7 @@ fun NetWorthBreakdownBottomSheet(
                                         color = PinkExpense.copy(alpha = 0.1f)
                                     ) {
                                         Text(
-                                            text = "⚡ High Priority",
+                                            text = "High Priority",
                                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
                                             style = MaterialTheme.typography.labelSmall,
                                             fontSize = 9.sp,
@@ -843,7 +843,7 @@ fun NetWorthBreakdownBottomSheet(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "💡 Financial Tip",
+                        text = "Financial Tip",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = colorScheme.primary

@@ -285,7 +285,7 @@ class GetNetWorthSummaryUseCase(
             val firePctRounded = kotlin.math.round(firePct * 10.0) / 10.0
 
             val phase = when {
-                firePctRounded >= 100.0 -> "FIRE Unlocked! Financial Independence Achieved 🏆"
+                firePctRounded >= 100.0 -> "FIRE Unlocked! Financial Independence Achieved"
                 firePctRounded >= 75.0 -> "Phase 4: Near Financial Independence"
                 firePctRounded >= 50.0 -> "Phase 3: Halfway To FIRE Independence"
                 firePctRounded >= 25.0 -> "Phase 2: Coast FI Growth Momentum"

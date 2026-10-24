@@ -431,7 +431,7 @@ fun AffordabilitySimulatorDialog(
                                                     verticalAlignment = Alignment.CenterVertically
                                                 ) {
                                                     Text(
-                                                        text = "⏳ Target Readiness Timeline",
+                                                        text = "Target Readiness Timeline",
                                                         style = MaterialTheme.typography.labelSmall,
                                                         fontWeight = FontWeight.Bold,
                                                         color = MaterialTheme.colorScheme.onPrimaryContainer
