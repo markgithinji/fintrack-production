@@ -309,6 +309,7 @@ fun ExtraPaymentBoostCard(
 @Composable
 fun DebtCard(
     debtSchedule: DebtWithSchedule,
+    onCardClick: () -> Unit,
     onPayClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -316,6 +317,7 @@ fun DebtCard(
     val debt = debtSchedule.debt
 
     Card(
+        onClick = onCardClick,
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
@@ -331,42 +333,21 @@ fun DebtCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "#${debtSchedule.payOffRank}",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-
-                    Column {
-                        Text(
-                            text = debt.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "${debt.interestRate}% APR • Min ${debt.minimumPayment.toCurrencyString()}/mo",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = debt.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "${debt.interestRate}% APR • Min ${debt.minimumPayment.toCurrencyString()}/mo",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 IconButton(onClick = onDeleteClick, modifier = Modifier.size(32.dp)) {
@@ -468,13 +449,15 @@ fun DebtCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditDebtDialog(
-    onDebtCreated: (name: String, balance: Double, interestRate: Double, minimumPayment: Double) -> Unit,
+    debt: Debt? = null,
+    onDebtSaved: (id: String?, name: String, balance: Double, interestRate: Double, minimumPayment: Double) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var nameText by remember { mutableStateOf("") }
-    var balanceText by remember { mutableStateOf("") }
-    var interestRateText by remember { mutableStateOf("") }
-    var minimumPaymentText by remember { mutableStateOf("") }
+    var nameText by remember { mutableStateOf(debt?.name ?: "") }
+    var balanceText by remember { mutableStateOf(debt?.balance?.let { if (it > 0) it.toString() else "" } ?: "") }
+    var interestRateText by remember { mutableStateOf(debt?.interestRate?.let { if (it > 0) it.toString() else "" } ?: "") }
+    var minimumPaymentText by remember { mutableStateOf(debt?.minimumPayment?.let { if (it > 0) it.toString() else "" } ?: "") }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
 
     BasicAlertDialog(
         onDismissRequest = onDismiss,
@@ -516,7 +499,7 @@ fun AddEditDebtDialog(
 
                     Column {
                         Text(
-                            text = "Add Loan or Debt",
+                            text = if (debt != null) "Edit Loan or Debt" else "Add Loan or Debt",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -534,19 +517,27 @@ fun AddEditDebtDialog(
 
                 OutlinedTextField(
                     value = nameText,
-                    onValueChange = { nameText = it },
+                    onValueChange = {
+                        nameText = it
+                        errorMsg = null
+                    },
                     label = { Text("Debt Name (e.g. Fuliza, Equity Loan)") },
                     singleLine = true,
+                    maxLines = 1,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
 
                 OutlinedTextField(
                     value = balanceText,
-                    onValueChange = { balanceText = it },
+                    onValueChange = {
+                        balanceText = it
+                        errorMsg = null
+                    },
                     label = { Text("Current Balance (e.g. 35,000)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
+                    maxLines = 1,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -557,22 +548,38 @@ fun AddEditDebtDialog(
                 ) {
                     OutlinedTextField(
                         value = interestRateText,
-                        onValueChange = { interestRateText = it },
+                        onValueChange = {
+                            interestRateText = it
+                            errorMsg = null
+                        },
                         label = { Text("APR % (e.g. 14.0)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
+                        maxLines = 1,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     )
 
                     OutlinedTextField(
                         value = minimumPaymentText,
-                        onValueChange = { minimumPaymentText = it },
+                        onValueChange = {
+                            minimumPaymentText = it
+                            errorMsg = null
+                        },
                         label = { Text("Min Pay/mo") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
+                        maxLines = 1,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
+                    )
+                }
+
+                if (errorMsg != null) {
+                    Text(
+                        text = errorMsg!!,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
 
@@ -586,18 +593,24 @@ fun AddEditDebtDialog(
                     Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            val balance = balanceText.toDoubleOrNull() ?: 0.0
+                            val balance = balanceText.toDoubleOrNull()
                             val rate = interestRateText.toDoubleOrNull() ?: 0.0
-                            val minPay = minimumPaymentText.toDoubleOrNull() ?: 0.0
+                            val minPay = minimumPaymentText.toDoubleOrNull()
 
-                            if (nameText.isNotBlank() && balance > 0) {
-                                onDebtCreated(nameText.trim(), balance, rate, minPay)
+                            if (nameText.isBlank()) {
+                                errorMsg = "Please enter a debt name"
+                            } else if (balance == null || balance <= 0) {
+                                errorMsg = "Please enter a valid debt balance"
+                            } else if (minPay == null || minPay <= 0) {
+                                errorMsg = "Please enter a valid monthly minimum payment"
+                            } else {
+                                onDebtSaved(debt?.id, nameText.trim(), balance, rate, minPay)
                                 onDismiss()
                             }
                         },
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Save Debt", fontWeight = FontWeight.Bold)
+                        Text(if (debt != null) "Update Debt" else "Save Debt", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -680,6 +693,7 @@ fun LogDebtRepaymentDialog(
                     label = { Text("Repayment Amount (e.g. 5,000)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
+                    maxLines = 1,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )

@@ -126,6 +126,7 @@ fun PlanningScreen(
     var showAddAssetDialog by remember { mutableStateOf(false) }
     var depositTargetGoal by remember { mutableStateOf<SavingsGoalWithCalculation?>(null) }
     var debtToPay by remember { mutableStateOf<com.fintrack.shared.feature.planning.domain.model.Debt?>(null) }
+    var debtToEdit by remember { mutableStateOf<com.fintrack.shared.feature.planning.domain.model.Debt?>(null) }
     var showAffordabilitySimulator by remember { mutableStateOf(false) }
     var showAddDebtDialog by remember { mutableStateOf(false) }
 
@@ -180,20 +181,22 @@ fun PlanningScreen(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(vertical = 10.dp)
+                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.PieChart,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(15.dp),
                                 tint = if (selectedTab == PlanningTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text(
                                 text = "Budgets",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (selectedTab == PlanningTab.SPENDING_BUDGETS) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTab == PlanningTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (selectedTab == PlanningTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -207,20 +210,22 @@ fun PlanningScreen(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(vertical = 10.dp)
+                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Savings,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(15.dp),
                                 tint = if (selectedTab == PlanningTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text(
                                 text = "Goals",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (selectedTab == PlanningTab.SAVINGS_GOALS) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTab == PlanningTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (selectedTab == PlanningTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -234,20 +239,22 @@ fun PlanningScreen(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(vertical = 10.dp)
+                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.TrendingUp,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(15.dp),
                                 tint = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text(
                                 text = "Assets",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -261,20 +268,22 @@ fun PlanningScreen(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(vertical = 10.dp)
+                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.CreditCard,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(15.dp),
                                 tint = if (selectedTab == PlanningTab.DEBT_PAYOFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(4.dp))
                             Text(
-                                text = "Debt Payoff",
+                                text = "Debts",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (selectedTab == PlanningTab.DEBT_PAYOFF) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTab == PlanningTab.DEBT_PAYOFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (selectedTab == PlanningTab.DEBT_PAYOFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -551,6 +560,7 @@ fun PlanningScreen(
                     items(payoffPlan!!.orderedDebts, key = { "debt_${it.debt.id}" }) { debtSchedule ->
                         DebtCard(
                             debtSchedule = debtSchedule,
+                            onCardClick = { debtToEdit = debtSchedule.debt },
                             onPayClick = { debtToPay = debtSchedule.debt },
                             onDeleteClick = { viewModel.deleteDebt(debtSchedule.debt.id) },
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
@@ -637,12 +647,16 @@ fun PlanningScreen(
         )
     }
 
-    if (showAddDebtDialog) {
+    if (showAddDebtDialog || debtToEdit != null) {
         AddEditDebtDialog(
-            onDebtCreated = { name, balance, rate, minPay ->
-                viewModel.createDebt(name, balance, rate, minPay)
+            debt = debtToEdit,
+            onDebtSaved = { id, name, balance, rate, minPay ->
+                viewModel.saveOrUpdateDebt(id, name, balance, rate, minPay)
             },
-            onDismiss = { showAddDebtDialog = false }
+            onDismiss = {
+                showAddDebtDialog = false
+                debtToEdit = null
+            }
         )
     }
 

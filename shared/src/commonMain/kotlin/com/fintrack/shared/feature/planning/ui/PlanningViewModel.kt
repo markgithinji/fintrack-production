@@ -171,11 +171,11 @@ class PlanningViewModel(
         )
     }
 
-    fun createDebt(name: String, balance: Double, interestRate: Double, minimumPayment: Double) {
+    fun saveOrUpdateDebt(id: String? = null, name: String, balance: Double, interestRate: Double, minimumPayment: Double) {
         if (debtRepository == null) return
         viewModelScope.launch {
             val newDebt = Debt(
-                id = randomUUID(),
+                id = id ?: randomUUID(),
                 userId = "local_user",
                 name = name,
                 balance = balance,
