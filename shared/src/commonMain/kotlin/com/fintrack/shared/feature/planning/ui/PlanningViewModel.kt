@@ -174,17 +174,23 @@ class PlanningViewModel(
     fun saveOrUpdateDebt(id: String? = null, name: String, balance: Double, interestRate: Double, minimumPayment: Double) {
         if (debtRepository == null) return
         viewModelScope.launch {
-            val newDebt = Debt(
-                id = id ?: randomUUID(),
-                userId = "local_user",
+            val debtId = id ?: randomUUID()
+            val existingDebt = if (id != null) (debtRepository.getDebtById(id) as? Result.Success)?.data else null
+
+            val updatedDebt = Debt(
+                id = debtId,
+                userId = existingDebt?.userId ?: "local_user",
                 name = name,
                 balance = balance,
-                initialBalance = balance,
+                initialBalance = existingDebt?.initialBalance ?: balance,
                 interestRate = interestRate,
                 minimumPayment = minimumPayment,
-                createdAt = kotlin.time.Clock.System.now().toString()
+                categoryId = existingDebt?.categoryId,
+                accountId = existingDebt?.accountId,
+                colorHex = existingDebt?.colorHex ?: "#E53935",
+                createdAt = existingDebt?.createdAt ?: kotlin.time.Clock.System.now().toString()
             )
-            val res = debtRepository.saveDebt(newDebt)
+            val res = debtRepository.saveDebt(updatedDebt)
             if (res is Result.Success) {
                 loadDebts()
             }
