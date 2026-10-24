@@ -534,7 +534,7 @@ fun AddEditDebtDialog(
                         balanceText = it
                         errorMsg = null
                     },
-                    label = { Text("Current Balance (e.g. 35,000)") },
+                    label = { Text("Current Debt Balance (e.g. 35,000)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     maxLines = 1,
