@@ -221,9 +221,9 @@ fun MainAppScaffold(
                                 )
 
                                 NavigationBarItem(
-                                    selected = currentDestination?.hierarchy?.any { it.hasRoute<Screen.Budget>() } == true,
+                                    selected = currentDestination?.hierarchy?.any { it.hasRoute<Screen.Planning>() } == true,
                                     onClick = {
-                                        navController.navigateThrottled(Screen.Budget) {
+                                        navController.navigateThrottled(Screen.Planning) {
                                             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                             launchSingleTop = true
                                             restoreState = true
@@ -291,16 +291,16 @@ fun MainAppScaffold(
                             )
 
                             NavigationRailItem(
-                                selected = currentDestination?.hierarchy?.any { it.hasRoute<Screen.Budget>() } == true,
+                                selected = currentDestination?.hierarchy?.any { it.hasRoute<Screen.Planning>() } == true,
                                 onClick = {
-                                    navController.navigateThrottled(Screen.Budget) {
+                                    navController.navigateThrottled(Screen.Planning) {
                                         popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                         launchSingleTop = true
                                         restoreState = true
                                     }
                                 },
-                                icon = { Icon(Icons.Default.Info, contentDescription = "Budget") },
-                                label = { Text("Budget") },
+                                icon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = "Planning") },
+                                label = { Text("Planning") },
                                 colors = railItemColors
                             )
                             NavigationRailItem(

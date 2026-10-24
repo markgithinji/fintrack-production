@@ -199,7 +199,7 @@ fun MainNavigation(
             )
         }
 
-        composable<Screen.Budget> { 
+        composable<Screen.Planning> { 
             PlanningScreen(
                 refreshTrigger = refreshTrigger,
                 paddingValues = paddingValues,

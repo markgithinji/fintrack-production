@@ -31,7 +31,7 @@ fun NavDestination.isProfileDetailScreen(): Boolean =
 fun NavDestination.isMainScreen(): Boolean =
     hasRoute<Screen.Home>() ||
             hasRoute<Screen.Statistics>() ||
-            hasRoute<Screen.Budget>() ||
+            hasRoute<Screen.Planning>() ||
             hasRoute<Screen.Profile>()
 
 fun NavDestination.shouldShowBottomBar(): Boolean = isMainScreen()
@@ -55,7 +55,7 @@ fun NavDestination.getAppBarState(entry: NavBackStackEntry?, navController: NavC
                 }
             }
         )
-        hasRoute<Screen.Budget>() -> AppBarState(title = "Budget")
+        hasRoute<Screen.Planning>() -> AppBarState(title = "Planning")
         hasRoute<Screen.Profile>() -> AppBarState(title = "Profile")
         hasRoute<Screen.EditProfile>() -> AppBarState(
             title = "Edit Profile",
