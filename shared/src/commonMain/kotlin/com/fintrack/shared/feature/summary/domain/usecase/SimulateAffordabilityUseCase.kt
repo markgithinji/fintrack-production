@@ -1,12 +1,17 @@
 package com.fintrack.shared.feature.summary.domain.usecase
 
 import com.fintrack.shared.feature.budget.domain.usecase.GetSavingsGoalsUseCase
+import com.fintrack.shared.feature.core.util.DateTimeHelper
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.planning.domain.repository.AssetRepository
 import com.fintrack.shared.feature.planning.domain.repository.DebtRepository
 import com.fintrack.shared.feature.summary.domain.model.AffordabilitySimulationResult
 import com.fintrack.shared.feature.summary.domain.model.AffordabilityVerdict
 import com.fintrack.shared.feature.summary.domain.model.CashflowRunway
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
+import kotlinx.datetime.toLocalDateTime
 
 class SimulateAffordabilityUseCase(
     private val getCashflowRunwayUseCase: GetCashflowRunwayUseCase,
@@ -98,6 +103,40 @@ class SimulateAffordabilityUseCase(
             "Reduces surplus below your KES ${requiredMonthlySavings.toFormattedString()}/mo required savings for active goals."
         } else null
 
+        // "When Can I Buy This?" Readiness Timeline Calculation
+        val tz = TimeZone.currentSystemDefault()
+        val todayDate = DateTimeHelper.now().toLocalDateTime(tz).date
+        val remainingCashNeeded = (itemPrice - currentCash).coerceAtLeast(0.0)
+
+        val monthlySurplus = (eomBefore).coerceAtLeast(0.0)
+        val estimatedMonths: Int?
+        val readinessDateStr: String?
+        val reqMonthlySavings: Double?
+        val readinessMsg: String?
+
+        if (remainingCashNeeded == 0.0) {
+            estimatedMonths = 0
+            readinessDateStr = "Today"
+            reqMonthlySavings = 0.0
+            readinessMsg = "Ready Today! You currently have 100% of the cash available in your account."
+        } else if (monthlySurplus > 0.0) {
+            val monthsDouble = remainingCashNeeded / monthlySurplus
+            val monthsInt = kotlin.math.ceil(monthsDouble).toInt().coerceAtLeast(1)
+            estimatedMonths = monthsInt
+
+            val futureDate = todayDate.plus(DatePeriod(months = monthsInt))
+            val monthTitle = futureDate.month.name.lowercase().replaceFirstChar { it.uppercase() }
+            readinessDateStr = "$monthTitle ${futureDate.year}"
+
+            reqMonthlySavings = kotlin.math.round((remainingCashNeeded / monthsInt) * 10.0) / 10.0
+            readinessMsg = "Ready in ~$monthsInt months ($readinessDateStr)! Saving KES ${reqMonthlySavings.toFormattedString()}/mo reaches 100% cash readiness without taking on debt."
+        } else {
+            estimatedMonths = null
+            readinessDateStr = null
+            reqMonthlySavings = null
+            readinessMsg = "Your projected month-end surplus is currently zero. Trimming discretionary spending will create surplus cashflow to reach this goal."
+        }
+
         val verdict: AffordabilityVerdict
         val message: String
         val recommendation: String
@@ -148,6 +187,10 @@ class SimulateAffordabilityUseCase(
             remainingDaysInMonth = runway.remainingDaysInMonth,
             remainingBurnDaysAfterPurchase = remainingBurnDays,
             savingsGoalImpactMessage = savingsGoalImpact,
+            estimatedMonthsToReadiness = estimatedMonths,
+            targetReadinessDate = readinessDateStr,
+            requiredMonthlySavingsForTarget = reqMonthlySavings,
+            readinessMessage = readinessMsg,
             message = message,
             recommendation = recommendation
         )

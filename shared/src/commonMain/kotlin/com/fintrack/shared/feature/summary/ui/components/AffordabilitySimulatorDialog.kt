@@ -413,6 +413,57 @@ fun AffordabilitySimulatorDialog(
                                         }
                                     }
 
+                                    // "When Can I Buy This?" Target Readiness Timeline Card
+                                    if (sim.readinessMessage != null) {
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                                            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.padding(10.dp),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = "⏳ Target Readiness Timeline",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                    )
+                                                    if (sim.targetReadinessDate != null) {
+                                                        Surface(
+                                                            shape = RoundedCornerShape(6.dp),
+                                                            color = MaterialTheme.colorScheme.primary
+                                                        ) {
+                                                            Text(
+                                                                text = sim.targetReadinessDate,
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                fontWeight = FontWeight.Bold,
+                                                                fontSize = 9.sp,
+                                                                color = MaterialTheme.colorScheme.onPrimary,
+                                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+
+                                                Text(
+                                                    text = sim.readinessMessage,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontSize = 11.sp,
+                                                    lineHeight = 14.sp,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                            }
+                                        }
+                                    }
+
                                     HorizontalDivider(color = verdictColor.copy(alpha = 0.2f))
 
                                     Row(

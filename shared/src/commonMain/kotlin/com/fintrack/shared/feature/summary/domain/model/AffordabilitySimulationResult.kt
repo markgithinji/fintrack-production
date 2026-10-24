@@ -24,6 +24,10 @@ data class AffordabilitySimulationResult(
     val remainingDaysInMonth: Int,
     val remainingBurnDaysAfterPurchase: Int? = null,
     val savingsGoalImpactMessage: String? = null,
+    val estimatedMonthsToReadiness: Int? = null,
+    val targetReadinessDate: String? = null,
+    val requiredMonthlySavingsForTarget: Double? = null,
+    val readinessMessage: String? = null,
     val message: String,
     val recommendation: String
 )
