@@ -374,6 +374,54 @@ fun NetWorthCard(
                         }
                     }
 
+                    // Net Worth Milestone Target Tracker
+                    if (summary.milestone != null) {
+                        val milestone = summary.milestone
+                        val progressFloat = (milestone.currentProgressPercentage.doubleValue(false) / 100.0).toFloat().coerceIn(0f, 1f)
+                        val targetStr = milestone.targetAmount.toCurrencyString()
+
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "🎯 Target Milestone ($targetStr)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "${milestone.currentProgressPercentage.toInt()}%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = GreenIncome
+                                )
+                            }
+
+                            LinearProgressIndicator(
+                                progress = { progressFloat },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
+                                color = GreenIncome,
+                                trackColor = GreenIncome.copy(alpha = 0.15f),
+                                drawStopIndicator = {}
+                            )
+
+                            if (milestone.estimatedMonthsToTarget != null) {
+                                Text(
+                                    text = "Est. target completion in ~${milestone.estimatedMonthsToTarget} months at current net savings rate",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
                     // Debt-to-Asset Gauge Bar
                     val ratioFloat = (summary.debtToAssetRatioPercentage.doubleValue(false) / 100.0).toFloat().coerceIn(0f, 1f)
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
