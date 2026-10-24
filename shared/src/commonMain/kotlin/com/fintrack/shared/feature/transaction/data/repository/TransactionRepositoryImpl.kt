@@ -147,6 +147,12 @@ class TransactionRepositoryImpl(
                     isIncome = transaction.isIncome,
                     undo = false
                 )
+
+                // Debt Balance Auto-Sync
+                syncDebtBalanceForTransaction(
+                    transaction = transaction,
+                    undo = false
+                )
             }
             Result.Success(transaction)
         } catch (e: Exception) {
@@ -189,6 +195,11 @@ class TransactionRepositoryImpl(
                         categoryId = transaction.categoryId,
                         amount = transaction.amount,
                         isIncome = transaction.isIncome,
+                        undo = false
+                    )
+
+                    syncDebtBalanceForTransaction(
+                        transaction = transaction,
                         undo = false
                     )
                 }
@@ -630,6 +641,43 @@ class TransactionRepositoryImpl(
             }
         } catch (e: Exception) {
             logger.error(TAG, "Error syncing savings goals for category $categoryId", e)
+        }
+    }
+
+    private fun syncDebtBalanceForTransaction(
+        transaction: Transaction,
+        undo: Boolean = false
+    ) {
+        try {
+            val desc = (transaction.description ?: "").lowercase()
+            val category = (transaction.category ?: "").lowercase()
+
+            val isDebtPayment = !transaction.isIncome && (
+                category.contains("loan") || category.contains("debt") || category.contains("fuliza") ||
+                desc.contains("fuliza") || desc.contains("loan repayment") || desc.contains("repay loan") ||
+                desc.contains("kcb mpesa loan") || desc.contains("m-shwari loan") || desc.contains("soft debt")
+            )
+
+            if (isDebtPayment) {
+                val debts = queries.selectAllDebts(offlineUserId).executeAsList()
+                if (debts.isNotEmpty()) {
+                    val amountDouble = transaction.amount.doubleValue(false)
+                    val delta = if (undo) amountDouble else -amountDouble
+
+                    // Only auto-deduct if there is an EXACT name match in transaction description
+                    val matchingDebt = debts.find { debt ->
+                        val debtName = debt.name.trim().lowercase()
+                        debtName.isNotBlank() && (desc.contains(debtName) || (debtName.contains("fuliza") && desc.contains("fuliza")))
+                    }
+
+                    if (matchingDebt != null) {
+                        val newBalance = (matchingDebt.balance + delta).coerceAtLeast(0.0)
+                        queries.updateDebtBalance(newBalance, matchingDebt.id)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            logger.error(TAG, "Error syncing debt balance for transaction ${transaction.id}", e)
         }
     }
 }

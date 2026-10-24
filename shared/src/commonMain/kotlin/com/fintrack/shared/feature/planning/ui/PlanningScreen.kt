@@ -49,13 +49,12 @@ import com.fintrack.shared.feature.account.ui.AccountsViewModel
 import com.fintrack.shared.feature.budget.domain.model.SavingsGoalWithCalculation
 import com.fintrack.shared.feature.planning.ui.components.AddEditAssetDialog
 import com.fintrack.shared.feature.planning.ui.components.AddEditDebtDialog
+import com.fintrack.shared.feature.planning.ui.components.LogDebtRepaymentDialog
 import com.fintrack.shared.feature.planning.ui.components.AffordabilityToolCard
 import com.fintrack.shared.feature.planning.ui.components.AssetCard
 import com.fintrack.shared.feature.planning.ui.components.AssetsSummaryCard
 import com.fintrack.shared.feature.planning.ui.components.DebtCard
 import com.fintrack.shared.feature.planning.ui.components.DebtPayoffSummaryCard
-import com.fintrack.shared.feature.planning.ui.components.DebtStrategySwitcher
-import com.fintrack.shared.feature.planning.ui.components.ExtraPaymentBoostCard
 import com.fintrack.shared.feature.summary.ui.components.AffordabilitySimulatorDialog
 import com.fintrack.shared.feature.budget.ui.components.AddSavingsGoalDialog
 import com.fintrack.shared.feature.budget.ui.components.DepositToGoalDialog
@@ -119,8 +118,6 @@ fun PlanningScreen(
     val savingsGoals by viewModel.savingsGoals.collectAsStateWithLifecycle()
     val assets by viewModel.assets.collectAsStateWithLifecycle()
     val debts by viewModel.debts.collectAsStateWithLifecycle()
-    val selectedStrategy by viewModel.selectedStrategy.collectAsStateWithLifecycle()
-    val extraMonthlyPayment by viewModel.extraMonthlyPayment.collectAsStateWithLifecycle()
     val payoffPlan by viewModel.payoffPlan.collectAsStateWithLifecycle()
     val accountsResult by accountsViewModel.accounts.collectAsStateWithLifecycle()
     val accounts = (accountsResult as? Result.Success)?.data ?: emptyList()
@@ -128,6 +125,7 @@ fun PlanningScreen(
     var showAddGoalDialog by remember { mutableStateOf(false) }
     var showAddAssetDialog by remember { mutableStateOf(false) }
     var depositTargetGoal by remember { mutableStateOf<SavingsGoalWithCalculation?>(null) }
+    var debtToPay by remember { mutableStateOf<com.fintrack.shared.feature.planning.domain.model.Debt?>(null) }
     var showAffordabilitySimulator by remember { mutableStateOf(false) }
     var showAddDebtDialog by remember { mutableStateOf(false) }
 
@@ -534,22 +532,6 @@ fun PlanningScreen(
                         )
                     }
 
-                    item(key = "debt_strategy_switcher") {
-                        DebtStrategySwitcher(
-                            selectedStrategy = selectedStrategy,
-                            onStrategySelected = { viewModel.setStrategy(it) },
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
-                    }
-
-                    item(key = "debt_extra_payment") {
-                        ExtraPaymentBoostCard(
-                            extraMonthlyPayment = extraMonthlyPayment,
-                            onExtraPaymentChange = { viewModel.setExtraMonthlyPayment(it) },
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
-                    }
-
                     item(key = "debt_add_button") {
                         Button(
                             onClick = { showAddDebtDialog = true },
@@ -569,6 +551,7 @@ fun PlanningScreen(
                     items(payoffPlan!!.orderedDebts, key = { "debt_${it.debt.id}" }) { debtSchedule ->
                         DebtCard(
                             debtSchedule = debtSchedule,
+                            onPayClick = { debtToPay = debtSchedule.debt },
                             onDeleteClick = { viewModel.deleteDebt(debtSchedule.debt.id) },
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                         )
@@ -660,6 +643,17 @@ fun PlanningScreen(
                 viewModel.createDebt(name, balance, rate, minPay)
             },
             onDismiss = { showAddDebtDialog = false }
+        )
+    }
+
+    if (debtToPay != null) {
+        LogDebtRepaymentDialog(
+            debtName = debtToPay!!.name,
+            currentBalance = debtToPay!!.balance,
+            onRepaymentLogged = { amount ->
+                viewModel.logDebtRepayment(debtToPay!!.id, amount)
+            },
+            onDismiss = { debtToPay = null }
         )
     }
 

@@ -191,6 +191,21 @@ class PlanningViewModel(
         }
     }
 
+    fun logDebtRepayment(debtId: String, amount: Double) {
+        if (debtRepository == null) return
+        viewModelScope.launch {
+            val debtRes = debtRepository.getDebtById(debtId)
+            if (debtRes is Result.Success && debtRes.data != null) {
+                val debt = debtRes.data!!
+                val newBal = (debt.balance - amount).coerceAtLeast(0.0)
+                val res = debtRepository.updateDebtBalance(debtId, newBal)
+                if (res is Result.Success) {
+                    loadDebts()
+                }
+            }
+        }
+    }
+
     fun deleteDebt(debtId: String) {
         if (debtRepository == null) return
         viewModelScope.launch {
