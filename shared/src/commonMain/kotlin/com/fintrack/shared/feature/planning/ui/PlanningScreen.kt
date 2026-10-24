@@ -137,11 +137,11 @@ fun PlanningScreen(
     LaunchedEffect(refreshTrigger) {
         if (refreshTrigger > 0) {
             viewModel.reloadBudgets(showLoading = false)
-            if (selectedTab == BudgetTab.SAVINGS_GOALS) {
+            if (selectedTab == PlanningTab.SAVINGS_GOALS) {
                 viewModel.loadSavingsGoals()
-            } else if (selectedTab == BudgetTab.ASSETS_PORTFOLIO) {
+            } else if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) {
                 viewModel.loadAssets()
-            } else if (selectedTab == BudgetTab.DEBT_PAYOFF) {
+            } else if (selectedTab == PlanningTab.DEBT_PAYOFF) {
                 viewModel.loadDebts()
             }
         }
@@ -172,9 +172,9 @@ fun PlanningScreen(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Surface(
-                        onClick = { viewModel.selectTab(BudgetTab.SPENDING_BUDGETS) },
+                        onClick = { viewModel.selectTab(PlanningTab.SPENDING_BUDGETS) },
                         shape = RoundedCornerShape(12.dp),
-                        color = if (selectedTab == BudgetTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.surface else Color.Transparent,
+                        color = if (selectedTab == PlanningTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.surface else Color.Transparent,
                         modifier = Modifier.weight(1f)
                     ) {
                         Row(
@@ -186,22 +186,22 @@ fun PlanningScreen(
                                 imageVector = Icons.Default.PieChart,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
-                                tint = if (selectedTab == BudgetTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (selectedTab == PlanningTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = "Budgets",
                                 style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (selectedTab == BudgetTab.SPENDING_BUDGETS) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTab == BudgetTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                fontWeight = if (selectedTab == PlanningTab.SPENDING_BUDGETS) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selectedTab == PlanningTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
                     Surface(
-                        onClick = { viewModel.selectTab(BudgetTab.SAVINGS_GOALS) },
+                        onClick = { viewModel.selectTab(PlanningTab.SAVINGS_GOALS) },
                         shape = RoundedCornerShape(12.dp),
-                        color = if (selectedTab == BudgetTab.SAVINGS_GOALS) MaterialTheme.colorScheme.surface else Color.Transparent,
+                        color = if (selectedTab == PlanningTab.SAVINGS_GOALS) MaterialTheme.colorScheme.surface else Color.Transparent,
                         modifier = Modifier.weight(1f)
                     ) {
                         Row(
@@ -213,22 +213,22 @@ fun PlanningScreen(
                                 imageVector = Icons.Default.Savings,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
-                                tint = if (selectedTab == BudgetTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (selectedTab == PlanningTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = "Goals",
                                 style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (selectedTab == BudgetTab.SAVINGS_GOALS) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTab == BudgetTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                fontWeight = if (selectedTab == PlanningTab.SAVINGS_GOALS) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selectedTab == PlanningTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
                     Surface(
-                        onClick = { viewModel.selectTab(BudgetTab.ASSETS_PORTFOLIO) },
+                        onClick = { viewModel.selectTab(PlanningTab.ASSETS_PORTFOLIO) },
                         shape = RoundedCornerShape(12.dp),
-                        color = if (selectedTab == BudgetTab.ASSETS_PORTFOLIO) MaterialTheme.colorScheme.surface else Color.Transparent,
+                        color = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) MaterialTheme.colorScheme.surface else Color.Transparent,
                         modifier = Modifier.weight(1f)
                     ) {
                         Row(
@@ -240,22 +240,22 @@ fun PlanningScreen(
                                 imageVector = Icons.AutoMirrored.Filled.TrendingUp,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
-                                tint = if (selectedTab == BudgetTab.ASSETS_PORTFOLIO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = "Assets",
                                 style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (selectedTab == BudgetTab.ASSETS_PORTFOLIO) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTab == BudgetTab.ASSETS_PORTFOLIO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                fontWeight = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
                     Surface(
-                        onClick = { viewModel.selectTab(BudgetTab.DEBT_PAYOFF) },
+                        onClick = { viewModel.selectTab(PlanningTab.DEBT_PAYOFF) },
                         shape = RoundedCornerShape(12.dp),
-                        color = if (selectedTab == BudgetTab.DEBT_PAYOFF) MaterialTheme.colorScheme.surface else Color.Transparent,
+                        color = if (selectedTab == PlanningTab.DEBT_PAYOFF) MaterialTheme.colorScheme.surface else Color.Transparent,
                         modifier = Modifier.weight(1f)
                     ) {
                         Row(
@@ -267,21 +267,21 @@ fun PlanningScreen(
                                 imageVector = Icons.Default.CreditCard,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
-                                tint = if (selectedTab == BudgetTab.DEBT_PAYOFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (selectedTab == PlanningTab.DEBT_PAYOFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 text = "Debt Payoff",
                                 style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (selectedTab == BudgetTab.DEBT_PAYOFF) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTab == BudgetTab.DEBT_PAYOFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                fontWeight = if (selectedTab == PlanningTab.DEBT_PAYOFF) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selectedTab == PlanningTab.DEBT_PAYOFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 }
             }
 
-            if (selectedTab == BudgetTab.SPENDING_BUDGETS) {
+            if (selectedTab == PlanningTab.SPENDING_BUDGETS) {
                 // SPENDING BUDGETS TAB
                 item(key = "affordability_tool_card") {
                     AffordabilityToolCard(
@@ -363,7 +363,7 @@ fun PlanningScreen(
                         }
                     }
                 }
-            } else if (selectedTab == BudgetTab.SAVINGS_GOALS) {
+            } else if (selectedTab == PlanningTab.SAVINGS_GOALS) {
                 // SAVINGS GOALS TAB
                 item(key = "savings_info_card") {
                     SavingsGoalsInfoCard(
@@ -436,7 +436,7 @@ fun PlanningScreen(
                         }
                     }
                 }
-            } else if (selectedTab == BudgetTab.ASSETS_PORTFOLIO) {
+            } else if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) {
                 // ASSETS & INVESTMENTS PORTFOLIO TAB
                 when (val currentAssets = assets) {
                     is Result.Loading -> {
@@ -523,7 +523,7 @@ fun PlanningScreen(
                         }
                     }
                 }
-            } else if (selectedTab == BudgetTab.DEBT_PAYOFF) {
+            } else if (selectedTab == PlanningTab.DEBT_PAYOFF) {
                 if (payoffPlan != null && payoffPlan!!.orderedDebts.isNotEmpty()) {
                     item(key = "debt_summary_card") {
                         DebtPayoffSummaryCard(

@@ -45,7 +45,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 
-enum class BudgetTab {
+enum class PlanningTab {
     SPENDING_BUDGETS,
     SAVINGS_GOALS,
     ASSETS_PORTFOLIO,
@@ -65,8 +65,8 @@ class PlanningViewModel(
     private val assetRepository: AssetRepository? = null
 ) : ViewModel() {
 
-    private val _selectedTab = MutableStateFlow(BudgetTab.SPENDING_BUDGETS)
-    val selectedTab: StateFlow<BudgetTab> = _selectedTab.asStateFlow()
+    private val _selectedTab = MutableStateFlow(PlanningTab.SPENDING_BUDGETS)
+    val selectedTab: StateFlow<PlanningTab> = _selectedTab.asStateFlow()
 
     private val _savingsGoals = MutableStateFlow<Result<List<SavingsGoalWithCalculation>>>(Result.Loading)
     val savingsGoals: StateFlow<Result<List<SavingsGoalWithCalculation>>> = _savingsGoals.asStateFlow()
@@ -86,13 +86,13 @@ class PlanningViewModel(
     private val _payoffPlan = MutableStateFlow<DebtPayoffPlan?>(null)
     val payoffPlan: StateFlow<DebtPayoffPlan?> = _payoffPlan.asStateFlow()
 
-    fun selectTab(tab: BudgetTab) {
+    fun selectTab(tab: PlanningTab) {
         _selectedTab.value = tab
-        if (tab == BudgetTab.SAVINGS_GOALS && _savingsGoals.value is Result.Loading) {
+        if (tab == PlanningTab.SAVINGS_GOALS && _savingsGoals.value is Result.Loading) {
             loadSavingsGoals()
-        } else if (tab == BudgetTab.ASSETS_PORTFOLIO && _assets.value is Result.Loading) {
+        } else if (tab == PlanningTab.ASSETS_PORTFOLIO && _assets.value is Result.Loading) {
             loadAssets()
-        } else if (tab == BudgetTab.DEBT_PAYOFF && _debts.value is Result.Loading) {
+        } else if (tab == PlanningTab.DEBT_PAYOFF && _debts.value is Result.Loading) {
             loadDebts()
         }
     }
