@@ -380,11 +380,54 @@ fun PlanningScreen(
                                 }
                             }
                         } else {
+                            item(key = "spending_add_button_empty") {
+                                with(sharedTransitionScope) {
+                                    SexyAddBudgetButton(
+                                        onClick = throttledOnAddBudget,
+                                        modifier = Modifier
+                                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                                            .sharedBounds(
+                                                rememberSharedContentState(key = "budget_header_new"),
+                                                animatedVisibilityScope = animatedVisibilityScope,
+                                                boundsTransform = { _, _ ->
+                                                    spring(
+                                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                                        stiffness = Spring.StiffnessMediumLow
+                                                    )
+                                                },
+                                                clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(20.dp))
+                                            )
+                                    )
+                                }
+                            }
+
                             item(key = "spending_empty_state") {
-                                BudgetEmptyState(
-                                    onAddBudget = throttledOnAddBudget,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
+                                Surface(
+                                    shape = RoundedCornerShape(22.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(24.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "No Spending Budgets Created",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Set category limits for Dining, Utilities, or Fuel. FinTrack auto-detects matching transactions across all accounts and tracks remaining limits in real-time.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
