@@ -1,5 +1,7 @@
 package com.fintrack.shared.feature.planning.ui.components
 
+import com.fintrack.shared.feature.core.ui.SelectableFilterChip
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import com.fintrack.shared.feature.core.ui.util.rememberLongPressHapticFeedback
@@ -396,7 +398,6 @@ fun AddEditAssetDialog(
 
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(AssetType.entries) { type ->
-                            val isSelected = selectedType == type
                             val typeLabel = when (type) {
                                 AssetType.MMF_YIELD -> "MMF Yield"
                                 AssetType.SACCO_SHARES -> "Sacco Shares"
@@ -406,20 +407,11 @@ fun AddEditAssetDialog(
                                 AssetType.GENERAL_ASSET -> "Asset Holding"
                             }
 
-                            Surface(
-                                onClick = { selectedType = type },
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
-                            ) {
-                                Text(
-                                    text = typeLabel,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SelectableFilterChip(
+                                selected = selectedType == type,
+                                label = typeLabel,
+                                onClick = { selectedType = type }
+                            )
                         }
                     }
                 }

@@ -1,5 +1,7 @@
 package com.fintrack.shared.feature.summary.ui
 
+import com.fintrack.shared.feature.core.ui.SelectableFilterChip
+
 import Period
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -567,73 +569,6 @@ private fun AccountFilterChipBar(
                 selected = isSelected,
                 label = acc.name,
                 onClick = { onToggleAccount(acc.id) }
-            )
-        }
-    }
-}
-
-@Composable
-private fun SelectableFilterChip(
-    selected: Boolean,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    leadingIcon: ImageVector? = null
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val animatedBgColor by animateColorAsState(
-        targetValue = if (selected) colorScheme.primaryContainer else colorScheme.surface,
-        animationSpec = tween(150),
-        label = "chipBgColor"
-    )
-    val animatedContentColor by animateColorAsState(
-        targetValue = if (selected) colorScheme.onPrimaryContainer else colorScheme.onSurface,
-        animationSpec = tween(150),
-        label = "chipContentColor"
-    )
-
-    val hapticFeedback = com.fintrack.shared.feature.core.ui.util.rememberHapticFeedback()
-    Surface(
-        onClick = {
-            hapticFeedback()
-            onClick()
-        },
-        shape = RoundedCornerShape(12.dp),
-        color = animatedBgColor,
-        border = BorderStroke(
-            width = if (selected) 1.5.dp else 1.dp,
-            color = if (selected) colorScheme.primary else colorScheme.outlineVariant.copy(alpha = 0.5f)
-        ),
-        modifier = modifier
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-                .animateContentSize(animationSpec = tween(200)),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            if (selected) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    tint = colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
-                )
-            } else if (leadingIcon != null) {
-                Icon(
-                    imageVector = leadingIcon,
-                    contentDescription = null,
-                    tint = colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-
-            Text(
-                text = label,
-                color = animatedContentColor,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                fontSize = 13.sp
             )
         }
     }

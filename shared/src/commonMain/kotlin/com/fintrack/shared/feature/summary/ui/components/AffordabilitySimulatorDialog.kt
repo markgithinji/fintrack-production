@@ -1,5 +1,7 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import com.fintrack.shared.feature.core.ui.SelectableFilterChip
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -71,9 +73,15 @@ fun AffordabilitySimulatorDialog(
     accountRepository: AccountRepository = koinInject()
 ) {
     var itemPriceText by remember { mutableStateOf("") }
-    var selectedAccountId by remember { mutableStateOf<String?>(null) }
+    var selectedAccountIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var simulationResult by remember { mutableStateOf<Result<AffordabilitySimulationResult>?>(null) }
     var accountsList by remember { mutableStateOf<List<Account>>(emptyList()) }
+
+    val effectiveAccountId = when {
+        selectedAccountIds.isEmpty() -> null
+        selectedAccountIds.size == 1 -> selectedAccountIds.first()
+        else -> selectedAccountIds.joinToString(",")
+    }
 
     LaunchedEffect(Unit) {
         val accResult = accountRepository.getAccounts()
@@ -81,16 +89,16 @@ fun AffordabilitySimulatorDialog(
             accountsList = accResult.data
             val mpesaAcc = accountsList.find { it.type == AccountType.MPESA || it.name.contains("mpesa", ignoreCase = true) }
             if (mpesaAcc != null) {
-                selectedAccountId = mpesaAcc.id
+                selectedAccountIds = setOf(mpesaAcc.id)
             }
         }
     }
 
-    LaunchedEffect(itemPriceText, selectedAccountId) {
+    LaunchedEffect(itemPriceText, selectedAccountIds) {
         val price = itemPriceText.toDoubleOrNull()
         if (price != null && price > 0) {
             simulationResult = Result.Loading
-            simulationResult = simulateAffordabilityUseCase(price, selectedAccountId)
+            simulationResult = simulateAffordabilityUseCase(price, effectiveAccountId)
         } else {
             simulationResult = null
         }
@@ -166,7 +174,7 @@ fun AffordabilitySimulatorDialog(
                 if (accountsList.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = "Source Account",
+                            text = "Source Accounts (Toggle Multiple)",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -175,38 +183,27 @@ fun AffordabilitySimulatorDialog(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             item {
-                                Surface(
-                                    onClick = { selectedAccountId = null },
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = if (selectedAccountId == null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    border = BorderStroke(1.dp, if (selectedAccountId == null) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color.Transparent)
-                                ) {
-                                    Text(
-                                        text = "All Accounts",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = if (selectedAccountId == null) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (selectedAccountId == null) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                    )
-                                }
+                                SelectableFilterChip(
+                                    selected = selectedAccountIds.isEmpty(),
+                                    label = "All Accounts",
+                                    onClick = { selectedAccountIds = emptySet() }
+                                )
                             }
 
                             items(accountsList, key = { it.id }) { acc ->
-                                val isSelected = selectedAccountId == acc.id
-                                Surface(
-                                    onClick = { selectedAccountId = acc.id },
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                    border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color.Transparent)
-                                ) {
-                                    Text(
-                                        text = acc.name,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                    )
-                                }
+                                SelectableFilterChip(
+                                    selected = selectedAccountIds.contains(acc.id),
+                                    label = acc.name,
+                                    onClick = {
+                                        val current = selectedAccountIds.toMutableSet()
+                                        if (current.contains(acc.id)) {
+                                            current.remove(acc.id)
+                                        } else {
+                                            current.add(acc.id)
+                                        }
+                                        selectedAccountIds = current
+                                    }
+                                )
                             }
                         }
                     }
