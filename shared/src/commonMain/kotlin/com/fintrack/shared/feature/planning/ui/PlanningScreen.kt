@@ -467,31 +467,31 @@ fun PlanningScreen(
                         val totalVal = assetList.sumOf { it.currentBalance }
                         val totalYield = assetList.sumOf { it.annualPassiveYield }
 
-                        item(key = "assets_summary_card") {
-                            AssetsSummaryCard(
-                                totalValue = totalVal,
-                                totalAnnualYield = totalYield,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                            )
-                        }
-
-                        item(key = "add_asset_button") {
-                            Button(
-                                onClick = { showAddAssetDialog = true },
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    .height(48.dp)
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Add Asset or Investment", fontWeight = FontWeight.Bold)
-                            }
-                        }
-
                         if (assetList.isNotEmpty()) {
+                            item(key = "assets_summary_card") {
+                                AssetsSummaryCard(
+                                    totalValue = totalVal,
+                                    totalAnnualYield = totalYield,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                                )
+                            }
+
+                            item(key = "add_asset_button") {
+                                Button(
+                                    onClick = { showAddAssetDialog = true },
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                                        .height(48.dp)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Add Asset or Investment", fontWeight = FontWeight.Bold)
+                                }
+                            }
+
                             items(assetList, key = { "asset_${it.id}" }) { asset ->
                                 AssetCard(
                                     asset = asset,
@@ -500,6 +500,22 @@ fun PlanningScreen(
                                 )
                             }
                         } else {
+                            item(key = "add_asset_button_empty") {
+                                Button(
+                                    onClick = { showAddAssetDialog = true },
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                                        .height(48.dp)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Add Asset or Investment", fontWeight = FontWeight.Bold)
+                                }
+                            }
+
                             item(key = "assets_empty_state") {
                                 Surface(
                                     shape = RoundedCornerShape(22.dp),
