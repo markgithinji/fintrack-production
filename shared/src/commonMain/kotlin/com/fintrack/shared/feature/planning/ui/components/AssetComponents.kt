@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -59,10 +61,15 @@ import com.fintrack.shared.ui.theme.GreenIncome
 
 @Composable
 fun AssetsSummaryCard(
-    totalValue: Double,
-    totalAnnualYield: Double,
+    assets: List<Asset>,
     modifier: Modifier = Modifier
 ) {
+    val totalValue = assets.sumOf { it.currentBalance }
+    val totalAnnualYield = assets.sumOf { it.annualPassiveYield }
+    val liquidValue = assets.filter { it.isLiquid }.sumOf { it.currentBalance }
+    val compound3YrTotal = assets.sumOf { it.compoundValue3Years }
+    val purePassiveGrowth = (compound3YrTotal - totalValue).coerceAtLeast(0.0)
+
     Card(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
@@ -117,12 +124,12 @@ fun AssetsSummaryCard(
             ) {
                 Column {
                     Text(
-                        text = "Accumulated Holdings",
+                        text = "Liquid Cash Reserves",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
                     Text(
-                        text = "MMFs, Saccos & Stocks",
+                        text = "${liquidValue.toCurrencyString()} (Ready in 24h)",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -145,6 +152,34 @@ fun AssetsSummaryCard(
                     }
                 }
             }
+
+            if (purePassiveGrowth > 0) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.08f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = "3-Year Compound Growth Forecast",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "At current yields, portfolio will reach ${compound3YrTotal.toCurrencyString()} in 3 years (+${purePassiveGrowth.toCurrencyString()} passive growth).",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 11.sp,
+                            lineHeight = 14.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -152,43 +187,30 @@ fun AssetsSummaryCard(
 @Composable
 fun AssetCard(
     asset: Asset,
+    onCardClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
+        onClick = onCardClick,
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
         modifier = modifier.fillMaxWidth()
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.AccountBalance,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = asset.name,
                         style = MaterialTheme.typography.bodyLarge,
@@ -232,38 +254,62 @@ fun AssetCard(
                         }
                     }
                 }
-            }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = asset.currentBalance.toCurrencyString(),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = GreenIncome
-                    )
-                    if (asset.annualPassiveYield > 0) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "+${asset.annualPassiveYield.toCurrencyString()}/yr",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontSize = 9.sp,
+                            text = asset.currentBalance.toCurrencyString(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
                             color = GreenIncome
+                        )
+                        if (asset.annualPassiveYield > 0) {
+                            Text(
+                                text = "+${asset.annualPassiveYield.toCurrencyString()}/yr",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 9.sp,
+                                color = GreenIncome
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = onDeleteClick,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete Asset",
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
+            }
 
-                IconButton(
-                    onClick = onDeleteClick,
-                    modifier = Modifier.size(28.dp)
+            if (asset.annualYieldPercentage != null && asset.annualYieldPercentage > 0) {
+                val realReturn = asset.netRealReturnPercentage
+                val realReturnRounded = kotlin.math.round(realReturn * 10.0) / 10.0
+                val isBeating = asset.isBeatingInflation
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isBeating) GreenIncome.copy(alpha = 0.1f) else com.fintrack.shared.ui.theme.PinkExpense.copy(alpha = 0.1f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete Asset",
-                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                        modifier = Modifier.size(16.dp)
+                    Text(
+                        text = if (isBeating) {
+                            "Beating 6.5% inflation (+${realReturnRounded}% net real return)"
+                        } else {
+                            "Losing to 6.5% inflation (${realReturnRounded}% net real return)"
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isBeating) GreenIncome else com.fintrack.shared.ui.theme.PinkExpense,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
             }
@@ -274,13 +320,14 @@ fun AssetCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditAssetDialog(
-    onAssetCreated: (name: String, assetType: AssetType, balance: Double, yieldPercentage: Double?) -> Unit,
+    asset: Asset? = null,
+    onAssetSaved: (id: String?, name: String, assetType: AssetType, balance: Double, yieldPercentage: Double?) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var balanceText by remember { mutableStateOf("") }
-    var yieldText by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf(AssetType.MMF_YIELD) }
+    var name by remember { mutableStateOf(asset?.name ?: "") }
+    var balanceText by remember { mutableStateOf(asset?.currentBalance?.let { if (it > 0) it.toString() else "" } ?: "") }
+    var yieldText by remember { mutableStateOf(asset?.annualYieldPercentage?.let { if (it > 0) it.toString() else "" } ?: "") }
+    var selectedType by remember { mutableStateOf(asset?.assetType ?: AssetType.MMF_YIELD) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
     BasicAlertDialog(
@@ -324,7 +371,7 @@ fun AddEditAssetDialog(
 
                     Column {
                         Text(
-                            text = "New Asset or Investment",
+                            text = if (asset != null) "Edit Asset or Investment" else "New Asset or Investment",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -338,6 +385,44 @@ fun AddEditAssetDialog(
                 }
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                // Asset Type Selector Chips
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Asset Type",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(AssetType.entries) { type ->
+                            val isSelected = selectedType == type
+                            val typeLabel = when (type) {
+                                AssetType.MMF_YIELD -> "MMF Yield"
+                                AssetType.SACCO_SHARES -> "Sacco Shares"
+                                AssetType.REAL_ESTATE -> "Real Estate"
+                                AssetType.STOCKS_CRYPTO -> "Stocks & Crypto"
+                                AssetType.CASH_SAVINGS -> "Cash Savings"
+                                AssetType.GENERAL_ASSET -> "Asset Holding"
+                            }
+
+                            Surface(
+                                onClick = { selectedType = type },
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                            ) {
+                                Text(
+                                    text = typeLabel,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
 
                 OutlinedTextField(
                     value = name,
@@ -402,13 +487,13 @@ fun AddEditAssetDialog(
                             } else if (bal == null || bal <= 0) {
                                 errorMsg = "Please enter a valid asset balance"
                             } else {
-                                onAssetCreated(name.trim(), selectedType, bal, yield)
+                                onAssetSaved(asset?.id, name.trim(), selectedType, bal, yield)
                                 onDismiss()
                             }
                         },
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Add Asset", fontWeight = FontWeight.Bold)
+                        Text(if (asset != null) "Update Asset" else "Add Asset", fontWeight = FontWeight.Bold)
                     }
                 }
             }

@@ -34,4 +34,36 @@ data class Asset(
 
     val monthlyPassiveYield: Double
         get() = annualPassiveYield / 12.0
+
+    /**
+     * Indicates whether the asset can be liquidated to cash within 24-48 hours.
+     */
+    val isLiquid: Boolean
+        get() = assetType == AssetType.MMF_YIELD ||
+                assetType == AssetType.CASH_SAVINGS ||
+                assetType == AssetType.STOCKS_CRYPTO ||
+                (annualYieldPercentage != null && annualYieldPercentage > 0)
+
+    /**
+     * Inflation benchmark (Kenya CPI average ~6.5% p.a.).
+     */
+    val netRealReturnPercentage: Double
+        get() = (annualYieldPercentage ?: 0.0) - 6.5
+
+    val isBeatingInflation: Boolean
+        get() = netRealReturnPercentage > 0.0
+
+    /**
+     * Compound value forecast after 3 years at annual yield rate.
+     */
+    val compoundValue3Years: Double
+        get() {
+            val rate = (annualYieldPercentage ?: 0.0) / 100.0
+            if (rate <= 0.0) return currentBalance
+            var value = currentBalance
+            repeat(3) {
+                value *= (1.0 + rate)
+            }
+            return value
+        }
 }

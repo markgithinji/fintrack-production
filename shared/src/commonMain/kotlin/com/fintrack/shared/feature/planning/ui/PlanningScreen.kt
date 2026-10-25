@@ -127,6 +127,7 @@ fun PlanningScreen(
     var depositTargetGoal by remember { mutableStateOf<SavingsGoalWithCalculation?>(null) }
     var debtToPay by remember { mutableStateOf<com.fintrack.shared.feature.planning.domain.model.Debt?>(null) }
     var debtToEdit by remember { mutableStateOf<com.fintrack.shared.feature.planning.domain.model.Debt?>(null) }
+    var assetToEdit by remember { mutableStateOf<com.fintrack.shared.feature.planning.domain.model.Asset?>(null) }
     var showAffordabilitySimulator by remember { mutableStateOf(false) }
     var showAddDebtDialog by remember { mutableStateOf(false) }
 
@@ -464,14 +465,11 @@ fun PlanningScreen(
                     }
                     is Result.Success -> {
                         val assetList = currentAssets.data
-                        val totalVal = assetList.sumOf { it.currentBalance }
-                        val totalYield = assetList.sumOf { it.annualPassiveYield }
 
                         if (assetList.isNotEmpty()) {
                             item(key = "assets_summary_card") {
                                 AssetsSummaryCard(
-                                    totalValue = totalVal,
-                                    totalAnnualYield = totalYield,
+                                    assets = assetList,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                                 )
                             }
@@ -495,6 +493,7 @@ fun PlanningScreen(
                             items(assetList, key = { "asset_${it.id}" }) { asset ->
                                 AssetCard(
                                     asset = asset,
+                                    onCardClick = { assetToEdit = asset },
                                     onDeleteClick = { viewModel.deleteAsset(asset.id) },
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                                 )
@@ -687,12 +686,16 @@ fun PlanningScreen(
         )
     }
 
-    if (showAddAssetDialog) {
+    if (showAddAssetDialog || assetToEdit != null) {
         AddEditAssetDialog(
-            onAssetCreated = { name, type, balance, yieldPct ->
-                viewModel.createAsset(name, type, balance, yieldPct)
+            asset = assetToEdit,
+            onAssetSaved = { id, name, type, balance, yieldPct ->
+                viewModel.saveOrUpdateAsset(id, name, type, balance, yieldPct)
             },
-            onDismiss = { showAddAssetDialog = false }
+            onDismiss = {
+                showAddAssetDialog = false
+                assetToEdit = null
+            }
         )
     }
 }

@@ -105,7 +105,8 @@ class PlanningViewModel(
         }
     }
 
-    fun createAsset(
+    fun saveOrUpdateAsset(
+        id: String? = null,
         name: String,
         assetType: AssetType,
         balance: Double,
@@ -113,14 +114,20 @@ class PlanningViewModel(
     ) {
         if (assetRepository == null) return
         viewModelScope.launch {
+            val assetId = id ?: randomUUID()
+            val existingAsset = if (id != null) (assetRepository.getAssetById(id) as? Result.Success)?.data else null
+
             val asset = Asset(
-                id = randomUUID(),
-                userId = "local_user",
+                id = assetId,
+                userId = existingAsset?.userId ?: "local_user",
                 name = name,
                 assetType = assetType,
                 currentBalance = balance,
                 annualYieldPercentage = annualYieldPercentage,
-                createdAt = kotlin.time.Clock.System.now().toString()
+                categoryId = existingAsset?.categoryId,
+                accountId = existingAsset?.accountId,
+                colorHex = existingAsset?.colorHex ?: "#2979FF",
+                createdAt = existingAsset?.createdAt ?: kotlin.time.Clock.System.now().toString()
             )
             val res = assetRepository.saveAsset(asset)
             if (res is Result.Success) {
