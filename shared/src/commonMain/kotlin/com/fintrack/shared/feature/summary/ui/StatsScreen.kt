@@ -152,21 +152,26 @@ fun StatisticsScreen(
         getDefaultPeriod(availableWeeks, availableMonths, availableYears)
     }
 
-    LaunchedEffect(activeAccountId, refreshTrigger) {
+    LaunchedEffect(activeAccountId, refreshTrigger, activeSubTab) {
         val force = refreshTrigger > lastProcessedRefreshTrigger && lastProcessedRefreshTrigger != -1
         if (force) {
             viewModel.resetStats()
         }
         viewModel.loadAvailablePeriods(activeAccountId, force = force)
-        viewModel.loadOverview(activeAccountId, force = force)
-        viewModel.loadCashflowRunway(activeAccountId, force = force)
-        viewModel.loadNetWorthSummary(activeAccountId, force = force)
-        viewModel.loadSpendSpikes(activeAccountId, force = force)
-        viewModel.loadEmergencyFundScore(activeAccountId, force = force)
-        viewModel.loadPassiveIncomeCoverage(activeAccountId, force = force)
-        viewModel.loadFinancialHealthIndex(activeAccountId, force = force)
-        viewModel.loadBudgetOptimizer(activeAccountId, force = force)
-        viewModel.loadTopMerchants(activeAccountId)
+
+        if (activeSubTab == 0) {
+            viewModel.loadOverview(activeAccountId, force = force)
+            viewModel.loadCashflowRunway(activeAccountId, force = force)
+            viewModel.loadSpendSpikes(activeAccountId, force = force)
+            viewModel.loadTopMerchants(activeAccountId)
+        } else if (activeSubTab == 1) {
+            viewModel.loadNetWorthSummary(activeAccountId, force = force)
+            viewModel.loadFinancialHealthIndex(activeAccountId, force = force)
+            viewModel.loadPassiveIncomeCoverage(activeAccountId, force = force)
+            viewModel.loadBudgetOptimizer(activeAccountId, force = force)
+            viewModel.loadEmergencyFundScore(activeAccountId, force = force)
+        }
+
         lastProcessedRefreshTrigger = refreshTrigger
     }
 

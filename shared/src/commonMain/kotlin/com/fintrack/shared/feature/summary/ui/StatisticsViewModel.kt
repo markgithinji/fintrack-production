@@ -259,7 +259,6 @@ class StatisticsViewModel(
             when (val res = accountRepository.getAccounts()) {
                 is Result.Success -> {
                     val accounts = res.data
-                    val isFirstLoad = _availableAccounts.value.isEmpty()
 
                     // Default to M-Pesa account on initial load if no filter selected yet
                     if (_selectedAccountIds.value.isEmpty()) {
@@ -274,23 +273,6 @@ class StatisticsViewModel(
                     }
 
                     _availableAccounts.value = accounts
-
-                    if (isFirstLoad) {
-                        val effectiveId = getEffectiveAccountId()
-                        loadAvailablePeriods(effectiveId)
-                        loadOverview(effectiveId)
-                        loadCashflowRunway(effectiveId)
-                        loadNetWorthSummary(effectiveId)
-                        loadSpendSpikes(effectiveId)
-                        loadEmergencyFundScore(effectiveId)
-                        loadBudgetOptimizer(effectiveId)
-                        loadPassiveIncomeCoverage(effectiveId)
-                        loadFinancialHealthIndex(effectiveId)
-                        loadTopMerchants(effectiveId)
-                        val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
-                        loadHighlights(effectiveId, yearCode)
-                        reloadDistributionForCurrentSelection(effectiveId)
-                    }
                 }
                 else -> {}
             }
