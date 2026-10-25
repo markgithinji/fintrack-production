@@ -64,7 +64,7 @@ class SimulateAffordabilityUseCase(
     private suspend fun fetchLiquidAssetsTotal(): Double {
         if (assetRepository == null) return 0.0
         return when (val assetsRes = assetRepository.getAssets()) {
-            is Result.Success -> assetsRes.data.sumOf { it.currentBalance }
+            is Result.Success -> assetsRes.data.filter { it.isLiquid }.sumOf { it.currentBalance }
             else -> 0.0
         }
     }
@@ -108,7 +108,8 @@ class SimulateAffordabilityUseCase(
         val todayDate = DateTimeHelper.now().toLocalDateTime(tz).date
         val remainingCashNeeded = (itemPrice - currentCash).coerceAtLeast(0.0)
 
-        val monthlySurplus = (eomBefore).coerceAtLeast(0.0)
+        // Net uncommitted monthly surplus (projected EOM cash balance minus required monthly goal contributions)
+        val monthlySurplus = (eomBefore - requiredMonthlySavings).coerceAtLeast(0.0)
         val estimatedMonths: Int?
         val readinessDateStr: String?
         val reqMonthlySavings: Double?
