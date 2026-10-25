@@ -1,5 +1,9 @@
 package com.fintrack.shared.feature.planning.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import com.fintrack.shared.feature.core.ui.util.rememberLongPressHapticFeedback
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -306,6 +310,7 @@ fun ExtraPaymentBoostCard(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DebtCard(
     debtSchedule: DebtWithSchedule,
@@ -315,14 +320,23 @@ fun DebtCard(
     modifier: Modifier = Modifier
 ) {
     val debt = debtSchedule.debt
+    val hapticLongPress = rememberLongPressHapticFeedback()
 
     Card(
-        onClick = onCardClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .combinedClickable(
+                onClick = onCardClick,
+                onLongClick = {
+                    hapticLongPress()
+                    onDeleteClick()
+                }
+            ),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = modifier.fillMaxWidth()
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -347,15 +361,6 @@ fun DebtCard(
                         style = MaterialTheme.typography.bodySmall,
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                IconButton(onClick = onDeleteClick, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.DeleteOutline,
-                        contentDescription = "Delete Debt",
-                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
-                        modifier = Modifier.size(18.dp)
                     )
                 }
             }

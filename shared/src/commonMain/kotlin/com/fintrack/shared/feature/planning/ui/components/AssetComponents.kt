@@ -1,5 +1,11 @@
 package com.fintrack.shared.feature.planning.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import com.fintrack.shared.feature.core.ui.util.rememberLongPressHapticFeedback
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -184,6 +190,7 @@ fun AssetsSummaryCard(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AssetCard(
     asset: Asset,
@@ -191,13 +198,23 @@ fun AssetCard(
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val hapticLongPress = rememberLongPressHapticFeedback()
+
     Card(
-        onClick = onCardClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .combinedClickable(
+                onClick = onCardClick,
+                onLongClick = {
+                    hapticLongPress()
+                    onDeleteClick()
+                }
+            ),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
-        modifier = modifier.fillMaxWidth()
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
     ) {
         Column(
             modifier = Modifier
@@ -255,36 +272,19 @@ fun AssetCard(
                     }
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Column(horizontalAlignment = Alignment.End) {
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = asset.currentBalance.toCurrencyString(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = GreenIncome
+                    )
+                    if (asset.annualPassiveYield > 0) {
                         Text(
-                            text = asset.currentBalance.toCurrencyString(),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            text = "+${asset.annualPassiveYield.toCurrencyString()}/yr",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 9.sp,
                             color = GreenIncome
-                        )
-                        if (asset.annualPassiveYield > 0) {
-                            Text(
-                                text = "+${asset.annualPassiveYield.toCurrencyString()}/yr",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontSize = 9.sp,
-                                color = GreenIncome
-                            )
-                        }
-                    }
-
-                    IconButton(
-                        onClick = onDeleteClick,
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete Asset",
-                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }

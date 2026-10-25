@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import com.fintrack.shared.feature.core.ui.util.rememberLongPressHapticFeedback
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -61,6 +64,11 @@ import com.fintrack.shared.feature.budget.ui.components.DepositToGoalDialog
 import com.fintrack.shared.feature.budget.ui.components.SavingsGoalCard
 import com.fintrack.shared.feature.budget.ui.components.SavingsGoalShimmerLoading
 import com.fintrack.shared.feature.budget.ui.components.SavingsGoalsInfoCard
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -130,6 +138,7 @@ fun PlanningScreen(
     var assetToEdit by remember { mutableStateOf<com.fintrack.shared.feature.planning.domain.model.Asset?>(null) }
     var showAffordabilitySimulator by remember { mutableStateOf(false) }
     var showAddDebtDialog by remember { mutableStateOf(false) }
+    var pendingDeleteTarget by remember { mutableStateOf<PendingDeleteTarget?>(null) }
 
     val listState = rememberLazyListState()
     
@@ -347,6 +356,11 @@ fun PlanningScreen(
                                     BudgetItem(
                                         budgetWithStatus = budgetWithStatus,
                                         onClick = { throttledOnBudgetClick(budgetWithStatus) },
+                                        onDeleteClick = {
+                                            budgetWithStatus.budget.id?.let { id ->
+                                                pendingDeleteTarget = PendingDeleteTarget.BudgetTarget(id, budgetWithStatus.budget.name)
+                                            }
+                                        },
                                         modifier = Modifier
                                             .animateItem()
                                             .sharedBounds(
@@ -410,7 +424,9 @@ fun PlanningScreen(
                                 SavingsGoalCard(
                                     goalCalc = goalCalc,
                                     onDepositClick = { depositTargetGoal = goalCalc },
-                                    onDeleteClick = { viewModel.deleteSavingsGoal(goalCalc.goal.id) },
+                                    onDeleteClick = {
+                                        pendingDeleteTarget = PendingDeleteTarget.GoalTarget(goalCalc.goal.id, goalCalc.goal.name)
+                                    },
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                                 )
                             }
@@ -494,7 +510,9 @@ fun PlanningScreen(
                                 AssetCard(
                                     asset = asset,
                                     onCardClick = { assetToEdit = asset },
-                                    onDeleteClick = { viewModel.deleteAsset(asset.id) },
+                                    onDeleteClick = {
+                                        pendingDeleteTarget = PendingDeleteTarget.AssetTarget(asset.id, asset.name)
+                                    },
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                                 )
                             }
@@ -577,7 +595,9 @@ fun PlanningScreen(
                             debtSchedule = debtSchedule,
                             onCardClick = { debtToEdit = debtSchedule.debt },
                             onPayClick = { debtToPay = debtSchedule.debt },
-                            onDeleteClick = { viewModel.deleteDebt(debtSchedule.debt.id) },
+                            onDeleteClick = {
+                                pendingDeleteTarget = PendingDeleteTarget.DebtTarget(debtSchedule.debt.id, debtSchedule.debt.name)
+                            },
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                         )
                     }
@@ -696,6 +716,23 @@ fun PlanningScreen(
                 showAddAssetDialog = false
                 assetToEdit = null
             }
+        )
+    }
+
+    if (pendingDeleteTarget != null) {
+        val target = pendingDeleteTarget!!
+        ConfirmDeleteDialog(
+            title = "Delete ${target.name}?",
+            message = "Are you sure you want to delete ${target.name}? This action cannot be undone.",
+            onConfirm = {
+                when (target) {
+                    is PendingDeleteTarget.BudgetTarget -> viewModel.removeBudget(target.id)
+                    is PendingDeleteTarget.GoalTarget -> viewModel.deleteSavingsGoal(target.id)
+                    is PendingDeleteTarget.AssetTarget -> viewModel.deleteAsset(target.id)
+                    is PendingDeleteTarget.DebtTarget -> viewModel.deleteDebt(target.id)
+                }
+            },
+            onDismiss = { pendingDeleteTarget = null }
         )
     }
 }
@@ -1011,14 +1048,90 @@ fun SexyAddSavingsGoalButton(
     }
 }
 
+sealed interface PendingDeleteTarget {
+    val name: String
+    data class BudgetTarget(val id: String, override val name: String) : PendingDeleteTarget
+    data class GoalTarget(val id: String, override val name: String) : PendingDeleteTarget
+    data class AssetTarget(val id: String, override val name: String) : PendingDeleteTarget
+    data class DebtTarget(val id: String, override val name: String) : PendingDeleteTarget
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ConfirmDeleteDialog(
+    title: String,
+    message: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    BasicAlertDialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        modifier = Modifier
+            .padding(24.dp)
+            .widthIn(max = 400.dp)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            onConfirm()
+                            onDismiss()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Delete", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BudgetItem(
     budgetWithStatus: BudgetWithStatus,
     onClick: () -> Unit,
+    onDeleteClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val budget = budgetWithStatus.budget
     val status = budgetWithStatus.status
+    val hapticLongPress = rememberLongPressHapticFeedback()
+
     val progress = if (budget.limit > BigDecimal.ZERO) {
         try {
             (status.spent.toDouble() / budget.limit.toDouble()).toFloat().coerceAtMost(1f)
@@ -1031,7 +1144,16 @@ fun BudgetItem(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clickable { onClick() },
+            .clip(RoundedCornerShape(24.dp))
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    if (onDeleteClick != null) {
+                        hapticLongPress()
+                        onDeleteClick()
+                    }
+                }
+            ),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),

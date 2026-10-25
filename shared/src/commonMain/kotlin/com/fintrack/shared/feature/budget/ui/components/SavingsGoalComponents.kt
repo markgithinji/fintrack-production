@@ -1,5 +1,10 @@
 package com.fintrack.shared.feature.budget.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloat
@@ -86,6 +91,9 @@ import com.fintrack.shared.feature.navigation.ui.toCurrencyString
 import com.fintrack.shared.ui.theme.GreenIncome
 import com.fintrack.shared.ui.theme.PinkExpense
 
+import com.fintrack.shared.feature.core.ui.util.rememberLongPressHapticFeedback
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SavingsGoalCard(
     goalCalc: SavingsGoalWithCalculation,
@@ -95,13 +103,23 @@ fun SavingsGoalCard(
 ) {
     val goal = goalCalc.goal
     val hapticFeedback = rememberHapticFeedback()
+    val hapticLongPress = rememberLongPressHapticFeedback()
 
     Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .combinedClickable(
+                onClick = {},
+                onLongClick = {
+                    hapticLongPress()
+                    onDeleteClick()
+                }
+            ),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
-        modifier = modifier.fillMaxWidth()
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -249,15 +267,6 @@ fun SavingsGoalCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        IconButton(onClick = onDeleteClick, modifier = Modifier.size(32.dp)) {
-                            Icon(
-                                imageVector = Icons.Default.DeleteOutline,
-                                contentDescription = "Delete Goal",
-                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
                         if (!goal.isCompleted) {
                             Button(
                                 onClick = {

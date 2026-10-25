@@ -4,3 +4,6 @@ import androidx.compose.runtime.Composable
 
 @Composable
 expect fun rememberHapticFeedback(): () -> Unit
+
+@Composable
+expect fun rememberLongPressHapticFeedback(): () -> Unit
