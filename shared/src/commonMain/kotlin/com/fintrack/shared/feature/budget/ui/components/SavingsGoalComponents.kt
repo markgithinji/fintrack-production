@@ -5,6 +5,11 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 
+import androidx.compose.material.icons.filled.DateRange
+import com.fintrack.shared.feature.core.ui.FintrackDatePickerDialog
+import com.fintrack.shared.feature.core.ui.NumpadTargetField
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloat
@@ -44,6 +49,9 @@ import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.foundation.layout.PaddingValues
@@ -97,6 +105,7 @@ import com.fintrack.shared.feature.core.ui.util.rememberLongPressHapticFeedback
 @Composable
 fun SavingsGoalCard(
     goalCalc: SavingsGoalWithCalculation,
+    onCardClick: () -> Unit = {},
     onDepositClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -110,7 +119,7 @@ fun SavingsGoalCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
             .combinedClickable(
-                onClick = {},
+                onClick = onCardClick,
                 onLongClick = {
                     hapticLongPress()
                     onDeleteClick()
@@ -293,7 +302,10 @@ fun SavingsGoalCard(
 @Composable
 fun AddSavingsGoalDialog(
     categories: List<com.fintrack.shared.feature.category.domain.model.Category> = emptyList(),
-    onGoalCreated: (
+    goal: com.fintrack.shared.feature.budget.domain.model.SavingsGoal? = null,
+    onFocusNumpadField: (com.fintrack.shared.feature.core.ui.NumpadTargetField) -> Unit = {},
+    onGoalSaved: (
+        id: String?,
         name: String,
         targetAmount: Double,
         targetDate: String,
@@ -301,10 +313,16 @@ fun AddSavingsGoalDialog(
     ) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var targetAmountText by remember { mutableStateOf("") }
-    var targetDate by remember { mutableStateOf("2025-12-31") }
-    var selectedCategory by remember { mutableStateOf(categories.find { it.name.contains("savings", ignoreCase = true) }) }
+    var name by remember { mutableStateOf(goal?.name ?: "") }
+    var targetAmountText by remember { mutableStateOf(goal?.targetAmount?.let { if (it > 0) it.toString() else "" } ?: "") }
+    val todayDateStr = remember {
+        kotlin.time.Clock.System.now()
+            .toLocalDateTime(TimeZone.currentSystemDefault())
+            .date
+            .toString()
+    }
+    var targetDate by remember { mutableStateOf(goal?.targetDate ?: todayDateStr) }
+    var selectedCategory by remember { mutableStateOf(categories.find { it.id == goal?.categoryId } ?: categories.find { it.name.contains("savings", ignoreCase = true) }) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
     BasicAlertDialog(
@@ -348,7 +366,7 @@ fun AddSavingsGoalDialog(
 
                     Column {
                         Text(
-                            text = "New Savings Goal",
+                            text = if (goal != null) "Edit Savings Goal" else "New Savings Goal",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -388,17 +406,50 @@ fun AddSavingsGoalDialog(
                     shape = RoundedCornerShape(12.dp)
                 )
 
+                var showDatePicker by remember { mutableStateOf(false) }
+
                 OutlinedTextField(
                     value = targetDate,
-                    onValueChange = {
-                        targetDate = it
-                        errorMsg = null
+                    onValueChange = {},
+                    readOnly = true,
+                    interactionSource = remember { MutableInteractionSource() }.also { interactionSource ->
+                        LaunchedEffect(interactionSource) {
+                            interactionSource.interactions.collect { interaction ->
+                                if (interaction is PressInteraction.Release) {
+                                    showDatePicker = true
+                                }
+                            }
+                        }
                     },
-                    label = { Text("Target Completion Date (YYYY-MM-DD)") },
+                    label = { Text("Target Completion Date") },
+                    trailingIcon = {
+                        IconButton(onClick = { showDatePicker = true }) {
+                            Icon(Icons.Default.DateRange, contentDescription = "Select Date")
+                        }
+                    },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
+
+                if (showDatePicker) {
+                    val initialLocalDate = try {
+                        val parts = targetDate.split("-").map { it.toInt() }
+                        kotlinx.datetime.LocalDate(parts[0], parts[1], parts[2])
+                    } catch (_: Exception) {
+                        null
+                    }
+
+                    FintrackDatePickerDialog(
+                        initialDate = initialLocalDate,
+                        onDateSelected = { selected ->
+                            targetDate = selected.toString()
+                            showDatePicker = false
+                            errorMsg = null
+                        },
+                        onDismiss = { showDatePicker = false }
+                    )
+                }
 
                 if (errorMsg != null) {
                     Text(
@@ -424,7 +475,8 @@ fun AddSavingsGoalDialog(
                             } else if (amount == null || amount <= 0) {
                                 errorMsg = "Please enter a valid target amount"
                             } else {
-                                onGoalCreated(
+                                onGoalSaved(
+                                    goal?.id,
                                     name.trim(),
                                     amount,
                                     targetDate.trim(),
@@ -435,7 +487,7 @@ fun AddSavingsGoalDialog(
                         },
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Create Goal", fontWeight = FontWeight.Bold)
+                        Text(if (goal != null) "Update Goal" else "Create Goal", fontWeight = FontWeight.Bold)
                     }
                 }
             }

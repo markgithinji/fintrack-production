@@ -133,12 +133,14 @@ fun PlanningScreen(
     var showAddGoalDialog by remember { mutableStateOf(false) }
     var showAddAssetDialog by remember { mutableStateOf(false) }
     var depositTargetGoal by remember { mutableStateOf<SavingsGoalWithCalculation?>(null) }
+    var goalToEdit by remember { mutableStateOf<SavingsGoalWithCalculation?>(null) }
     var debtToPay by remember { mutableStateOf<com.fintrack.shared.feature.planning.domain.model.Debt?>(null) }
     var debtToEdit by remember { mutableStateOf<com.fintrack.shared.feature.planning.domain.model.Debt?>(null) }
     var assetToEdit by remember { mutableStateOf<com.fintrack.shared.feature.planning.domain.model.Asset?>(null) }
     var showAffordabilitySimulator by remember { mutableStateOf(false) }
     var showAddDebtDialog by remember { mutableStateOf(false) }
     var pendingDeleteTarget by remember { mutableStateOf<PendingDeleteTarget?>(null) }
+    var activeNumpadField by remember { mutableStateOf<com.fintrack.shared.feature.core.ui.NumpadTargetField?>(null) }
 
     val listState = rememberLazyListState()
     
@@ -423,6 +425,7 @@ fun PlanningScreen(
                             items(goalsList, key = { "savings_${it.goal.id}" }) { goalCalc ->
                                 SavingsGoalCard(
                                     goalCalc = goalCalc,
+                                    onCardClick = { goalToEdit = goalCalc },
                                     onDepositClick = { depositTargetGoal = goalCalc },
                                     onDeleteClick = {
                                         pendingDeleteTarget = PendingDeleteTarget.GoalTarget(goalCalc.goal.id, goalCalc.goal.name)
@@ -578,7 +581,7 @@ fun PlanningScreen(
                         Button(
                             onClick = { showAddDebtDialog = true },
                             shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -606,7 +609,7 @@ fun PlanningScreen(
                         Button(
                             onClick = { showAddDebtDialog = true },
                             shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -651,18 +654,19 @@ fun PlanningScreen(
         }
     }
 
-    if (showAddGoalDialog) {
+    if (showAddGoalDialog || goalToEdit != null) {
         AddSavingsGoalDialog(
             categories = categories,
-            onGoalCreated = { name, targetAmount, targetDate, categoryId ->
-                viewModel.createSavingsGoal(
-                    name = name,
-                    targetAmount = targetAmount,
-                    targetDate = targetDate,
-                    categoryId = categoryId
-                )
+            goal = goalToEdit?.goal,
+            onFocusNumpadField = { activeNumpadField = it },
+            onGoalSaved = { id, name, targetAmount, targetDate, categoryId ->
+                viewModel.saveOrUpdateSavingsGoal(id, name, targetAmount, targetDate, categoryId)
             },
-            onDismiss = { showAddGoalDialog = false }
+            onDismiss = {
+                showAddGoalDialog = false
+                goalToEdit = null
+                activeNumpadField = null
+            }
         )
     }
 
@@ -1025,7 +1029,7 @@ fun SexyAddSavingsGoalButton(
 
                 Column {
                     Text(
-                        text = "New Asset or Savings Goal",
+                        text = "Add Savings Goal",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondary

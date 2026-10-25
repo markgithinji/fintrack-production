@@ -27,6 +27,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+data class NumpadTargetField(
+    val value: String,
+    val onValueChange: (String) -> Unit
+)
+
+fun appendNumpadDigit(current: String, digit: String): String {
+    if (digit == "." && current.contains(".")) return current
+    if (current == "0" && digit != ".") return digit
+    return current + digit
+}
+
+fun backspaceNumpadDigit(current: String): String {
+    return if (current.isNotEmpty()) current.dropLast(1) else ""
+}
+
 @Composable
 fun FinanceNumpad(
     onNumberClick: (String) -> Unit,

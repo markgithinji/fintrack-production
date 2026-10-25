@@ -236,7 +236,8 @@ class PlanningViewModel(
         }
     }
 
-    fun createSavingsGoal(
+    fun saveOrUpdateSavingsGoal(
+        id: String? = null,
         name: String,
         targetAmount: Double,
         targetDate: String,
@@ -248,20 +249,23 @@ class PlanningViewModel(
         annualRatePercentage: Double? = null
     ) {
         viewModelScope.launch {
+            val goalId = id ?: randomUUID()
+            val existingGoal = if (id != null) (savingsGoalRepository.getSavingsGoalById(id) as? Result.Success)?.data else null
+
             val goal = SavingsGoal(
-                id = randomUUID(),
-                userId = "local_user",
+                id = goalId,
+                userId = existingGoal?.userId ?: "local_user",
                 name = name,
                 targetAmount = targetAmount,
-                currentAmount = 0.0,
+                currentAmount = existingGoal?.currentAmount ?: 0.0,
                 targetDate = targetDate,
-                categoryId = categoryId,
-                accountId = accountId,
-                iconName = iconName,
-                colorHex = colorHex,
-                createdAt = kotlin.time.Clock.System.now().toString(),
-                goalType = goalType,
-                annualRatePercentage = annualRatePercentage
+                categoryId = categoryId ?: existingGoal?.categoryId,
+                accountId = accountId ?: existingGoal?.accountId,
+                iconName = existingGoal?.iconName ?: iconName,
+                colorHex = existingGoal?.colorHex ?: colorHex,
+                createdAt = existingGoal?.createdAt ?: kotlin.time.Clock.System.now().toString(),
+                goalType = existingGoal?.goalType ?: goalType,
+                annualRatePercentage = existingGoal?.annualRatePercentage ?: annualRatePercentage
             )
             val res = savingsGoalRepository.saveSavingsGoal(goal)
             if (res is Result.Success) {
