@@ -283,9 +283,10 @@ fun AssetCard(
                     )
                     if (asset.annualPassiveYield > 0) {
                         Text(
-                            text = "+${asset.annualPassiveYield.toCurrencyString()}/yr",
+                            text = "+${asset.annualPassiveYield.toCurrencyString()}/yr Net",
                             style = MaterialTheme.typography.labelSmall,
                             fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
                             color = GreenIncome
                         )
                     }
@@ -296,6 +297,7 @@ fun AssetCard(
                 val realReturn = asset.netRealReturnPercentage
                 val realReturnRounded = kotlin.math.round(realReturn * 10.0) / 10.0
                 val isBeating = asset.isBeatingInflation
+                val taxNotice = if (asset.statutoryTaxRatePercentage > 0) "after ${asset.statutoryTaxRatePercentage.toInt()}% tax" else "100% tax-free"
 
                 Surface(
                     shape = RoundedCornerShape(8.dp),
@@ -303,9 +305,9 @@ fun AssetCard(
                 ) {
                     Text(
                         text = if (isBeating) {
-                            "Beating 6.5% inflation (+${realReturnRounded}% net real return)"
+                            "Beating 6.5% inflation (+${realReturnRounded}% net real return $taxNotice)"
                         } else {
-                            "Losing to 6.5% inflation (${realReturnRounded}% net real return)"
+                            "Losing to 6.5% inflation (${realReturnRounded}% net real return $taxNotice)"
                         },
                         style = MaterialTheme.typography.labelSmall,
                         fontSize = 10.sp,
