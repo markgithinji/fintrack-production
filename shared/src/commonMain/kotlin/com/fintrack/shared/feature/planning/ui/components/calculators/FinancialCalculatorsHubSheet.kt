@@ -46,6 +46,7 @@ import com.fintrack.shared.feature.core.ui.SelectableFilterChip
 import com.fintrack.shared.feature.navigation.ui.LocalCurrency
 import com.fintrack.shared.feature.navigation.ui.toCurrencyString
 import com.fintrack.shared.feature.planning.domain.calculator.CalculatorEngine
+import com.fintrack.shared.feature.planning.domain.calculator.DebtStrategyType
 import com.fintrack.shared.feature.planning.domain.calculator.FinancialCalculatorType
 import com.fintrack.shared.ui.theme.GreenIncome
 
@@ -126,13 +127,12 @@ fun FinancialCalculatorsHubSheet(
                     val label = when (type) {
                         FinancialCalculatorType.MMF_COMPOUND -> "📈 MMF Compound"
                         FinancialCalculatorType.SAVINGS_RATE_FREEDOM -> "🎯 Savings Rate & Freedom"
-                        FinancialCalculatorType.CURRENCY_HEDGE -> "💱 USD Currency Shield"
+                        FinancialCalculatorType.DEBT_ACCELERATOR -> "⚡ Debt Accelerator"
+                        FinancialCalculatorType.BUY_VS_RENT -> "🏠 Buy vs Rent"
                         FinancialCalculatorType.COAST_FIRE -> "🌴 Coast FIRE"
                         FinancialCalculatorType.MORTGAGE_SAVER -> "🏠 Mortgage Saver"
                         FinancialCalculatorType.EDUCATION_FUND -> "🎓 College Fund"
                         FinancialCalculatorType.CAR_OWNERSHIP -> "🚗 Car Ownership"
-                        FinancialCalculatorType.DEBT_ACCELERATOR -> "⚡ Debt Accelerator"
-                        FinancialCalculatorType.BUY_VS_RENT -> "🏘️ Buy vs Rent"
                         FinancialCalculatorType.TIP_SPLITTER -> "🍽️ Tip & Split"
                         FinancialCalculatorType.LOAN_AMORTIZATION -> "💳 Loan Interest"
                         FinancialCalculatorType.EMERGENCY_FUND -> "🛡️ Emergency Reserve"
@@ -151,13 +151,12 @@ fun FinancialCalculatorsHubSheet(
             when (activeCalculator) {
                 FinancialCalculatorType.MMF_COMPOUND -> MmfCalculatorView()
                 FinancialCalculatorType.SAVINGS_RATE_FREEDOM -> SavingsRateFreedomCalculatorView()
-                FinancialCalculatorType.CURRENCY_HEDGE -> CurrencyHedgeCalculatorView()
+                FinancialCalculatorType.DEBT_ACCELERATOR -> DebtAcceleratorCalculatorView()
+                FinancialCalculatorType.BUY_VS_RENT -> BuyVsRentCalculatorView()
                 FinancialCalculatorType.COAST_FIRE -> CoastFireCalculatorView()
                 FinancialCalculatorType.MORTGAGE_SAVER -> MortgageSaverCalculatorView()
                 FinancialCalculatorType.EDUCATION_FUND -> EducationFundCalculatorView()
                 FinancialCalculatorType.CAR_OWNERSHIP -> CarOwnershipCalculatorView()
-                FinancialCalculatorType.DEBT_ACCELERATOR -> DebtAcceleratorCalculatorView()
-                FinancialCalculatorType.BUY_VS_RENT -> BuyVsRentCalculatorView()
                 FinancialCalculatorType.TIP_SPLITTER -> TipSplitterCalculatorView()
                 FinancialCalculatorType.LOAN_AMORTIZATION -> LoanCalculatorView()
                 FinancialCalculatorType.EMERGENCY_FUND -> EmergencyFundCalculatorView()
@@ -237,95 +236,6 @@ private fun SavingsRateFreedomCalculatorView() {
                     Text("Monthly Savings: ${result.monthlySavings.toCurrencyString()}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                     Text("Target FIRE Number: ${result.targetFireNumber.toCurrencyString()}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CurrencyHedgeCalculatorView() {
-    val currencySymbol = LocalCurrency.current.symbol
-    var kesAmountText by remember { mutableStateOf("1000000") }
-    var fxRateText by remember { mutableStateOf("130") }
-    var yearsText by remember { mutableStateOf("3") }
-
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(
-            value = kesAmountText,
-            onValueChange = { kesAmountText = it },
-            label = { Text("Investment Capital ($currencySymbol)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
-        )
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = fxRateText,
-                onValueChange = { fxRateText = it },
-                label = { Text("USD/KES Rate") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            OutlinedTextField(
-                value = yearsText,
-                onValueChange = { yearsText = it },
-                label = { Text("Years") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                modifier = Modifier.weight(0.8f),
-                shape = RoundedCornerShape(12.dp)
-            )
-        }
-
-        val kes = kesAmountText.toDoubleOrNull() ?: 0.0
-        val fx = fxRateText.toDoubleOrNull() ?: 130.0
-        val years = yearsText.toIntOrNull() ?: 3
-
-        val result = remember(kes, fx, years) {
-            CalculatorEngine.calculateCurrencyHedge(kes, fx, years)
-        }
-
-        Card(
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text("$years-Year USD Hedging Shield Outcome", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column {
-                        Text("USD Hedged Portfolio ($currencySymbol Value)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(result.usdHedgedOutcomeInKes.toCurrencyString(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GreenIncome)
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("Local $currencySymbol MMF Outcome", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(result.localKesOutcome.toCurrencyString(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
-
-                Text(
-                    text = if (result.isUsdHedgeSuperior) {
-                        "USD Hedging creates ${result.hedgingShieldDifferenceKes.toCurrencyString()} MORE net wealth over $years years due to currency devaluation defense (@5% p.a.)."
-                    } else {
-                        "Local $currencySymbol MMF yield (@11.5%) creates ${result.hedgingShieldDifferenceKes.toCurrencyString()} MORE net wealth over $years years."
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
             }
         }
     }
@@ -800,8 +710,33 @@ private fun DebtAcceleratorCalculatorView() {
     var rateText by remember { mutableStateOf("16.0") }
     var minPaymentText by remember { mutableStateOf("18000") }
     var extraBoostText by remember { mutableStateOf("7000") }
+    var selectedStrategy by remember { mutableStateOf(DebtStrategyType.AVALANCHE_INTEREST) }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = "Payoff Strategy",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SelectableFilterChip(
+                    selected = selectedStrategy == DebtStrategyType.AVALANCHE_INTEREST,
+                    label = "🌋 Avalanche (Highest Interest First)",
+                    onClick = { selectedStrategy = DebtStrategyType.AVALANCHE_INTEREST },
+                    modifier = Modifier.weight(1f)
+                )
+
+                SelectableFilterChip(
+                    selected = selectedStrategy == DebtStrategyType.SNOWBALL_BALANCE,
+                    label = "❄️ Snowball (Smallest Balance First)",
+                    onClick = { selectedStrategy = DebtStrategyType.SNOWBALL_BALANCE },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
         OutlinedTextField(
             value = principalText,
             onValueChange = { principalText = it },
@@ -849,8 +784,8 @@ private fun DebtAcceleratorCalculatorView() {
         val minPay = minPaymentText.toDoubleOrNull() ?: 0.0
         val boost = extraBoostText.toDoubleOrNull() ?: 0.0
 
-        val result = remember(principal, rate, minPay, boost) {
-            CalculatorEngine.calculateDebtAccelerator(principal, rate, minPay, boost)
+        val result = remember(principal, rate, minPay, boost, selectedStrategy) {
+            CalculatorEngine.calculateDebtAccelerator(principal, rate, minPay, boost, selectedStrategy)
         }
 
         Card(
@@ -877,6 +812,24 @@ private fun DebtAcceleratorCalculatorView() {
                         Text("Original Duration", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("${result.monthsWithoutBoost} mo", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     }
+                }
+
+                if (selectedStrategy == DebtStrategyType.AVALANCHE_INTEREST && result.avalancheSavingsVsSnowball > 0) {
+                    Text(
+                        text = "🌋 Avalanche Advantage: Tackling highest interest rates first saves an additional ${result.avalancheSavingsVsSnowball.toCurrencyString()} in interest over Snowball!",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                } else if (selectedStrategy == DebtStrategyType.SNOWBALL_BALANCE) {
+                    Text(
+                        text = "❄️ Snowball Advantage: Ticking off smallest debt balances first gives rapid psychological momentum and quick wins!",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 }
             }
         }

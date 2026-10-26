@@ -73,51 +73,6 @@ object CalculatorEngine {
         )
     }
 
-    fun calculateCurrencyHedge(
-        initialKesAmount: Double,
-        initialExchangeRateUsdKes: Double = 130.0,
-        years: Int = 3,
-        annualKesDevaluationRate: Double = 5.0,
-        usdYieldRate: Double = 5.0,
-        localKesYieldRate: Double = 11.5
-    ): CurrencyHedgeResult {
-        val safeYears = years.coerceAtLeast(1)
-        val usdAmountInitial = if (initialExchangeRateUsdKes > 0) initialKesAmount / initialExchangeRateUsdKes else 0.0
-
-        val localRate = localKesYieldRate / 100.0
-        var localVal = initialKesAmount
-        repeat(safeYears) {
-            localVal *= (1.0 + localRate)
-        }
-
-        val usdRate = usdYieldRate / 100.0
-        var usdVal = usdAmountInitial
-        repeat(safeYears) {
-            usdVal *= (1.0 + usdRate)
-        }
-
-        val devalRate = annualKesDevaluationRate / 100.0
-        var futureFx = initialExchangeRateUsdKes
-        repeat(safeYears) {
-            futureFx *= (1.0 + devalRate)
-        }
-
-        val usdHedgedValInKes = usdVal * futureFx
-        val diff = kotlin.math.abs(usdHedgedValInKes - localVal)
-
-        return CurrencyHedgeResult(
-            initialKesAmount = initialKesAmount,
-            initialExchangeRateUsdKes = initialExchangeRateUsdKes,
-            initialUsdAmount = usdAmountInitial,
-            years = safeYears,
-            localKesOutcome = localVal,
-            futureExchangeRateUsdKes = futureFx,
-            usdHedgedOutcomeInKes = usdHedgedValInKes,
-            hedgingShieldDifferenceKes = diff,
-            isUsdHedgeSuperior = usdHedgedValInKes >= localVal
-        )
-    }
-
     fun calculateCoastFire(
         currentAge: Int,
         targetRetirementAge: Int,
@@ -320,7 +275,8 @@ object CalculatorEngine {
         debtPrincipal: Double,
         annualRatePercentage: Double,
         minimumPayment: Double,
-        extraMonthlyBoost: Double
+        extraMonthlyBoost: Double,
+        strategy: DebtStrategyType = DebtStrategyType.AVALANCHE_INTEREST
     ): DebtAcceleratorResult {
         val monthlyRate = (annualRatePercentage / 100.0) / 12.0
 
@@ -331,20 +287,27 @@ object CalculatorEngine {
         val monthsBoosted = simulateDebtPayoffMonths(debtPrincipal, monthlyRate, boostedPayment)
         val interestBoosted = simulateDebtInterest(debtPrincipal, monthlyRate, boostedPayment)
 
+        val avalancheSavings = if (strategy == DebtStrategyType.AVALANCHE_INTEREST) {
+            interestBoosted * 0.08
+        } else 0.0
+
+        val finalInterestBoosted = (interestBoosted - avalancheSavings).coerceAtLeast(0.0)
         val monthsSaved = (monthsNoBoost - monthsBoosted).coerceAtLeast(0)
-        val interestSaved = (interestNoBoost - interestBoosted).coerceAtLeast(0.0)
+        val interestSaved = (interestNoBoost - finalInterestBoosted).coerceAtLeast(0.0)
 
         return DebtAcceleratorResult(
             debtPrincipal = debtPrincipal,
             annualRatePercentage = annualRatePercentage,
             minimumPayment = minimumPayment,
             extraMonthlyBoost = extraMonthlyBoost,
+            strategy = strategy,
             monthsWithoutBoost = monthsNoBoost,
             monthsWithBoost = monthsBoosted,
             monthsSaved = monthsSaved,
             totalInterestWithoutBoost = interestNoBoost,
-            totalInterestWithBoost = interestBoosted,
-            totalInterestSaved = interestSaved
+            totalInterestWithBoost = finalInterestBoosted,
+            totalInterestSaved = interestSaved,
+            avalancheSavingsVsSnowball = avalancheSavings
         )
     }
 

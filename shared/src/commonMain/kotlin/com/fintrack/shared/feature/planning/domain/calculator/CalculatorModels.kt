@@ -3,17 +3,21 @@ package com.fintrack.shared.feature.planning.domain.calculator
 enum class FinancialCalculatorType {
     MMF_COMPOUND,
     SAVINGS_RATE_FREEDOM,
-    CURRENCY_HEDGE,
+    DEBT_ACCELERATOR,
+    BUY_VS_RENT,
     COAST_FIRE,
     MORTGAGE_SAVER,
     EDUCATION_FUND,
     CAR_OWNERSHIP,
-    DEBT_ACCELERATOR,
-    BUY_VS_RENT,
     TIP_SPLITTER,
     LOAN_AMORTIZATION,
     EMERGENCY_FUND,
     FIRE_RETIREMENT
+}
+
+enum class DebtStrategyType {
+    SNOWBALL_BALANCE,
+    AVALANCHE_INTEREST
 }
 
 data class MmfCalculatorResult(
@@ -36,18 +40,6 @@ data class SavingsRateFreedomResult(
     val savingsRatePercentage: Double,
     val targetFireNumber: Double,
     val estimatedYearsToFreedom: Double?
-)
-
-data class CurrencyHedgeResult(
-    val initialKesAmount: Double,
-    val initialExchangeRateUsdKes: Double,
-    val initialUsdAmount: Double,
-    val years: Int,
-    val localKesOutcome: Double,
-    val futureExchangeRateUsdKes: Double,
-    val usdHedgedOutcomeInKes: Double,
-    val hedgingShieldDifferenceKes: Double,
-    val isUsdHedgeSuperior: Boolean
 )
 
 data class CoastFireResult(
@@ -121,12 +113,14 @@ data class DebtAcceleratorResult(
     val annualRatePercentage: Double,
     val minimumPayment: Double,
     val extraMonthlyBoost: Double,
+    val strategy: DebtStrategyType = DebtStrategyType.AVALANCHE_INTEREST,
     val monthsWithoutBoost: Int,
     val monthsWithBoost: Int,
     val monthsSaved: Int,
     val totalInterestWithoutBoost: Double,
     val totalInterestWithBoost: Double,
-    val totalInterestSaved: Double
+    val totalInterestSaved: Double,
+    val avalancheSavingsVsSnowball: Double = 0.0
 )
 
 data class BuyVsRentResult(
