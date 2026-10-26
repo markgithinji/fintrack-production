@@ -64,6 +64,8 @@ import com.fintrack.shared.feature.budget.ui.components.DepositToGoalDialog
 import com.fintrack.shared.feature.budget.ui.components.SavingsGoalCard
 import com.fintrack.shared.feature.budget.ui.components.SavingsGoalShimmerLoading
 import com.fintrack.shared.feature.budget.ui.components.SavingsGoalsInfoCard
+import com.fintrack.shared.feature.planning.ui.components.calculators.FinancialCalculatorsHubSheet
+import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -141,6 +143,7 @@ fun PlanningScreen(
     var showAddDebtDialog by remember { mutableStateOf(false) }
     var pendingDeleteTarget by remember { mutableStateOf<PendingDeleteTarget?>(null) }
     var activeNumpadField by remember { mutableStateOf<com.fintrack.shared.feature.core.ui.NumpadTargetField?>(null) }
+    var showCalculatorsHub by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
     
@@ -309,6 +312,67 @@ fun PlanningScreen(
                         onSimulateClick = { showAffordabilitySimulator = true },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
+                }
+
+                item(key = "calculators_hub_card") {
+                    Card(
+                        onClick = { showCalculatorsHub = true },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Calculate,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+
+                                Column {
+                                    Text(
+                                        text = "Financial Calculators Hub",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "MMF Yield, Tip Splitter, Loan & FIRE Tools",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
 
                 when (val currentBudgets = budgets) {
@@ -726,6 +790,12 @@ fun PlanningScreen(
     if (showAffordabilitySimulator) {
         AffordabilitySimulatorDialog(
             onDismiss = { showAffordabilitySimulator = false }
+        )
+    }
+
+    if (showCalculatorsHub) {
+        FinancialCalculatorsHubSheet(
+            onDismiss = { showCalculatorsHub = false }
         )
     }
 
