@@ -1,10 +1,14 @@
 package com.fintrack.shared.feature.budget.ui.components
 
+import org.koin.compose.koinInject
+
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 
+import com.fintrack.shared.feature.core.ui.SelectableFilterChip
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.filled.DateRange
 import com.fintrack.shared.feature.core.ui.FintrackDatePickerDialog
 import com.fintrack.shared.feature.core.ui.NumpadTargetField
@@ -213,6 +217,36 @@ fun SavingsGoalCard(
                 drawStopIndicator = {}
             )
 
+            // Smart Cashflow Recommendation Banner
+            if (!goal.isCompleted && !goalCalc.isCashflowSufficient && goalCalc.recommendedTargetDate != null) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = "Smart Cashflow Recommendation",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "Your required ${goalCalc.requiredMonthlyContribution.toCurrencyString()}/mo exceeds your 30-day uncommitted cashflow (${goalCalc.uncommittedMonthlyCashflow.toCurrencyString()}/mo). Pushing target date to ${goalCalc.recommendedTargetDate} makes this 100% achievable without debt.",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 11.sp,
+                            lineHeight = 14.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                        )
+                    }
+                }
+            }
+
             // Callout Banner: Monthly Requirement & Cashflow Feasibility
             Surface(
                 shape = RoundedCornerShape(14.dp),
@@ -252,22 +286,35 @@ fun SavingsGoalCard(
                         )
 
                         if (!goal.isCompleted) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (goalCalc.isFeasible) Icons.Default.CheckCircle else Icons.Default.Warning,
-                                    contentDescription = null,
-                                    tint = if (goalCalc.isFeasible) GreenIncome else PinkExpense,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = if (goalCalc.isFeasible) "On Track with Surplus" else "Surplus Gap: Adjust Date",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontSize = 10.sp,
-                                    color = if (goalCalc.isFeasible) GreenIncome else PinkExpense
-                                )
+                            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (goalCalc.isFeasible) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = if (goalCalc.isFeasible) GreenIncome else PinkExpense,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        text = if (goalCalc.isFeasible) "On Track" else "Timeline Too Tight",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (goalCalc.isFeasible) GreenIncome else PinkExpense
+                                    )
+                                }
+
+                                if (goalCalc.statusReason.isNotBlank()) {
+                                    Text(
+                                        text = goalCalc.statusReason,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 9.sp,
+                                        lineHeight = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                    )
+                                }
                             }
                         }
                     }
@@ -302,17 +349,31 @@ fun SavingsGoalCard(
 @Composable
 fun AddSavingsGoalDialog(
     categories: List<com.fintrack.shared.feature.category.domain.model.Category> = emptyList(),
+    accounts: List<com.fintrack.shared.feature.account.domain.model.Account> = emptyList(),
     goal: com.fintrack.shared.feature.budget.domain.model.SavingsGoal? = null,
+    accountRepository: com.fintrack.shared.feature.account.domain.repository.AccountRepository = koinInject(),
     onFocusNumpadField: (com.fintrack.shared.feature.core.ui.NumpadTargetField) -> Unit = {},
     onGoalSaved: (
         id: String?,
         name: String,
         targetAmount: Double,
         targetDate: String,
-        categoryId: String?
+        categoryId: String?,
+        accountId: String?
     ) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var accountsList by remember { mutableStateOf(accounts) }
+
+    LaunchedEffect(Unit) {
+        if (accountsList.isEmpty()) {
+            val accResult = accountRepository.getAccounts()
+            if (accResult is com.fintrack.shared.feature.core.util.Result.Success) {
+                accountsList = accResult.data
+            }
+        }
+    }
+
     var name by remember { mutableStateOf(goal?.name ?: "") }
     var targetAmountText by remember { mutableStateOf(goal?.targetAmount?.let { if (it > 0) it.toString() else "" } ?: "") }
     val todayDateStr = remember {
@@ -323,6 +384,7 @@ fun AddSavingsGoalDialog(
     }
     var targetDate by remember { mutableStateOf(goal?.targetDate ?: todayDateStr) }
     var selectedCategory by remember { mutableStateOf(categories.find { it.id == goal?.categoryId } ?: categories.find { it.name.contains("savings", ignoreCase = true) }) }
+    var selectedAccountId by remember { mutableStateOf<String?>(goal?.accountId) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
     BasicAlertDialog(
@@ -380,6 +442,34 @@ fun AddSavingsGoalDialog(
                 }
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                if (accountsList.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "Target Account (Optional)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            item {
+                                SelectableFilterChip(
+                                    selected = selectedAccountId == null,
+                                    label = "All Accounts",
+                                    onClick = { selectedAccountId = null }
+                                )
+                            }
+
+                            items(accountsList, key = { it.id }) { acc ->
+                                SelectableFilterChip(
+                                    selected = selectedAccountId == acc.id,
+                                    label = acc.name,
+                                    onClick = { selectedAccountId = acc.id }
+                                )
+                            }
+                        }
+                    }
+                }
 
                 OutlinedTextField(
                     value = name,
@@ -480,7 +570,8 @@ fun AddSavingsGoalDialog(
                                     name.trim(),
                                     amount,
                                     targetDate.trim(),
-                                    selectedCategory?.id
+                                    selectedCategory?.id,
+                                    selectedAccountId
                                 )
                                 onDismiss()
                             }
@@ -671,7 +762,7 @@ fun SavingsGoalsInfoCard(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("2.", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                         Text(
-                            text = "Feasibility Check: Compares required monthly savings against your actual monthly net surplus.",
+                            text = "Cashflow Check: Verifies if your monthly savings fit comfortably within your leftover monthly income.",
                             style = MaterialTheme.typography.bodySmall,
                             fontSize = 11.sp,
                             lineHeight = 14.sp,

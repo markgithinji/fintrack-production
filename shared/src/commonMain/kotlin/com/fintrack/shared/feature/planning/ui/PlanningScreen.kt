@@ -764,10 +764,11 @@ fun PlanningScreen(
     if (showAddGoalDialog || goalToEdit != null) {
         AddSavingsGoalDialog(
             categories = categories,
+            accounts = accounts,
             goal = goalToEdit?.goal,
             onFocusNumpadField = { activeNumpadField = it },
-            onGoalSaved = { id, name, targetAmount, targetDate, categoryId ->
-                viewModel.saveOrUpdateSavingsGoal(id, name, targetAmount, targetDate, categoryId)
+            onGoalSaved = { id, name, targetAmount, targetDate, categoryId, accountId ->
+                viewModel.saveOrUpdateSavingsGoal(id, name, targetAmount, targetDate, categoryId, accountId)
             },
             onDismiss = {
                 showAddGoalDialog = false

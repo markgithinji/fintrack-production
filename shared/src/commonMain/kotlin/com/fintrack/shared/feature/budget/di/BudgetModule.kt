@@ -18,7 +18,7 @@ val budgetModule = module {
     single<SavingsGoalRepository> { SavingsGoalRepositoryImpl(database = get()) }
     singleOf(::BudgetValidationUseCase)
     singleOf(::CheckBudgetThresholdsUseCase)
-    singleOf(::GetSavingsGoalsUseCase)
+    single { GetSavingsGoalsUseCase(savingsGoalRepository = get(), transactionRepository = get(), accountRepository = getOrNull()) }
     viewModel { 
         PlanningViewModel(
             budgetRepository = get(),
