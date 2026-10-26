@@ -19,7 +19,11 @@ class SimulateAffordabilityUseCase(
     private val assetRepository: AssetRepository? = null,
     private val debtRepository: DebtRepository? = null
 ) {
-    suspend operator fun invoke(itemPrice: Double, accountId: String? = null): Result<AffordabilitySimulationResult> {
+    suspend operator fun invoke(
+        itemPrice: Double,
+        accountId: String? = null,
+        currencySymbol: String = "KES"
+    ): Result<AffordabilitySimulationResult> {
         if (itemPrice <= 0.0) {
             return Result.Error(IllegalArgumentException("Please enter a valid item price greater than zero."))
         }
@@ -34,17 +38,18 @@ class SimulateAffordabilityUseCase(
                 val totalRequiredMonthlySavings = fetchTotalRequiredSavings()
 
                 // Fetch liquid MMF & asset reserves
-                val liquidAssetsTotal = fetchLiquidAssetsTotal()
+                val liquidAssetsTotal = fetchLiquidAssetsTotal(accountId)
 
                 // Fetch active debts total
-                val activeDebtsTotal = fetchActiveDebtsTotal()
+                val activeDebtsTotal = fetchActiveDebtsTotal(accountId)
 
                 val result = runSimulation(
                     itemPrice = itemPrice,
                     runway = runway,
                     requiredMonthlySavings = totalRequiredMonthlySavings,
                     liquidAssetsTotal = liquidAssetsTotal,
-                    activeDebtsTotal = activeDebtsTotal
+                    activeDebtsTotal = activeDebtsTotal,
+                    currencySymbol = currencySymbol
                 )
                 Result.Success(result)
             }
@@ -61,18 +66,24 @@ class SimulateAffordabilityUseCase(
         }
     }
 
-    private suspend fun fetchLiquidAssetsTotal(): Double {
+    private suspend fun fetchLiquidAssetsTotal(accountId: String? = null): Double {
         if (assetRepository == null) return 0.0
+        val targetAccountIds = accountId?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
         return when (val assetsRes = assetRepository.getAssets()) {
-            is Result.Success -> assetsRes.data.filter { it.isLiquid }.sumOf { it.currentBalance }
+            is Result.Success -> assetsRes.data.filter { asset ->
+                asset.isLiquid && (targetAccountIds.isEmpty() || asset.accountId == null || targetAccountIds.contains(asset.accountId))
+            }.sumOf { it.currentBalance }
             else -> 0.0
         }
     }
 
-    private suspend fun fetchActiveDebtsTotal(): Double {
+    private suspend fun fetchActiveDebtsTotal(accountId: String? = null): Double {
         if (debtRepository == null) return 0.0
+        val targetAccountIds = accountId?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
         return when (val debtsRes = debtRepository.getDebts()) {
-            is Result.Success -> debtsRes.data.sumOf { it.balance }
+            is Result.Success -> debtsRes.data.filter { debt ->
+                targetAccountIds.isEmpty() || debt.accountId == null || targetAccountIds.contains(debt.accountId)
+            }.sumOf { it.balance }
             else -> 0.0
         }
     }
@@ -82,7 +93,8 @@ class SimulateAffordabilityUseCase(
         runway: CashflowRunway,
         requiredMonthlySavings: Double,
         liquidAssetsTotal: Double,
-        activeDebtsTotal: Double
+        activeDebtsTotal: Double,
+        currencySymbol: String
     ): AffordabilitySimulationResult {
         val currentCash = runway.currentBalance.doubleValue(false)
         val eomBefore = runway.projectedEomBalance.doubleValue(false)
@@ -100,7 +112,7 @@ class SimulateAffordabilityUseCase(
 
         // Savings Goal Impact
         val savingsGoalImpact = if (requiredMonthlySavings > 0 && eomAfter < requiredMonthlySavings) {
-            "Reduces surplus below your KES ${requiredMonthlySavings.toFormattedString()}/mo required savings for active goals."
+            "Reduces surplus below your $currencySymbol ${requiredMonthlySavings.toFormattedString()}/mo required savings for active goals."
         } else null
 
         // "When Can I Buy This?" Readiness Timeline Calculation
@@ -130,7 +142,7 @@ class SimulateAffordabilityUseCase(
             readinessDateStr = "$monthTitle ${futureDate.year}"
 
             reqMonthlySavings = kotlin.math.round((remainingCashNeeded / monthsInt) * 10.0) / 10.0
-            readinessMsg = "Ready in ~$monthsInt months ($readinessDateStr)! Saving KES ${reqMonthlySavings.toFormattedString()}/mo reaches 100% cash readiness without taking on debt."
+            readinessMsg = "Ready in ~$monthsInt months ($readinessDateStr)! Saving $currencySymbol ${reqMonthlySavings.toFormattedString()}/mo reaches 100% cash readiness without taking on debt."
         } else {
             estimatedMonths = null
             readinessDateStr = null
@@ -145,24 +157,24 @@ class SimulateAffordabilityUseCase(
         if (itemPrice > currentCash) {
             if (liquidAssetsTotal >= itemPrice) {
                 verdict = AffordabilityVerdict.CAUTION
-                message = "Checking Cash Deficit: Today's checking cash (KES ${currentCash.toFormattedString()}) is less than item price, but you have KES ${liquidAssetsTotal.toFormattedString()} in MMFs/Assets."
-                recommendation = "Doable via MMF withdrawal! Transfer KES ${itemPrice.toFormattedString()} from your MMF Asset to cover this purchase without taking on high-interest loan debt."
+                message = "Checking Cash Deficit: Today's checking cash ($currencySymbol ${currentCash.toFormattedString()}) is less than item price, but you have $currencySymbol ${liquidAssetsTotal.toFormattedString()} in MMFs/Assets."
+                recommendation = "Doable via MMF withdrawal! Transfer $currencySymbol ${itemPrice.toFormattedString()} from your MMF Asset to cover this purchase without taking on high-interest loan debt."
             } else {
                 verdict = AffordabilityVerdict.IMMEDIATE_DEFICIT
-                message = "Immediate Cash Deficit: Today's available cash (KES ${currentCash.toFormattedString()}) is less than item price."
+                message = "Immediate Cash Deficit: Today's available cash ($currencySymbol ${currentCash.toFormattedString()}) is less than item price."
                 recommendation = if (activeDebtsTotal > 0) {
-                    "You have KES ${activeDebtsTotal.toFormattedString()} in active debts. Avoid taking on new credit or overdrafts for non-essential purchases."
+                    "You have $currencySymbol ${activeDebtsTotal.toFormattedString()} in active debts. Avoid taking on new credit or overdrafts for non-essential purchases."
                 } else {
                     "You cannot afford this purchase today without using credit or overdraft."
                 }
             }
         } else if (eomAfter < 0.0) {
             verdict = AffordabilityVerdict.RISKY
-            message = "High Risk: Will cause an estimated overdraft of KES ${kotlin.math.abs(eomAfter).toFormattedString()} before month-end."
+            message = "High Risk: Will cause an estimated overdraft of $currencySymbol ${kotlin.math.abs(eomAfter).toFormattedString()} before month-end."
             recommendation = "Postpone this purchase or extend your savings timeline to protect your cash flow."
         } else if (eomAfter < billsTotal * 0.2 || (requiredMonthlySavings > 0 && eomAfter < requiredMonthlySavings)) {
             verdict = AffordabilityVerdict.CAUTION
-            message = "Borderline: Leaves a tight month-end cushion of KES ${eomAfter.toFormattedString()}."
+            message = "Borderline: Leaves a tight month-end cushion of $currencySymbol ${eomAfter.toFormattedString()}."
             recommendation = if (savingsGoalImpact != null) {
                 "Purchase is doable but limits funding your active savings goals this month."
             } else {
@@ -170,7 +182,7 @@ class SimulateAffordabilityUseCase(
             }
         } else {
             verdict = AffordabilityVerdict.SAFE
-            message = "Safe! Leaves a healthy cushion of KES ${eomAfter.toFormattedString()} after scheduled bills."
+            message = "Safe! Leaves a healthy cushion of $currencySymbol ${eomAfter.toFormattedString()} after scheduled bills."
             recommendation = "Fits comfortably within your cashflow runway without overdraft risk!"
         }
 

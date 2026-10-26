@@ -43,6 +43,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fintrack.shared.feature.core.ui.SelectableFilterChip
+import com.fintrack.shared.feature.navigation.ui.LocalCurrency
 import com.fintrack.shared.feature.navigation.ui.toCurrencyString
 import com.fintrack.shared.feature.planning.domain.calculator.CalculatorEngine
 import com.fintrack.shared.feature.planning.domain.calculator.FinancialCalculatorType
@@ -168,6 +169,7 @@ fun FinancialCalculatorsHubSheet(
 
 @Composable
 private fun SavingsRateFreedomCalculatorView() {
+    val currencySymbol = LocalCurrency.current.symbol
     var incomeText by remember { mutableStateOf("150000") }
     var expenseText by remember { mutableStateOf("90000") }
 
@@ -176,7 +178,7 @@ private fun SavingsRateFreedomCalculatorView() {
             OutlinedTextField(
                 value = incomeText,
                 onValueChange = { incomeText = it },
-                label = { Text("Monthly Net Income (KES)") },
+                label = { Text("Monthly Net Income ($currencySymbol)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 modifier = Modifier.weight(1f),
@@ -186,7 +188,7 @@ private fun SavingsRateFreedomCalculatorView() {
             OutlinedTextField(
                 value = expenseText,
                 onValueChange = { expenseText = it },
-                label = { Text("Monthly Expenses (KES)") },
+                label = { Text("Monthly Expenses ($currencySymbol)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 modifier = Modifier.weight(1f),
@@ -242,6 +244,7 @@ private fun SavingsRateFreedomCalculatorView() {
 
 @Composable
 private fun CurrencyHedgeCalculatorView() {
+    val currencySymbol = LocalCurrency.current.symbol
     var kesAmountText by remember { mutableStateOf("1000000") }
     var fxRateText by remember { mutableStateOf("130") }
     var yearsText by remember { mutableStateOf("3") }
@@ -250,7 +253,7 @@ private fun CurrencyHedgeCalculatorView() {
         OutlinedTextField(
             value = kesAmountText,
             onValueChange = { kesAmountText = it },
-            label = { Text("Investment Capital (KES)") },
+            label = { Text("Investment Capital ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -301,11 +304,11 @@ private fun CurrencyHedgeCalculatorView() {
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column {
-                        Text("USD Hedged Portfolio (KES Value)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("USD Hedged Portfolio ($currencySymbol Value)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(result.usdHedgedOutcomeInKes.toCurrencyString(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = GreenIncome)
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("Local KES MMF Outcome", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Local $currencySymbol MMF Outcome", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(result.localKesOutcome.toCurrencyString(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -316,7 +319,7 @@ private fun CurrencyHedgeCalculatorView() {
                     text = if (result.isUsdHedgeSuperior) {
                         "USD Hedging creates ${result.hedgingShieldDifferenceKes.toCurrencyString()} MORE net wealth over $years years due to currency devaluation defense (@5% p.a.)."
                     } else {
-                        "Local KES MMF yield (@11.5%) creates ${result.hedgingShieldDifferenceKes.toCurrencyString()} MORE net wealth over $years years."
+                        "Local $currencySymbol MMF yield (@11.5%) creates ${result.hedgingShieldDifferenceKes.toCurrencyString()} MORE net wealth over $years years."
                     },
                     style = MaterialTheme.typography.bodySmall,
                     fontSize = 11.sp,
@@ -330,6 +333,7 @@ private fun CurrencyHedgeCalculatorView() {
 
 @Composable
 private fun CoastFireCalculatorView() {
+    val currencySymbol = LocalCurrency.current.symbol
     var ageText by remember { mutableStateOf("30") }
     var retireAgeText by remember { mutableStateOf("60") }
     var currentInvestmentsText by remember { mutableStateOf("2500000") }
@@ -361,7 +365,7 @@ private fun CoastFireCalculatorView() {
         OutlinedTextField(
             value = currentInvestmentsText,
             onValueChange = { currentInvestmentsText = it },
-            label = { Text("Current Investments Portfolio (KES)") },
+            label = { Text("Current Investments Portfolio ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -371,7 +375,7 @@ private fun CoastFireCalculatorView() {
         OutlinedTextField(
             value = annualExpenseText,
             onValueChange = { annualExpenseText = it },
-            label = { Text("Annual Expenses in Retirement (KES)") },
+            label = { Text("Annual Expenses in Retirement ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -414,9 +418,9 @@ private fun CoastFireCalculatorView() {
 
                 Text(
                     text = if (result.isCoastFireReached) {
-                        "Your current KES ${result.currentInvestments.toCurrencyString()} portfolio will compound to ${result.projectedBalanceAtRetirement.toCurrencyString()} by age $retireAge at 8% p.a. without adding a single extra shilling! You can spend 100% of your income."
+                        "Your current ${result.currentInvestments.toCurrencyString()} portfolio will compound to ${result.projectedBalanceAtRetirement.toCurrencyString()} by age $retireAge at 8% p.a. without adding a single extra shilling! You can spend 100% of your income."
                     } else {
-                        "Saving KES ${result.monthlySavingsNeededToCoast.toCurrencyString()}/mo for the next ${retireAge - age} years will reach Coast FIRE autopilot readiness."
+                        "Saving ${result.monthlySavingsNeededToCoast.toCurrencyString()}/mo for the next ${retireAge - age} years will reach Coast FIRE autopilot readiness."
                     },
                     style = MaterialTheme.typography.bodySmall,
                     fontSize = 11.sp,
@@ -429,6 +433,7 @@ private fun CoastFireCalculatorView() {
 
 @Composable
 private fun MortgageSaverCalculatorView() {
+    val currencySymbol = LocalCurrency.current.symbol
     var principalText by remember { mutableStateOf("10000000") }
     var rateText by remember { mutableStateOf("14.0") }
     var tenureText by remember { mutableStateOf("20") }
@@ -438,7 +443,7 @@ private fun MortgageSaverCalculatorView() {
         OutlinedTextField(
             value = principalText,
             onValueChange = { principalText = it },
-            label = { Text("Mortgage Principal (KES)") },
+            label = { Text("Mortgage Principal ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -514,6 +519,7 @@ private fun MortgageSaverCalculatorView() {
 
 @Composable
 private fun EducationFundCalculatorView() {
+    val currencySymbol = LocalCurrency.current.symbol
     var childAgeText by remember { mutableStateOf("2") }
     var annualTuitionText by remember { mutableStateOf("300000") }
 
@@ -532,7 +538,7 @@ private fun EducationFundCalculatorView() {
             OutlinedTextField(
                 value = annualTuitionText,
                 onValueChange = { annualTuitionText = it },
-                label = { Text("Today Annual Tuition (KES)") },
+                label = { Text("Today Annual Tuition ($currencySymbol)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 modifier = Modifier.weight(1.5f),
@@ -580,6 +586,7 @@ private fun EducationFundCalculatorView() {
 
 @Composable
 private fun MmfCalculatorView() {
+    val currencySymbol = LocalCurrency.current.symbol
     var initialDepositText by remember { mutableStateOf("100000") }
     var monthlyContributionText by remember { mutableStateOf("10000") }
     var annualRateText by remember { mutableStateOf("11.5") }
@@ -589,7 +596,7 @@ private fun MmfCalculatorView() {
         OutlinedTextField(
             value = initialDepositText,
             onValueChange = { initialDepositText = it },
-            label = { Text("Initial Deposit (KES)") },
+            label = { Text("Initial Deposit ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -698,6 +705,7 @@ private fun MmfCalculatorView() {
 
 @Composable
 private fun CarOwnershipCalculatorView() {
+    val currencySymbol = LocalCurrency.current.symbol
     var priceText by remember { mutableStateOf("2500000") }
     var runningCostText by remember { mutableStateOf("30000") }
     var insuranceText by remember { mutableStateOf("100000") }
@@ -707,7 +715,7 @@ private fun CarOwnershipCalculatorView() {
         OutlinedTextField(
             value = priceText,
             onValueChange = { priceText = it },
-            label = { Text("Car Purchase Price (KES)") },
+            label = { Text("Car Purchase Price ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -787,6 +795,7 @@ private fun CarOwnershipCalculatorView() {
 
 @Composable
 private fun DebtAcceleratorCalculatorView() {
+    val currencySymbol = LocalCurrency.current.symbol
     var principalText by remember { mutableStateOf("400000") }
     var rateText by remember { mutableStateOf("16.0") }
     var minPaymentText by remember { mutableStateOf("18000") }
@@ -796,7 +805,7 @@ private fun DebtAcceleratorCalculatorView() {
         OutlinedTextField(
             value = principalText,
             onValueChange = { principalText = it },
-            label = { Text("Total Debt Principal (KES)") },
+            label = { Text("Total Debt Principal ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -876,6 +885,7 @@ private fun DebtAcceleratorCalculatorView() {
 
 @Composable
 private fun BuyVsRentCalculatorView() {
+    val currencySymbol = LocalCurrency.current.symbol
     var priceText by remember { mutableStateOf("12000000") }
     var rentText by remember { mutableStateOf("60000") }
     var yearsText by remember { mutableStateOf("10") }
@@ -884,7 +894,7 @@ private fun BuyVsRentCalculatorView() {
         OutlinedTextField(
             value = priceText,
             onValueChange = { priceText = it },
-            label = { Text("Property Buy/Build Price (KES)") },
+            label = { Text("Property Buy/Build Price ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -895,7 +905,7 @@ private fun BuyVsRentCalculatorView() {
             OutlinedTextField(
                 value = rentText,
                 onValueChange = { rentText = it },
-                label = { Text("Monthly Rent (KES)") },
+                label = { Text("Monthly Rent ($currencySymbol)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 modifier = Modifier.weight(1.2f),
@@ -964,6 +974,7 @@ private fun BuyVsRentCalculatorView() {
 
 @Composable
 private fun TipSplitterCalculatorView() {
+    val currencySymbol = LocalCurrency.current.symbol
     var billText by remember { mutableStateOf("5000") }
     var tipPercentText by remember { mutableStateOf("10") }
     var peopleText by remember { mutableStateOf("4") }
@@ -972,7 +983,7 @@ private fun TipSplitterCalculatorView() {
         OutlinedTextField(
             value = billText,
             onValueChange = { billText = it },
-            label = { Text("Total Bill Amount (KES)") },
+            label = { Text("Total Bill Amount ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -1051,6 +1062,7 @@ private fun TipSplitterCalculatorView() {
 
 @Composable
 private fun LoanCalculatorView() {
+    val currencySymbol = LocalCurrency.current.symbol
     var principalText by remember { mutableStateOf("500000") }
     var rateText by remember { mutableStateOf("14.0") }
     var monthsText by remember { mutableStateOf("24") }
@@ -1059,7 +1071,7 @@ private fun LoanCalculatorView() {
         OutlinedTextField(
             value = principalText,
             onValueChange = { principalText = it },
-            label = { Text("Loan Principal Amount (KES)") },
+            label = { Text("Loan Principal Amount ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -1132,6 +1144,7 @@ private fun LoanCalculatorView() {
 
 @Composable
 private fun EmergencyFundCalculatorView() {
+    val currencySymbol = LocalCurrency.current.symbol
     var expenseText by remember { mutableStateOf("60000") }
     var monthsText by remember { mutableStateOf("6") }
 
@@ -1140,7 +1153,7 @@ private fun EmergencyFundCalculatorView() {
             OutlinedTextField(
                 value = expenseText,
                 onValueChange = { expenseText = it },
-                label = { Text("Monthly Expenses (KES)") },
+                label = { Text("Monthly Expenses ($currencySymbol)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 modifier = Modifier.weight(1.2f),
@@ -1185,6 +1198,7 @@ private fun EmergencyFundCalculatorView() {
 
 @Composable
 private fun FireCalculatorView() {
+    val currencySymbol = LocalCurrency.current.symbol
     var annualExpenseText by remember { mutableStateOf("720000") }
     var currentInvestmentsText by remember { mutableStateOf("500000") }
     var monthlySavingsText by remember { mutableStateOf("30000") }
@@ -1193,7 +1207,7 @@ private fun FireCalculatorView() {
         OutlinedTextField(
             value = annualExpenseText,
             onValueChange = { annualExpenseText = it },
-            label = { Text("Annual Living Expenses (KES)") },
+            label = { Text("Annual Living Expenses ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),

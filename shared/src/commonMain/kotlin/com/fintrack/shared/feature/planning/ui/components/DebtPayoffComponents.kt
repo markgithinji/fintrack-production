@@ -166,7 +166,7 @@ fun DebtPayoffSummaryCard(
                     color = GreenIncome.copy(alpha = 0.15f)
                 ) {
                     Text(
-                        text = "Saves KES ${plan.interestSavedVsOtherStrategy.toCurrencyString()} more in interest vs ${if (plan.strategy == DebtStrategy.SNOWBALL) "Avalanche" else "Snowball"}!",
+                        text = "Saves ${plan.interestSavedVsOtherStrategy.toCurrencyString()} more in interest vs ${if (plan.strategy == DebtStrategy.SNOWBALL) "Avalanche" else "Snowball"}!",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = GreenIncome,
