@@ -129,6 +129,7 @@ fun PlanningScreen(
     val assets by viewModel.assets.collectAsStateWithLifecycle()
     val debts by viewModel.debts.collectAsStateWithLifecycle()
     val payoffPlan by viewModel.payoffPlan.collectAsStateWithLifecycle()
+    val calculatorsState by viewModel.calculatorsState.collectAsStateWithLifecycle()
     val accountsResult by accountsViewModel.accounts.collectAsStateWithLifecycle()
     val accounts = (accountsResult as? Result.Success)?.data ?: emptyList()
 
@@ -796,6 +797,8 @@ fun PlanningScreen(
 
     if (showCalculatorsHub) {
         FinancialCalculatorsHubSheet(
+            state = calculatorsState,
+            onUpdateState = { transform -> viewModel.updateCalculatorsState(transform) },
             onDismiss = { showCalculatorsHub = false }
         )
     }

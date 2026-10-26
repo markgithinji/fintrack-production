@@ -321,6 +321,13 @@ class PlanningViewModel(
     private val _receiptScanState = MutableStateFlow<Result<Unit>?>(null)
     val receiptScanState: StateFlow<Result<Unit>?> = _receiptScanState.asStateFlow()
 
+    private val _calculatorsState = MutableStateFlow(com.fintrack.shared.feature.planning.domain.calculator.FinancialCalculatorsState())
+    val calculatorsState: StateFlow<com.fintrack.shared.feature.planning.domain.calculator.FinancialCalculatorsState> = _calculatorsState.asStateFlow()
+
+    fun updateCalculatorsState(transform: (com.fintrack.shared.feature.planning.domain.calculator.FinancialCalculatorsState) -> com.fintrack.shared.feature.planning.domain.calculator.FinancialCalculatorsState) {
+        _calculatorsState.update(transform)
+    }
+
     private var hasInitializedForm = false
 
     fun scanReceipt(imageBytes: ByteArray) {

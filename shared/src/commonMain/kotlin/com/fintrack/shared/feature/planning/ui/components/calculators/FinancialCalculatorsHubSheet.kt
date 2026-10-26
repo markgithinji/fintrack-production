@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,7 +34,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -50,16 +53,29 @@ import com.fintrack.shared.feature.navigation.ui.toCurrencyString
 import com.fintrack.shared.feature.planning.domain.calculator.CalculatorEngine
 import com.fintrack.shared.feature.planning.domain.calculator.DebtStrategyType
 import com.fintrack.shared.feature.planning.domain.calculator.FinancialCalculatorType
+import com.fintrack.shared.feature.planning.domain.calculator.FinancialCalculatorsState
 import com.fintrack.shared.ui.theme.GreenIncome
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FinancialCalculatorsHubSheet(
+    state: FinancialCalculatorsState = FinancialCalculatorsState(),
+    onUpdateState: ((FinancialCalculatorsState) -> FinancialCalculatorsState) -> Unit = {},
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var activeCalculator by remember { mutableStateOf(FinancialCalculatorType.MMF_COMPOUND) }
+    val tabLazyListState = rememberLazyListState()
+
+    val activeIndex = remember(state.activeCalculator) {
+        FinancialCalculatorType.entries.indexOf(state.activeCalculator).coerceAtLeast(0)
+    }
+
+    LaunchedEffect(activeIndex) {
+        if (activeIndex >= 0) {
+            tabLazyListState.animateScrollToItem(activeIndex)
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -109,7 +125,7 @@ fun FinancialCalculatorsHubSheet(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Interactive MMF, FIRE, FX, Mortgage & Savings Tools",
+                            text = "Interactive MMF, FIRE, Mortgage & Savings Tools",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -131,12 +147,13 @@ fun FinancialCalculatorsHubSheet(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 LazyRow(
+                    state = tabLazyListState,
                     modifier = Modifier.padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     items(FinancialCalculatorType.entries) { type ->
-                        val isSelected = activeCalculator == type
+                        val isSelected = state.activeCalculator == type
                         val label = when (type) {
                             FinancialCalculatorType.MMF_COMPOUND -> "📈 MMF Compound"
                             FinancialCalculatorType.SAVINGS_RATE_FREEDOM -> "🎯 Savings & Freedom"
@@ -151,7 +168,7 @@ fun FinancialCalculatorsHubSheet(
                         }
 
                         Surface(
-                            onClick = { activeCalculator = type },
+                            onClick = { onUpdateState { it.copy(activeCalculator = type) } },
                             shape = RoundedCornerShape(12.dp),
                             color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
                         ) {
@@ -168,33 +185,34 @@ fun FinancialCalculatorsHubSheet(
             }
 
             // Selected Calculator Form & Results
-            when (activeCalculator) {
-                FinancialCalculatorType.MMF_COMPOUND -> MmfCalculatorView()
-                FinancialCalculatorType.SAVINGS_RATE_FREEDOM -> SavingsRateFreedomCalculatorView()
-                FinancialCalculatorType.DEBT_ACCELERATOR -> DebtAcceleratorCalculatorView()
-                FinancialCalculatorType.BUY_VS_RENT -> BuyVsRentCalculatorView()
-                FinancialCalculatorType.COAST_FIRE -> CoastFireCalculatorView()
-                FinancialCalculatorType.MORTGAGE_SAVER -> MortgageSaverCalculatorView()
-                FinancialCalculatorType.EDUCATION_FUND -> EducationFundCalculatorView()
-                FinancialCalculatorType.CAR_OWNERSHIP -> CarOwnershipCalculatorView()
-                FinancialCalculatorType.TIP_SPLITTER -> TipSplitterCalculatorView()
-                FinancialCalculatorType.FIRE_RETIREMENT -> FireCalculatorView()
+            when (state.activeCalculator) {
+                FinancialCalculatorType.MMF_COMPOUND -> MmfCalculatorView(state, onUpdateState)
+                FinancialCalculatorType.SAVINGS_RATE_FREEDOM -> SavingsRateFreedomCalculatorView(state, onUpdateState)
+                FinancialCalculatorType.DEBT_ACCELERATOR -> DebtAcceleratorCalculatorView(state, onUpdateState)
+                FinancialCalculatorType.BUY_VS_RENT -> BuyVsRentCalculatorView(state, onUpdateState)
+                FinancialCalculatorType.COAST_FIRE -> CoastFireCalculatorView(state, onUpdateState)
+                FinancialCalculatorType.MORTGAGE_SAVER -> MortgageSaverCalculatorView(state, onUpdateState)
+                FinancialCalculatorType.EDUCATION_FUND -> EducationFundCalculatorView(state, onUpdateState)
+                FinancialCalculatorType.CAR_OWNERSHIP -> CarOwnershipCalculatorView(state, onUpdateState)
+                FinancialCalculatorType.TIP_SPLITTER -> TipSplitterCalculatorView(state, onUpdateState)
+                FinancialCalculatorType.FIRE_RETIREMENT -> FireCalculatorView(state, onUpdateState)
             }
         }
     }
 }
 
 @Composable
-private fun SavingsRateFreedomCalculatorView() {
+private fun SavingsRateFreedomCalculatorView(
+    state: FinancialCalculatorsState,
+    onUpdateState: ((FinancialCalculatorsState) -> FinancialCalculatorsState) -> Unit
+) {
     val currencySymbol = LocalCurrency.current.symbol
-    var incomeText by remember { mutableStateOf("150000") }
-    var expenseText by remember { mutableStateOf("90000") }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
-                value = incomeText,
-                onValueChange = { incomeText = it },
+                value = state.savingsRateIncome,
+                onValueChange = { newValue -> onUpdateState { it.copy(savingsRateIncome = newValue) } },
                 label = { Text("Monthly Net Income ($currencySymbol)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -203,8 +221,8 @@ private fun SavingsRateFreedomCalculatorView() {
             )
 
             OutlinedTextField(
-                value = expenseText,
-                onValueChange = { expenseText = it },
+                value = state.savingsRateExpense,
+                onValueChange = { newValue -> onUpdateState { it.copy(savingsRateExpense = newValue) } },
                 label = { Text("Monthly Expenses ($currencySymbol)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -213,12 +231,10 @@ private fun SavingsRateFreedomCalculatorView() {
             )
         }
 
-        val income = incomeText.toDoubleOrNull() ?: 0.0
-        val expense = expenseText.toDoubleOrNull() ?: 0.0
+        val income = state.savingsRateIncome.toDoubleOrNull() ?: 0.0
+        val expense = state.savingsRateExpense.toDoubleOrNull() ?: 0.0
 
-        val result = remember(income, expense) {
-            CalculatorEngine.calculateSavingsRateFreedom(income, expense)
-        }
+        val result = CalculatorEngine.calculateSavingsRateFreedom(income, expense)
 
         Card(
             shape = RoundedCornerShape(18.dp),
@@ -260,18 +276,44 @@ private fun SavingsRateFreedomCalculatorView() {
 }
 
 @Composable
-private fun CoastFireCalculatorView() {
+private fun CoastFireCalculatorView(
+    state: FinancialCalculatorsState,
+    onUpdateState: ((FinancialCalculatorsState) -> FinancialCalculatorsState) -> Unit
+) {
     val currencySymbol = LocalCurrency.current.symbol
-    var ageText by remember { mutableStateOf("30") }
-    var retireAgeText by remember { mutableStateOf("60") }
-    var currentInvestmentsText by remember { mutableStateOf("2500000") }
-    var annualExpenseText by remember { mutableStateOf("720000") }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp).padding(top = 2.dp)
+                )
+                Text(
+                    text = "What is Coast FIRE?: It means you have saved enough early in life that compound interest will grow it to your full retirement goal on autopilot. You can stop saving for retirement and spend 100% of your income today!",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
-                value = ageText,
-                onValueChange = { ageText = it },
+                value = state.coastFireAge,
+                onValueChange = { newValue -> onUpdateState { it.copy(coastFireAge = newValue) } },
                 label = { Text("Current Age") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -280,8 +322,8 @@ private fun CoastFireCalculatorView() {
             )
 
             OutlinedTextField(
-                value = retireAgeText,
-                onValueChange = { retireAgeText = it },
+                value = state.coastFireRetireAge,
+                onValueChange = { newValue -> onUpdateState { it.copy(coastFireRetireAge = newValue) } },
                 label = { Text("Retire Age") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -291,8 +333,8 @@ private fun CoastFireCalculatorView() {
         }
 
         OutlinedTextField(
-            value = currentInvestmentsText,
-            onValueChange = { currentInvestmentsText = it },
+            value = state.coastFireCurrentInvestments,
+            onValueChange = { newValue -> onUpdateState { it.copy(coastFireCurrentInvestments = newValue) } },
             label = { Text("Current Investments Portfolio ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
@@ -301,8 +343,8 @@ private fun CoastFireCalculatorView() {
         )
 
         OutlinedTextField(
-            value = annualExpenseText,
-            onValueChange = { annualExpenseText = it },
+            value = state.coastFireAnnualExpenses,
+            onValueChange = { newValue -> onUpdateState { it.copy(coastFireAnnualExpenses = newValue) } },
             label = { Text("Annual Expenses in Retirement ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
@@ -310,14 +352,12 @@ private fun CoastFireCalculatorView() {
             shape = RoundedCornerShape(12.dp)
         )
 
-        val age = ageText.toIntOrNull() ?: 30
-        val retireAge = retireAgeText.toIntOrNull() ?: 60
-        val currentInv = currentInvestmentsText.toDoubleOrNull() ?: 0.0
-        val expenses = annualExpenseText.toDoubleOrNull() ?: 0.0
+        val age = state.coastFireAge.toIntOrNull() ?: 30
+        val retireAge = state.coastFireRetireAge.toIntOrNull() ?: 60
+        val currentInv = state.coastFireCurrentInvestments.toDoubleOrNull() ?: 0.0
+        val expenses = state.coastFireAnnualExpenses.toDoubleOrNull() ?: 0.0
 
-        val result = remember(age, retireAge, currentInv, expenses) {
-            CalculatorEngine.calculateCoastFire(age, retireAge, currentInv, expenses)
-        }
+        val result = CalculatorEngine.calculateCoastFire(age, retireAge, currentInv, expenses)
 
         Card(
             shape = RoundedCornerShape(18.dp),
@@ -360,17 +400,16 @@ private fun CoastFireCalculatorView() {
 }
 
 @Composable
-private fun MortgageSaverCalculatorView() {
+private fun MortgageSaverCalculatorView(
+    state: FinancialCalculatorsState,
+    onUpdateState: ((FinancialCalculatorsState) -> FinancialCalculatorsState) -> Unit
+) {
     val currencySymbol = LocalCurrency.current.symbol
-    var principalText by remember { mutableStateOf("10000000") }
-    var rateText by remember { mutableStateOf("14.0") }
-    var tenureText by remember { mutableStateOf("20") }
-    var extraPaymentText by remember { mutableStateOf("10000") }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
-            value = principalText,
-            onValueChange = { principalText = it },
+            value = state.mortgagePrincipal,
+            onValueChange = { newValue -> onUpdateState { it.copy(mortgagePrincipal = newValue) } },
             label = { Text("Mortgage Principal ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
@@ -380,8 +419,8 @@ private fun MortgageSaverCalculatorView() {
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
-                value = rateText,
-                onValueChange = { rateText = it },
+                value = state.mortgageRate,
+                onValueChange = { newValue -> onUpdateState { it.copy(mortgageRate = newValue) } },
                 label = { Text("APR %") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -390,8 +429,8 @@ private fun MortgageSaverCalculatorView() {
             )
 
             OutlinedTextField(
-                value = tenureText,
-                onValueChange = { tenureText = it },
+                value = state.mortgageTenureYears,
+                onValueChange = { newValue -> onUpdateState { it.copy(mortgageTenureYears = newValue) } },
                 label = { Text("Tenure (Yrs)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -400,8 +439,8 @@ private fun MortgageSaverCalculatorView() {
             )
 
             OutlinedTextField(
-                value = extraPaymentText,
-                onValueChange = { extraPaymentText = it },
+                value = state.mortgageExtraPrincipal,
+                onValueChange = { newValue -> onUpdateState { it.copy(mortgageExtraPrincipal = newValue) } },
                 label = { Text("+Extra Principal/mo") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -410,14 +449,12 @@ private fun MortgageSaverCalculatorView() {
             )
         }
 
-        val principal = principalText.toDoubleOrNull() ?: 0.0
-        val rate = rateText.toDoubleOrNull() ?: 0.0
-        val tenure = tenureText.toIntOrNull() ?: 20
-        val extra = extraPaymentText.toDoubleOrNull() ?: 0.0
+        val principal = state.mortgagePrincipal.toDoubleOrNull() ?: 0.0
+        val rate = state.mortgageRate.toDoubleOrNull() ?: 0.0
+        val tenure = state.mortgageTenureYears.toIntOrNull() ?: 20
+        val extra = state.mortgageExtraPrincipal.toDoubleOrNull() ?: 0.0
 
-        val result = remember(principal, rate, tenure, extra) {
-            CalculatorEngine.calculateMortgageSaver(principal, rate, tenure, extra)
-        }
+        val result = CalculatorEngine.calculateMortgageSaver(principal, rate, tenure, extra)
 
         Card(
             shape = RoundedCornerShape(18.dp),
@@ -446,16 +483,17 @@ private fun MortgageSaverCalculatorView() {
 }
 
 @Composable
-private fun EducationFundCalculatorView() {
+private fun EducationFundCalculatorView(
+    state: FinancialCalculatorsState,
+    onUpdateState: ((FinancialCalculatorsState) -> FinancialCalculatorsState) -> Unit
+) {
     val currencySymbol = LocalCurrency.current.symbol
-    var childAgeText by remember { mutableStateOf("2") }
-    var annualTuitionText by remember { mutableStateOf("300000") }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
-                value = childAgeText,
-                onValueChange = { childAgeText = it },
+                value = state.educationChildAge,
+                onValueChange = { newValue -> onUpdateState { it.copy(educationChildAge = newValue) } },
                 label = { Text("Child Current Age") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -464,8 +502,8 @@ private fun EducationFundCalculatorView() {
             )
 
             OutlinedTextField(
-                value = annualTuitionText,
-                onValueChange = { annualTuitionText = it },
+                value = state.educationAnnualTuition,
+                onValueChange = { newValue -> onUpdateState { it.copy(educationAnnualTuition = newValue) } },
                 label = { Text("Today Annual Tuition ($currencySymbol)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -474,12 +512,10 @@ private fun EducationFundCalculatorView() {
             )
         }
 
-        val age = childAgeText.toIntOrNull() ?: 2
-        val tuition = annualTuitionText.toDoubleOrNull() ?: 300000.0
+        val age = state.educationChildAge.toIntOrNull() ?: 2
+        val tuition = state.educationAnnualTuition.toDoubleOrNull() ?: 300000.0
 
-        val result = remember(age, tuition) {
-            CalculatorEngine.calculateEducationFund(age, currentAnnualTuition = tuition)
-        }
+        val result = CalculatorEngine.calculateEducationFund(age, currentAnnualTuition = tuition)
 
         Card(
             shape = RoundedCornerShape(18.dp),
@@ -513,17 +549,16 @@ private fun EducationFundCalculatorView() {
 }
 
 @Composable
-private fun MmfCalculatorView() {
+private fun MmfCalculatorView(
+    state: FinancialCalculatorsState,
+    onUpdateState: ((FinancialCalculatorsState) -> FinancialCalculatorsState) -> Unit
+) {
     val currencySymbol = LocalCurrency.current.symbol
-    var initialDepositText by remember { mutableStateOf("100000") }
-    var monthlyContributionText by remember { mutableStateOf("10000") }
-    var annualRateText by remember { mutableStateOf("11.5") }
-    var yearsText by remember { mutableStateOf("3") }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
-            value = initialDepositText,
-            onValueChange = { initialDepositText = it },
+            value = state.mmfInitialDeposit,
+            onValueChange = { newValue -> onUpdateState { it.copy(mmfInitialDeposit = newValue) } },
             label = { Text("Initial Deposit ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
@@ -533,8 +568,8 @@ private fun MmfCalculatorView() {
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
-                value = monthlyContributionText,
-                onValueChange = { monthlyContributionText = it },
+                value = state.mmfMonthlyContribution,
+                onValueChange = { newValue -> onUpdateState { it.copy(mmfMonthlyContribution = newValue) } },
                 label = { Text("Monthly Deposit") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -543,8 +578,8 @@ private fun MmfCalculatorView() {
             )
 
             OutlinedTextField(
-                value = annualRateText,
-                onValueChange = { annualRateText = it },
+                value = state.mmfAnnualRate,
+                onValueChange = { newValue -> onUpdateState { it.copy(mmfAnnualRate = newValue) } },
                 label = { Text("MMF Rate % p.a.") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -553,8 +588,8 @@ private fun MmfCalculatorView() {
             )
 
             OutlinedTextField(
-                value = yearsText,
-                onValueChange = { yearsText = it },
+                value = state.mmfYears,
+                onValueChange = { newValue -> onUpdateState { it.copy(mmfYears = newValue) } },
                 label = { Text("Years") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -563,14 +598,12 @@ private fun MmfCalculatorView() {
             )
         }
 
-        val initial = initialDepositText.toDoubleOrNull() ?: 0.0
-        val monthly = monthlyContributionText.toDoubleOrNull() ?: 0.0
-        val rate = annualRateText.toDoubleOrNull() ?: 0.0
-        val years = yearsText.toIntOrNull() ?: 1
+        val initial = state.mmfInitialDeposit.toDoubleOrNull() ?: 0.0
+        val monthly = state.mmfMonthlyContribution.toDoubleOrNull() ?: 0.0
+        val rate = state.mmfAnnualRate.toDoubleOrNull() ?: 0.0
+        val years = state.mmfYears.toIntOrNull() ?: 1
 
-        val result = remember(initial, monthly, rate, years) {
-            CalculatorEngine.calculateMmfYield(initial, monthly, rate, years)
-        }
+        val result = CalculatorEngine.calculateMmfYield(initial, monthly, rate, years)
 
         Card(
             shape = RoundedCornerShape(18.dp),
@@ -632,17 +665,16 @@ private fun MmfCalculatorView() {
 }
 
 @Composable
-private fun CarOwnershipCalculatorView() {
+private fun CarOwnershipCalculatorView(
+    state: FinancialCalculatorsState,
+    onUpdateState: ((FinancialCalculatorsState) -> FinancialCalculatorsState) -> Unit
+) {
     val currencySymbol = LocalCurrency.current.symbol
-    var priceText by remember { mutableStateOf("2500000") }
-    var runningCostText by remember { mutableStateOf("30000") }
-    var insuranceText by remember { mutableStateOf("100000") }
-    var yearsText by remember { mutableStateOf("3") }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
-            value = priceText,
-            onValueChange = { priceText = it },
+            value = state.carPrice,
+            onValueChange = { newValue -> onUpdateState { it.copy(carPrice = newValue) } },
             label = { Text("Car Purchase Price ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
@@ -652,8 +684,8 @@ private fun CarOwnershipCalculatorView() {
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
-                value = runningCostText,
-                onValueChange = { runningCostText = it },
+                value = state.carRunningCost,
+                onValueChange = { newValue -> onUpdateState { it.copy(carRunningCost = newValue) } },
                 label = { Text("Fuel & Maint/mo") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -662,8 +694,8 @@ private fun CarOwnershipCalculatorView() {
             )
 
             OutlinedTextField(
-                value = insuranceText,
-                onValueChange = { insuranceText = it },
+                value = state.carInsurance,
+                onValueChange = { newValue -> onUpdateState { it.copy(carInsurance = newValue) } },
                 label = { Text("Insurance/yr") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -672,8 +704,8 @@ private fun CarOwnershipCalculatorView() {
             )
 
             OutlinedTextField(
-                value = yearsText,
-                onValueChange = { yearsText = it },
+                value = state.carYears,
+                onValueChange = { newValue -> onUpdateState { it.copy(carYears = newValue) } },
                 label = { Text("Years") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -682,14 +714,12 @@ private fun CarOwnershipCalculatorView() {
             )
         }
 
-        val price = priceText.toDoubleOrNull() ?: 0.0
-        val running = runningCostText.toDoubleOrNull() ?: 0.0
-        val insurance = insuranceText.toDoubleOrNull() ?: 0.0
-        val years = yearsText.toIntOrNull() ?: 3
+        val price = state.carPrice.toDoubleOrNull() ?: 0.0
+        val running = state.carRunningCost.toDoubleOrNull() ?: 0.0
+        val insurance = state.carInsurance.toDoubleOrNull() ?: 0.0
+        val years = state.carYears.toIntOrNull() ?: 3
 
-        val result = remember(price, running, insurance, years) {
-            CalculatorEngine.calculateCarOwnership(price, running, insurance, years)
-        }
+        val result = CalculatorEngine.calculateCarOwnership(price, running, insurance, years)
 
         Card(
             shape = RoundedCornerShape(18.dp),
@@ -722,13 +752,11 @@ private fun CarOwnershipCalculatorView() {
 }
 
 @Composable
-private fun DebtAcceleratorCalculatorView() {
+private fun DebtAcceleratorCalculatorView(
+    state: FinancialCalculatorsState,
+    onUpdateState: ((FinancialCalculatorsState) -> FinancialCalculatorsState) -> Unit
+) {
     val currencySymbol = LocalCurrency.current.symbol
-    var principalText by remember { mutableStateOf("400000") }
-    var rateText by remember { mutableStateOf("16.0") }
-    var minPaymentText by remember { mutableStateOf("18000") }
-    var extraBoostText by remember { mutableStateOf("7000") }
-    var selectedStrategy by remember { mutableStateOf(DebtStrategyType.AVALANCHE_INTEREST) }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -740,24 +768,24 @@ private fun DebtAcceleratorCalculatorView() {
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SelectableFilterChip(
-                    selected = selectedStrategy == DebtStrategyType.AVALANCHE_INTEREST,
-                    label = "🌋 Avalanche (Highest Interest First)",
-                    onClick = { selectedStrategy = DebtStrategyType.AVALANCHE_INTEREST },
+                    selected = state.debtStrategy == DebtStrategyType.AVALANCHE_INTEREST,
+                    label = "Avalanche (Highest Interest First)",
+                    onClick = { onUpdateState { it.copy(debtStrategy = DebtStrategyType.AVALANCHE_INTEREST) } },
                     modifier = Modifier.weight(1f)
                 )
 
                 SelectableFilterChip(
-                    selected = selectedStrategy == DebtStrategyType.SNOWBALL_BALANCE,
-                    label = "❄️ Snowball (Smallest Balance First)",
-                    onClick = { selectedStrategy = DebtStrategyType.SNOWBALL_BALANCE },
+                    selected = state.debtStrategy == DebtStrategyType.SNOWBALL_BALANCE,
+                    label = "Snowball (Smallest Balance First)",
+                    onClick = { onUpdateState { it.copy(debtStrategy = DebtStrategyType.SNOWBALL_BALANCE) } },
                     modifier = Modifier.weight(1f)
                 )
             }
         }
 
         OutlinedTextField(
-            value = principalText,
-            onValueChange = { principalText = it },
+            value = state.debtPrincipal,
+            onValueChange = { newValue -> onUpdateState { it.copy(debtPrincipal = newValue) } },
             label = { Text("Total Debt Principal ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
@@ -767,8 +795,8 @@ private fun DebtAcceleratorCalculatorView() {
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
-                value = rateText,
-                onValueChange = { rateText = it },
+                value = state.debtRate,
+                onValueChange = { newValue -> onUpdateState { it.copy(debtRate = newValue) } },
                 label = { Text("APR %") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -777,8 +805,8 @@ private fun DebtAcceleratorCalculatorView() {
             )
 
             OutlinedTextField(
-                value = minPaymentText,
-                onValueChange = { minPaymentText = it },
+                value = state.debtMinPayment,
+                onValueChange = { newValue -> onUpdateState { it.copy(debtMinPayment = newValue) } },
                 label = { Text("Min Pay/mo") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -787,8 +815,8 @@ private fun DebtAcceleratorCalculatorView() {
             )
 
             OutlinedTextField(
-                value = extraBoostText,
-                onValueChange = { extraBoostText = it },
+                value = state.debtExtraBoost,
+                onValueChange = { newValue -> onUpdateState { it.copy(debtExtraBoost = newValue) } },
                 label = { Text("+Extra Boost") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -797,14 +825,12 @@ private fun DebtAcceleratorCalculatorView() {
             )
         }
 
-        val principal = principalText.toDoubleOrNull() ?: 0.0
-        val rate = rateText.toDoubleOrNull() ?: 0.0
-        val minPay = minPaymentText.toDoubleOrNull() ?: 0.0
-        val boost = extraBoostText.toDoubleOrNull() ?: 0.0
+        val principal = state.debtPrincipal.toDoubleOrNull() ?: 0.0
+        val rate = state.debtRate.toDoubleOrNull() ?: 0.0
+        val minPay = state.debtMinPayment.toDoubleOrNull() ?: 0.0
+        val boost = state.debtExtraBoost.toDoubleOrNull() ?: 0.0
 
-        val result = remember(principal, rate, minPay, boost, selectedStrategy) {
-            CalculatorEngine.calculateDebtAccelerator(principal, rate, minPay, boost, selectedStrategy)
-        }
+        val result = CalculatorEngine.calculateDebtAccelerator(principal, rate, minPay, boost, state.debtStrategy)
 
         Card(
             shape = RoundedCornerShape(18.dp),
@@ -839,7 +865,7 @@ private fun DebtAcceleratorCalculatorView() {
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                     )
-                } else if (selectedStrategy == DebtStrategyType.AVALANCHE_INTEREST && result.avalancheSavingsVsSnowball > 0) {
+                } else if (state.debtStrategy == DebtStrategyType.AVALANCHE_INTEREST && result.avalancheSavingsVsSnowball > 0) {
                     Text(
                         text = "🌋 Avalanche Advantage: Tackling highest interest rates first saves an additional ${result.avalancheSavingsVsSnowball.toCurrencyString()} in interest over Snowball!",
                         style = MaterialTheme.typography.bodySmall,
@@ -847,7 +873,7 @@ private fun DebtAcceleratorCalculatorView() {
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
-                } else if (selectedStrategy == DebtStrategyType.SNOWBALL_BALANCE) {
+                } else if (state.debtStrategy == DebtStrategyType.SNOWBALL_BALANCE) {
                     Text(
                         text = "❄️ Snowball Advantage: Ticking off smallest debt balances first gives rapid psychological momentum and quick wins!",
                         style = MaterialTheme.typography.bodySmall,
@@ -862,16 +888,16 @@ private fun DebtAcceleratorCalculatorView() {
 }
 
 @Composable
-private fun BuyVsRentCalculatorView() {
+private fun BuyVsRentCalculatorView(
+    state: FinancialCalculatorsState,
+    onUpdateState: ((FinancialCalculatorsState) -> FinancialCalculatorsState) -> Unit
+) {
     val currencySymbol = LocalCurrency.current.symbol
-    var priceText by remember { mutableStateOf("12000000") }
-    var rentText by remember { mutableStateOf("60000") }
-    var yearsText by remember { mutableStateOf("10") }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
-            value = priceText,
-            onValueChange = { priceText = it },
+            value = state.buyVsRentPrice,
+            onValueChange = { newValue -> onUpdateState { it.copy(buyVsRentPrice = newValue) } },
             label = { Text("Property Buy/Build Price ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
@@ -881,8 +907,8 @@ private fun BuyVsRentCalculatorView() {
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
-                value = rentText,
-                onValueChange = { rentText = it },
+                value = state.buyVsRentRent,
+                onValueChange = { newValue -> onUpdateState { it.copy(buyVsRentRent = newValue) } },
                 label = { Text("Monthly Rent ($currencySymbol)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -891,8 +917,8 @@ private fun BuyVsRentCalculatorView() {
             )
 
             OutlinedTextField(
-                value = yearsText,
-                onValueChange = { yearsText = it },
+                value = state.buyVsRentYears,
+                onValueChange = { newValue -> onUpdateState { it.copy(buyVsRentYears = newValue) } },
                 label = { Text("Years") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -901,13 +927,11 @@ private fun BuyVsRentCalculatorView() {
             )
         }
 
-        val price = priceText.toDoubleOrNull() ?: 0.0
-        val rent = rentText.toDoubleOrNull() ?: 0.0
-        val years = yearsText.toIntOrNull() ?: 10
+        val price = state.buyVsRentPrice.toDoubleOrNull() ?: 0.0
+        val rent = state.buyVsRentRent.toDoubleOrNull() ?: 0.0
+        val years = state.buyVsRentYears.toIntOrNull() ?: 10
 
-        val result = remember(price, rent, years) {
-            CalculatorEngine.calculateBuyVsRent(price, rent, years)
-        }
+        val result = CalculatorEngine.calculateBuyVsRent(price, rent, years)
 
         Card(
             shape = RoundedCornerShape(18.dp),
@@ -951,16 +975,16 @@ private fun BuyVsRentCalculatorView() {
 }
 
 @Composable
-private fun TipSplitterCalculatorView() {
+private fun TipSplitterCalculatorView(
+    state: FinancialCalculatorsState,
+    onUpdateState: ((FinancialCalculatorsState) -> FinancialCalculatorsState) -> Unit
+) {
     val currencySymbol = LocalCurrency.current.symbol
-    var billText by remember { mutableStateOf("5000") }
-    var tipPercentText by remember { mutableStateOf("10") }
-    var peopleText by remember { mutableStateOf("4") }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
-            value = billText,
-            onValueChange = { billText = it },
+            value = state.tipBillAmount,
+            onValueChange = { newValue -> onUpdateState { it.copy(tipBillAmount = newValue) } },
             label = { Text("Total Bill Amount ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
@@ -970,8 +994,8 @@ private fun TipSplitterCalculatorView() {
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
-                value = tipPercentText,
-                onValueChange = { tipPercentText = it },
+                value = state.tipPercentage,
+                onValueChange = { newValue -> onUpdateState { it.copy(tipPercentage = newValue) } },
                 label = { Text("Tip %") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -980,8 +1004,8 @@ private fun TipSplitterCalculatorView() {
             )
 
             OutlinedTextField(
-                value = peopleText,
-                onValueChange = { peopleText = it },
+                value = state.tipPeopleSplit,
+                onValueChange = { newValue -> onUpdateState { it.copy(tipPeopleSplit = newValue) } },
                 label = { Text("People Split") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -990,13 +1014,11 @@ private fun TipSplitterCalculatorView() {
             )
         }
 
-        val bill = billText.toDoubleOrNull() ?: 0.0
-        val tipPct = tipPercentText.toDoubleOrNull() ?: 0.0
-        val people = peopleText.toIntOrNull() ?: 1
+        val bill = state.tipBillAmount.toDoubleOrNull() ?: 0.0
+        val tipPct = state.tipPercentage.toDoubleOrNull() ?: 0.0
+        val people = state.tipPeopleSplit.toIntOrNull() ?: 1
 
-        val result = remember(bill, tipPct, people) {
-            CalculatorEngine.calculateTipAndSplit(bill, tipPct, people)
-        }
+        val result = CalculatorEngine.calculateTipAndSplit(bill, tipPct, people)
 
         Card(
             shape = RoundedCornerShape(18.dp),
@@ -1039,16 +1061,43 @@ private fun TipSplitterCalculatorView() {
 }
 
 @Composable
-private fun FireCalculatorView() {
+private fun FireCalculatorView(
+    state: FinancialCalculatorsState,
+    onUpdateState: ((FinancialCalculatorsState) -> FinancialCalculatorsState) -> Unit
+) {
     val currencySymbol = LocalCurrency.current.symbol
-    var annualExpenseText by remember { mutableStateOf("720000") }
-    var currentInvestmentsText by remember { mutableStateOf("500000") }
-    var monthlySavingsText by remember { mutableStateOf("30000") }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp).padding(top = 2.dp)
+                )
+                Text(
+                    text = "What is FIRE?: FIRE stands for Financial Independence, Retire Early. The 25x Rule calculates the portfolio target needed so your passive investment returns pay for 100% of your living expenses forever.",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
         OutlinedTextField(
-            value = annualExpenseText,
-            onValueChange = { annualExpenseText = it },
+            value = state.fireAnnualExpenses,
+            onValueChange = { newValue -> onUpdateState { it.copy(fireAnnualExpenses = newValue) } },
             label = { Text("Annual Living Expenses ($currencySymbol)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
@@ -1058,8 +1107,8 @@ private fun FireCalculatorView() {
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
-                value = currentInvestmentsText,
-                onValueChange = { currentInvestmentsText = it },
+                value = state.fireCurrentInvestments,
+                onValueChange = { newValue -> onUpdateState { it.copy(fireCurrentInvestments = newValue) } },
                 label = { Text("Current Investments") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -1068,8 +1117,8 @@ private fun FireCalculatorView() {
             )
 
             OutlinedTextField(
-                value = monthlySavingsText,
-                onValueChange = { monthlySavingsText = it },
+                value = state.fireMonthlySavings,
+                onValueChange = { newValue -> onUpdateState { it.copy(fireMonthlySavings = newValue) } },
                 label = { Text("Monthly Savings") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
@@ -1078,13 +1127,11 @@ private fun FireCalculatorView() {
             )
         }
 
-        val annualExp = annualExpenseText.toDoubleOrNull() ?: 0.0
-        val currentInv = currentInvestmentsText.toDoubleOrNull() ?: 0.0
-        val savings = monthlySavingsText.toDoubleOrNull() ?: 0.0
+        val annualExp = state.fireAnnualExpenses.toDoubleOrNull() ?: 0.0
+        val currentInv = state.fireCurrentInvestments.toDoubleOrNull() ?: 0.0
+        val savings = state.fireMonthlySavings.toDoubleOrNull() ?: 0.0
 
-        val result = remember(annualExp, currentInv, savings) {
-            CalculatorEngine.calculateFireTarget(annualExp, currentInv, savings)
-        }
+        val result = CalculatorEngine.calculateFireTarget(annualExp, currentInv, savings)
 
         Card(
             shape = RoundedCornerShape(18.dp),
