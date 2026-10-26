@@ -147,8 +147,6 @@ fun FinancialCalculatorsHubSheet(
                             FinancialCalculatorType.EDUCATION_FUND -> "🎓 College Fund"
                             FinancialCalculatorType.CAR_OWNERSHIP -> "🚗 Car Ownership"
                             FinancialCalculatorType.TIP_SPLITTER -> "🍽️ Tip & Split"
-                            FinancialCalculatorType.LOAN_AMORTIZATION -> "💳 Loan Interest"
-                            FinancialCalculatorType.EMERGENCY_FUND -> "🛡️ Emergency Reserve"
                             FinancialCalculatorType.FIRE_RETIREMENT -> "🔥 FIRE Freedom"
                         }
 
@@ -180,8 +178,6 @@ fun FinancialCalculatorsHubSheet(
                 FinancialCalculatorType.EDUCATION_FUND -> EducationFundCalculatorView()
                 FinancialCalculatorType.CAR_OWNERSHIP -> CarOwnershipCalculatorView()
                 FinancialCalculatorType.TIP_SPLITTER -> TipSplitterCalculatorView()
-                FinancialCalculatorType.LOAN_AMORTIZATION -> LoanCalculatorView()
-                FinancialCalculatorType.EMERGENCY_FUND -> EmergencyFundCalculatorView()
                 FinancialCalculatorType.FIRE_RETIREMENT -> FireCalculatorView()
             }
         }
@@ -1030,142 +1026,6 @@ private fun TipSplitterCalculatorView() {
                     Text("Original Bill: ${result.billAmount.toCurrencyString()}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("Tip (${result.tipPercentage}%): ${result.tipAmount.toCurrencyString()}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = GreenIncome)
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LoanCalculatorView() {
-    val currencySymbol = LocalCurrency.current.symbol
-    var principalText by remember { mutableStateOf("500000") }
-    var rateText by remember { mutableStateOf("14.0") }
-    var monthsText by remember { mutableStateOf("24") }
-
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(
-            value = principalText,
-            onValueChange = { principalText = it },
-            label = { Text("Loan Principal Amount ($currencySymbol)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
-        )
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = rateText,
-                onValueChange = { rateText = it },
-                label = { Text("Interest Rate % p.a.") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            OutlinedTextField(
-                value = monthsText,
-                onValueChange = { monthsText = it },
-                label = { Text("Tenure (Months)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp)
-            )
-        }
-
-        val principal = principalText.toDoubleOrNull() ?: 0.0
-        val rate = rateText.toDoubleOrNull() ?: 0.0
-        val months = monthsText.toIntOrNull() ?: 12
-
-        val result = remember(principal, rate, months) {
-            CalculatorEngine.calculateLoanAmortization(principal, rate, months)
-        }
-
-        Card(
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f)),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.2f)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text("Estimated Monthly Loan Payment", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.7f))
-                Text(result.monthlyPayment.toCurrencyString(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text("Total Interest Cost", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(result.totalInterestPaid.toCurrencyString(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
-                    }
-
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("Total Amount Repaid", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(result.totalAmountRepaid.toCurrencyString(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmergencyFundCalculatorView() {
-    val currencySymbol = LocalCurrency.current.symbol
-    var expenseText by remember { mutableStateOf("60000") }
-    var monthsText by remember { mutableStateOf("6") }
-
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = expenseText,
-                onValueChange = { expenseText = it },
-                label = { Text("Monthly Expenses ($currencySymbol)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                modifier = Modifier.weight(1.2f),
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            OutlinedTextField(
-                value = monthsText,
-                onValueChange = { monthsText = it },
-                label = { Text("Buffer (Months)") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                modifier = Modifier.weight(0.8f),
-                shape = RoundedCornerShape(12.dp)
-            )
-        }
-
-        val expense = expenseText.toDoubleOrNull() ?: 0.0
-        val months = monthsText.toIntOrNull() ?: 6
-
-        val result = remember(expense, months) {
-            CalculatorEngine.calculateEmergencyFund(expense, months)
-        }
-
-        Card(
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text("Target Emergency Reserve Required", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
-                Text(result.targetFundRequired.toCurrencyString(), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                Text("Provides 100% cash coverage for ${result.cushionMonths} months of living expenses without taking on debt.", style = MaterialTheme.typography.bodySmall, fontSize = 11.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
             }
         }
     }

@@ -10,8 +10,6 @@ enum class FinancialCalculatorType {
     EDUCATION_FUND,
     CAR_OWNERSHIP,
     TIP_SPLITTER,
-    LOAN_AMORTIZATION,
-    EMERGENCY_FUND,
     FIRE_RETIREMENT
 }
 
@@ -87,15 +85,6 @@ data class TipSplitterResult(
     val perPersonShare: Double
 )
 
-data class LoanAmortizationResult(
-    val loanPrincipal: Double,
-    val annualInterestRate: Double,
-    val tenureMonths: Int,
-    val monthlyPayment: Double,
-    val totalInterestPaid: Double,
-    val totalAmountRepaid: Double
-)
-
 data class CarOwnershipResult(
     val purchasePrice: Double,
     val monthlyFuelAndMaintenance: Double,
@@ -134,12 +123,6 @@ data class BuyVsRentResult(
     val rentAndInvestNetWorthOutcome: Double,
     val netWorthDifference: Double,
     val isBuyingFavorable: Boolean
-)
-
-data class EmergencyFundResult(
-    val monthlyExpense: Double,
-    val cushionMonths: Int,
-    val targetFundRequired: Double
 )
 
 data class FireCalculatorResult(

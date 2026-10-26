@@ -207,34 +207,6 @@ object CalculatorEngine {
         )
     }
 
-    fun calculateLoanAmortization(
-        loanPrincipal: Double,
-        annualInterestRate: Double,
-        tenureMonths: Int
-    ): LoanAmortizationResult {
-        val safeTenure = tenureMonths.coerceAtLeast(1)
-        val monthlyRate = (annualInterestRate / 100.0) / 12.0
-
-        val monthlyPayment = if (monthlyRate > 0) {
-            val factor = (1.0 + monthlyRate).pow(safeTenure.toDouble())
-            loanPrincipal * (monthlyRate * factor) / (factor - 1.0)
-        } else {
-            loanPrincipal / safeTenure
-        }
-
-        val totalRepaid = monthlyPayment * safeTenure
-        val totalInterest = (totalRepaid - loanPrincipal).coerceAtLeast(0.0)
-
-        return LoanAmortizationResult(
-            loanPrincipal = loanPrincipal,
-            annualInterestRate = annualInterestRate,
-            tenureMonths = safeTenure,
-            monthlyPayment = monthlyPayment,
-            totalInterestPaid = totalInterest,
-            totalAmountRepaid = totalRepaid
-        )
-    }
-
     fun calculateCarOwnership(
         purchasePrice: Double,
         monthlyFuelAndMaintenance: Double,
@@ -377,20 +349,6 @@ object CalculatorEngine {
             rentAndInvestNetWorthOutcome = rentAndInvestNetWorth,
             netWorthDifference = diff,
             isBuyingFavorable = buyNetWorth >= rentAndInvestNetWorth
-        )
-    }
-
-    fun calculateEmergencyFund(
-        monthlyExpense: Double,
-        cushionMonths: Int
-    ): EmergencyFundResult {
-        val safeMonths = cushionMonths.coerceAtLeast(1)
-        val target = monthlyExpense * safeMonths
-
-        return EmergencyFundResult(
-            monthlyExpense = monthlyExpense,
-            cushionMonths = safeMonths,
-            targetFundRequired = target
         )
     }
 
