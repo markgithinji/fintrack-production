@@ -28,8 +28,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -121,29 +123,50 @@ fun FinancialCalculatorsHubSheet(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
 
-            // Calculator Type Chips Row
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(FinancialCalculatorType.entries) { type ->
-                    val label = when (type) {
-                        FinancialCalculatorType.MMF_COMPOUND -> "📈 MMF Compound"
-                        FinancialCalculatorType.SAVINGS_RATE_FREEDOM -> "🎯 Savings Rate & Freedom"
-                        FinancialCalculatorType.DEBT_ACCELERATOR -> "⚡ Debt Accelerator"
-                        FinancialCalculatorType.BUY_VS_RENT -> "🏠 Buy vs Rent"
-                        FinancialCalculatorType.COAST_FIRE -> "🌴 Coast FIRE"
-                        FinancialCalculatorType.MORTGAGE_SAVER -> "🏠 Mortgage Saver"
-                        FinancialCalculatorType.EDUCATION_FUND -> "🎓 College Fund"
-                        FinancialCalculatorType.CAR_OWNERSHIP -> "🚗 Car Ownership"
-                        FinancialCalculatorType.TIP_SPLITTER -> "🍽️ Tip & Split"
-                        FinancialCalculatorType.LOAN_AMORTIZATION -> "💳 Loan Interest"
-                        FinancialCalculatorType.EMERGENCY_FUND -> "🛡️ Emergency Reserve"
-                        FinancialCalculatorType.FIRE_RETIREMENT -> "🔥 FIRE Freedom"
-                    }
+            // Scrollable Tab Control Panel Container
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                LazyRow(
+                    modifier = Modifier.padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    items(FinancialCalculatorType.entries) { type ->
+                        val isSelected = activeCalculator == type
+                        val label = when (type) {
+                            FinancialCalculatorType.MMF_COMPOUND -> "📈 MMF Compound"
+                            FinancialCalculatorType.SAVINGS_RATE_FREEDOM -> "🎯 Savings & Freedom"
+                            FinancialCalculatorType.DEBT_ACCELERATOR -> "⚡ Debt Accelerator"
+                            FinancialCalculatorType.BUY_VS_RENT -> "🏠 Buy vs Rent"
+                            FinancialCalculatorType.COAST_FIRE -> "🌴 Coast FIRE"
+                            FinancialCalculatorType.MORTGAGE_SAVER -> "🏠 Mortgage Saver"
+                            FinancialCalculatorType.EDUCATION_FUND -> "🎓 College Fund"
+                            FinancialCalculatorType.CAR_OWNERSHIP -> "🚗 Car Ownership"
+                            FinancialCalculatorType.TIP_SPLITTER -> "🍽️ Tip & Split"
+                            FinancialCalculatorType.LOAN_AMORTIZATION -> "💳 Loan Interest"
+                            FinancialCalculatorType.EMERGENCY_FUND -> "🛡️ Emergency Reserve"
+                            FinancialCalculatorType.FIRE_RETIREMENT -> "🔥 FIRE Freedom"
+                        }
 
-                    SelectableFilterChip(
-                        selected = activeCalculator == type,
-                        label = label,
-                        onClick = { activeCalculator = type }
-                    )
+                        Surface(
+                            onClick = { activeCalculator = type },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
+                            border = if (isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)) else null
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
                 }
             }
 
