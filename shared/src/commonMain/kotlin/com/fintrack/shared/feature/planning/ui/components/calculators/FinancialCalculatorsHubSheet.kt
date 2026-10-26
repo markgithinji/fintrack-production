@@ -832,7 +832,14 @@ private fun DebtAcceleratorCalculatorView() {
                     }
                 }
 
-                if (selectedStrategy == DebtStrategyType.AVALANCHE_INTEREST && result.avalancheSavingsVsSnowball > 0) {
+                if (boost == 0.0) {
+                    Text(
+                        text = "💡 Tip: Enter an extra monthly payment boost above your minimum payment (e.g. +$currencySymbol 5,000/mo) to calculate how many months and interest you save by accelerating your debt payoff!",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                    )
+                } else if (selectedStrategy == DebtStrategyType.AVALANCHE_INTEREST && result.avalancheSavingsVsSnowball > 0) {
                     Text(
                         text = "🌋 Avalanche Advantage: Tackling highest interest rates first saves an additional ${result.avalancheSavingsVsSnowball.toCurrencyString()} in interest over Snowball!",
                         style = MaterialTheme.typography.bodySmall,
