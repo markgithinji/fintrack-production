@@ -2,6 +2,8 @@ package com.fintrack.shared.feature.summary.ui
 
 import com.fintrack.shared.feature.core.ui.SelectableFilterChip
 
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import Period
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -190,6 +192,8 @@ fun StatisticsScreen(
         return
     }
 
+    val density = LocalDensity.current
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -198,7 +202,12 @@ fun StatisticsScreen(
     ) {
         // Unified Top Control Panel Container (Row 1: Sub-Tabs, Row 2: Account Chips)
         Surface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { coordinates ->
+                    val heightDp = with(density) { coordinates.size.height.toDp() }
+                    println("[TOP_CONTROL_PANEL_SIZE_LOG] Top Control Panel Height: $heightDp (${coordinates.size.height}px) | AccountBar: ${if (availableAccounts.isNotEmpty()) "LOADED" else "SHIMMER"}")
+                },
             color = MaterialTheme.colorScheme.background,
             tonalElevation = 1.dp
         ) {
@@ -255,17 +264,24 @@ fun StatisticsScreen(
                     }
                 }
 
-                // Row 2: Account Selection Filter Bar
-                if (availableAccounts.isNotEmpty()) {
-                    AccountFilterChipBar(
-                        accounts = availableAccounts,
-                        selectedAccountIds = selectedAccountIds,
-                        onToggleAccount = { accId ->
-                            viewModel.toggleAccountFilter(accId)
-                        }
-                    )
-                } else {
-                    AccountFilterShimmerBar()
+                // Row 2: Account Selection Filter Bar (Fixed height container to prevent wrap shifts)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    if (availableAccounts.isNotEmpty()) {
+                        AccountFilterChipBar(
+                            accounts = availableAccounts,
+                            selectedAccountIds = selectedAccountIds,
+                            onToggleAccount = { accId ->
+                                viewModel.toggleAccountFilter(accId)
+                            }
+                        )
+                    } else {
+                        AccountFilterShimmerBar()
+                    }
                 }
             }
         }
@@ -578,6 +594,7 @@ private fun AccountFilterChipBar(
 private fun AccountFilterShimmerBar(
     modifier: Modifier = Modifier
 ) {
+    val shimmerWidths = listOf(104.dp, 80.dp, 72.dp, 76.dp, 84.dp)
     LazyRow(
         modifier = modifier
             .fillMaxWidth()
@@ -585,19 +602,15 @@ private fun AccountFilterShimmerBar(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        items(count = 3, key = { "account_filter_shimmer_$it" }) { index ->
-            val chipWidth = when (index) {
-                0 -> 96.dp
-                1 -> 76.dp
-                else -> 92.dp
-            }
+        items(count = shimmerWidths.size, key = { "account_filter_shimmer_$it" }) { index ->
             Box(
                 modifier = Modifier.height(48.dp),
                 contentAlignment = Alignment.Center
             ) {
                 AnimatedShimmerBox(
                     modifier = Modifier
-                        .size(width = chipWidth, height = 32.dp)
+                        .width(shimmerWidths[index])
+                        .height(36.dp)
                         .clip(RoundedCornerShape(12.dp))
                 )
             }
