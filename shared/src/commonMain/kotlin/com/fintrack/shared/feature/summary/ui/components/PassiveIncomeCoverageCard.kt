@@ -1,5 +1,8 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -44,12 +47,19 @@ fun PassiveIncomeCoverageCard(
     onRetry: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val density = LocalDensity.current
+
     Card(
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[PORTFOLIO_CARD_SIZE_LOG] PassiveIncomeCoverageCard Height: $heightDp (${coordinates.size.height}px) | State: ${if (coverageResult is Result.Success) "SUCCESS" else "LOADING"}")
+            }
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -81,19 +91,88 @@ fun PassiveIncomeCoverageCard(
 
             when (coverageResult) {
                 is Result.Loading -> {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        AnimatedShimmerBox(
-                            modifier = Modifier
-                                .fillMaxWidth(0.5f)
-                                .height(24.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        // 1. Hero Coverage Row Shimmer
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                AnimatedShimmerBox(
+                                    modifier = Modifier
+                                        .width(100.dp)
+                                        .height(10.dp)
+                                        .clip(RoundedCornerShape(3.dp))
+                                )
+                                AnimatedShimmerBox(
+                                    modifier = Modifier
+                                        .width(90.dp)
+                                        .height(24.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                )
+                            }
+                            AnimatedShimmerBox(
+                                modifier = Modifier
+                                    .width(110.dp)
+                                    .height(16.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                            )
+                        }
+
+                        // 2. Coverage Progress Bar Shimmer
                         AnimatedShimmerBox(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(12.dp)
-                                .clip(RoundedCornerShape(4.dp))
+                                .height(10.dp)
+                                .clip(RoundedCornerShape(5.dp))
                         )
+
+                        // 3. 2-Tile Living Costs vs Passive Income Tile Shimmer
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    AnimatedShimmerBox(
+                                        modifier = Modifier
+                                            .width(90.dp)
+                                            .height(10.dp)
+                                            .clip(RoundedCornerShape(3.dp))
+                                    )
+                                    AnimatedShimmerBox(
+                                        modifier = Modifier
+                                            .width(80.dp)
+                                            .height(14.dp)
+                                            .clip(RoundedCornerShape(4.dp))
+                                    )
+                                }
+                                Column(
+                                    horizontalAlignment = Alignment.End,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    AnimatedShimmerBox(
+                                        modifier = Modifier
+                                            .width(100.dp)
+                                            .height(10.dp)
+                                            .clip(RoundedCornerShape(3.dp))
+                                    )
+                                    AnimatedShimmerBox(
+                                        modifier = Modifier
+                                            .width(80.dp)
+                                            .height(14.dp)
+                                            .clip(RoundedCornerShape(4.dp))
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 

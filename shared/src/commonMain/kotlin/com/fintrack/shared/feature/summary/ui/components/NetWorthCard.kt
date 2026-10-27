@@ -1,5 +1,7 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -77,6 +79,7 @@ fun NetWorthCard(
     modifier: Modifier = Modifier
 ) {
     var showBottomSheet by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
 
     Card(
         shape = RoundedCornerShape(22.dp),
@@ -86,6 +89,10 @@ fun NetWorthCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[PORTFOLIO_CARD_SIZE_LOG] NetWorthCard Height: $heightDp (${coordinates.size.height}px) | State: ${if (netWorthResult is Result.Success) "SUCCESS" else "LOADING"}")
+            }
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -507,7 +514,12 @@ fun NetWorthCard(
 
 @Composable
 private fun NetWorthShimmerLoading() {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(425.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         // 1. Hero Readout Row Shimmer
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -529,7 +541,6 @@ private fun NetWorthShimmerLoading() {
                 )
             }
 
-            // Dual growth badges shimmer
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 AnimatedShimmerBox(
                     modifier = Modifier
@@ -546,7 +557,111 @@ private fun NetWorthShimmerLoading() {
             }
         }
 
-        // 2. Inner 2-Column Assets vs Liabilities Tile Shimmer
+        // 2. Net Worth Growth Trend Chart Shimmer
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AnimatedShimmerBox(
+                    modifier = Modifier
+                        .width(120.dp)
+                        .height(10.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    repeat(3) {
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(28.dp)
+                                .height(16.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                        )
+                    }
+                }
+            }
+            AnimatedShimmerBox(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(38.dp)
+                    .clip(RoundedCornerShape(8.dp))
+            )
+        }
+
+        // 3. Milestone Goal Progress Tracker Shimmer
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .width(150.dp)
+                            .height(12.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                    )
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .width(60.dp)
+                            .height(12.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                    )
+                }
+                AnimatedShimmerBox(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                )
+            }
+        }
+
+        // 4. FIRE Target Progress Tracker Shimmer
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = GreenIncome.copy(alpha = 0.12f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .width(140.dp)
+                            .height(12.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                    )
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .width(50.dp)
+                            .height(12.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                    )
+                }
+                AnimatedShimmerBox(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                )
+            }
+        }
+
+        // 5. Inner 2-Column Assets vs Liabilities Tile Shimmer
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),

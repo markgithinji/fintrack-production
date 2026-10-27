@@ -1,5 +1,7 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -44,12 +47,19 @@ fun FinancialHealthIndexCard(
     onRetry: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val density = LocalDensity.current
+
     Card(
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[PORTFOLIO_CARD_SIZE_LOG] FinancialHealthIndexCard Height: $heightDp (${coordinates.size.height}px) | State: ${if (healthIndexResult is Result.Success) "SUCCESS" else "LOADING"}")
+            }
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -81,18 +91,90 @@ fun FinancialHealthIndexCard(
 
             when (healthIndexResult) {
                 is Result.Loading -> {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        AnimatedShimmerBox(
-                            modifier = Modifier
-                                .fillMaxWidth(0.5f)
-                                .height(24.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                        )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(360.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // 1. Hero Score Row Shimmer
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                AnimatedShimmerBox(
+                                    modifier = Modifier
+                                        .width(110.dp)
+                                        .height(10.dp)
+                                        .clip(RoundedCornerShape(3.dp))
+                                )
+                                AnimatedShimmerBox(
+                                    modifier = Modifier
+                                        .width(90.dp)
+                                        .height(26.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                )
+                            }
+                            AnimatedShimmerBox(
+                                modifier = Modifier
+                                    .width(100.dp)
+                                    .height(28.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                            )
+                        }
+
+                        // 2. Score Progress Bar Shimmer
                         AnimatedShimmerBox(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(12.dp)
-                                .clip(RoundedCornerShape(4.dp))
+                                .height(10.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                        )
+
+                        // 3. 5-Pillar Score Cards Shimmer Grid
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            AnimatedShimmerBox(
+                                modifier = Modifier
+                                    .width(90.dp)
+                                    .height(10.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                repeat(3) {
+                                    AnimatedShimmerBox(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(48.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                    )
+                                }
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                repeat(2) {
+                                    AnimatedShimmerBox(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(48.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                    )
+                                }
+                            }
+                        }
+
+                        // 4. Actionable Tip Box Shimmer
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(42.dp)
+                                .clip(RoundedCornerShape(12.dp))
                         )
                     }
                 }

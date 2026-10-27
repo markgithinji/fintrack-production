@@ -1,5 +1,7 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -75,6 +77,7 @@ fun BudgetOptimizerCard(
     modifier: Modifier = Modifier
 ) {
     var showBottomSheet by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
 
     Card(
         shape = RoundedCornerShape(22.dp),
@@ -84,6 +87,10 @@ fun BudgetOptimizerCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[PORTFOLIO_CARD_SIZE_LOG] BudgetOptimizerCard Height: $heightDp (${coordinates.size.height}px) | State: ${if (optimizerResult is Result.Success) "SUCCESS" else "LOADING"}")
+            }
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -434,20 +441,70 @@ private fun TrimRecommendationItem(recommendation: TrimRecommendation) {
 
 @Composable
 private fun OptimizerShimmerLoading() {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // 1. Score Readout Row Shimmer
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            AnimatedShimmerBox(modifier = Modifier.width(100.dp).height(20.dp).clip(RoundedCornerShape(4.dp)))
-            AnimatedShimmerBox(modifier = Modifier.width(60.dp).height(20.dp).clip(CircleShape))
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                AnimatedShimmerBox(modifier = Modifier.width(110.dp).height(10.dp).clip(RoundedCornerShape(3.dp)))
+                AnimatedShimmerBox(modifier = Modifier.width(90.dp).height(24.dp).clip(RoundedCornerShape(4.dp)))
+            }
+            AnimatedShimmerBox(modifier = Modifier.width(90.dp).height(24.dp).clip(RoundedCornerShape(8.dp)))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            AnimatedShimmerBox(modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(10.dp)))
-            AnimatedShimmerBox(modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(10.dp)))
-            AnimatedShimmerBox(modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(10.dp)))
+
+        // 2. 3-Bucket Visual Allocation Row Shimmer
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            AnimatedShimmerBox(modifier = Modifier.width(140.dp).height(10.dp).clip(RoundedCornerShape(3.dp)))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                repeat(3) {
+                    AnimatedShimmerBox(modifier = Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(10.dp)))
+                }
+            }
         }
-        AnimatedShimmerBox(modifier = Modifier.fillMaxWidth().height(36.dp).clip(RoundedCornerShape(12.dp)))
+
+        // 3. Primary Actionable Insight Banner Shimmer
+        AnimatedShimmerBox(modifier = Modifier.fillMaxWidth().height(42.dp).clip(RoundedCornerShape(12.dp)))
+
+        // 4. Recommendation Items Shimmer
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            AnimatedShimmerBox(modifier = Modifier.width(130.dp).height(12.dp).clip(RoundedCornerShape(3.dp)))
+            repeat(3) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            AnimatedShimmerBox(modifier = Modifier.size(28.dp).clip(CircleShape))
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                AnimatedShimmerBox(modifier = Modifier.width(80.dp).height(12.dp).clip(RoundedCornerShape(3.dp)))
+                                AnimatedShimmerBox(modifier = Modifier.width(100.dp).height(10.dp).clip(RoundedCornerShape(3.dp)))
+                            }
+                        }
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            AnimatedShimmerBox(modifier = Modifier.width(90.dp).height(18.dp).clip(RoundedCornerShape(6.dp)))
+                            AnimatedShimmerBox(modifier = Modifier.width(70.dp).height(10.dp).clip(RoundedCornerShape(3.dp)))
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -1,5 +1,7 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -56,13 +58,19 @@ fun EmergencyFundScoreCard(
     modifier: Modifier = Modifier
 ) {
     var showBottomSheet by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
 
     Card(
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[PORTFOLIO_CARD_SIZE_LOG] EmergencyFundScoreCard Height: $heightDp (${coordinates.size.height}px) | State: ${if (scoreResult is Result.Success) "SUCCESS" else "LOADING"}")
+            }
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -99,8 +107,41 @@ fun EmergencyFundScoreCard(
 
             when (scoreResult) {
                 is Result.Loading -> {
-                    AnimatedShimmerBox(modifier = Modifier.height(24.dp).fillMaxWidth().clip(RoundedCornerShape(4.dp)))
-                    AnimatedShimmerBox(modifier = Modifier.height(6.dp).fillMaxWidth().clip(RoundedCornerShape(3.dp)))
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                AnimatedShimmerBox(modifier = Modifier.width(100.dp).height(10.dp).clip(RoundedCornerShape(3.dp)))
+                                AnimatedShimmerBox(modifier = Modifier.width(90.dp).height(24.dp).clip(RoundedCornerShape(4.dp)))
+                            }
+                            AnimatedShimmerBox(modifier = Modifier.width(90.dp).height(22.dp).clip(RoundedCornerShape(6.dp)))
+                        }
+
+                        AnimatedShimmerBox(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)))
+
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    AnimatedShimmerBox(modifier = Modifier.width(80.dp).height(10.dp).clip(RoundedCornerShape(3.dp)))
+                                    AnimatedShimmerBox(modifier = Modifier.width(70.dp).height(14.dp).clip(RoundedCornerShape(4.dp)))
+                                }
+                                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    AnimatedShimmerBox(modifier = Modifier.width(90.dp).height(10.dp).clip(RoundedCornerShape(3.dp)))
+                                    AnimatedShimmerBox(modifier = Modifier.width(70.dp).height(14.dp).clip(RoundedCornerShape(4.dp)))
+                                }
+                            }
+                        }
+                    }
                 }
 
                 is Result.Error -> {
