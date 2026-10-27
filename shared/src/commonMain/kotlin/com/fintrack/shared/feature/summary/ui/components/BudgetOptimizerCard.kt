@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fintrack.shared.feature.core.ui.AnimatedShimmerBox
@@ -337,49 +338,48 @@ private fun TrimRecommendationItem(recommendation: TrimRecommendation) {
         border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            // Row 1: Icon + Category Name (Left) & Trim Badge (Right)
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(PinkExpense.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f, fill = false)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCut,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = PinkExpense
-                    )
-                }
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(PinkExpense.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCut,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = PinkExpense
+                        )
+                    }
 
-                Column {
                     Text(
                         text = recommendation.categoryName,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Spent ${recommendation.currentSpend.toCurrencyString()}",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-            }
 
-            Column(horizontalAlignment = Alignment.End) {
                 Surface(
                     shape = RoundedCornerShape(6.dp),
                     color = GreenIncome.copy(alpha = 0.12f)
@@ -389,14 +389,43 @@ private fun TrimRecommendationItem(recommendation: TrimRecommendation) {
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = GreenIncome
+                        color = GreenIncome,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
+            }
+
+            // Row 2: Top Merchant & Amount (Left) & Annual Savings (Right)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (recommendation.topMerchantName != null) {
+                        "${recommendation.topMerchantName} (${recommendation.currentSpend.toCurrencyString()})"
+                    } else {
+                        "Spent ${recommendation.currentSpend.toCurrencyString()}"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+
+                Spacer(Modifier.width(8.dp))
+
                 Text(
                     text = "Saves ${recommendation.projectedAnnualSavings.toCurrencyString()}/yr",
                     style = MaterialTheme.typography.labelSmall,
-                    fontSize = 9.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                    color = GreenIncome,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -542,7 +571,10 @@ fun BudgetOptimizerBottomSheet(
                                         text = rec.categoryName,
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = colorScheme.onSurface
+                                        color = colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false)
                                     )
                                     Text(
                                         text = "Current: ${rec.currentSpend.toCurrencyString()}",
@@ -628,7 +660,10 @@ private fun BucketCategoryBreakdownCard(
                         Text(
                             text = item.name,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
                         Text(
                             text = "${item.amount.toCurrencyString()} (${item.percentageOfBucket.toInt()}%)",

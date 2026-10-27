@@ -39,7 +39,9 @@ data class TrimRecommendation(
     val projectedAnnualSavings: BigDecimal,
     val impactMessage: String,
     val iconName: String? = null,
-    val priority: TrimPriority = TrimPriority.MEDIUM
+    val priority: TrimPriority = TrimPriority.MEDIUM,
+    val topMerchantName: String? = null,
+    val topMerchantAmount: BigDecimal? = null
 )
 
 data class BudgetOptimizerSummary(

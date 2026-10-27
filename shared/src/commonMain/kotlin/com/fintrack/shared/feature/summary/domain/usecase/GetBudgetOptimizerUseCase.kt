@@ -232,6 +232,19 @@ class GetBudgetOptimizerUseCase(
                                 else -> TrimPriority.LOW
                             }
 
+                            val topMerchantEntry = transactions
+                                .filter { !it.isIncome && (it.category?.equals(catName, ignoreCase = true) == true) }
+                                .groupBy { it.merchantName ?: it.description ?: "General Merchant" }
+                                .mapValues { entry -> entry.value.fold(BigDecimal.ZERO) { sum, tx -> sum + tx.amount } }
+                                .maxByOrNull { entry -> entry.value.doubleValue(false) }
+
+                            val topMerchantName = topMerchantEntry?.key
+                            val topMerchantAmt = topMerchantEntry?.value
+
+                            val merchantNotice = if (topMerchantName != null && topMerchantAmt != null && topMerchantAmt > BigDecimal.ZERO) {
+                                " (Top spend at $topMerchantName)"
+                            } else ""
+
                             trimRecommendations.add(
                                 TrimRecommendation(
                                     id = catName,
@@ -240,9 +253,11 @@ class GetBudgetOptimizerUseCase(
                                     currentSpend = monthlySpend,
                                     suggestedTrimAmount = trimVal,
                                     projectedAnnualSavings = annualSavings,
-                                    impactMessage = "Trimming Ksh ${trimVal.toInt()}/mo from $catName frees up Ksh ${annualSavings.toInt()}/yr toward your 20% savings goal.",
+                                    impactMessage = "Trimming Ksh ${trimVal.toInt()}/mo from $catName$merchantNotice frees up Ksh ${annualSavings.toInt()}/yr toward your savings goal.",
                                     iconName = catName,
-                                    priority = priority
+                                    priority = priority,
+                                    topMerchantName = topMerchantName,
+                                    topMerchantAmount = topMerchantAmt
                                 )
                             )
                         }

@@ -780,6 +780,17 @@ fun SavingsGoalsInfoCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("4.", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            text = "Deposits & Withdrawals Tracked: Depositing into savings increases goal progress. Withdrawing from savings deducts from your goal balance and updates your Financial Health Index in real-time!",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 11.sp,
+                            lineHeight = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
