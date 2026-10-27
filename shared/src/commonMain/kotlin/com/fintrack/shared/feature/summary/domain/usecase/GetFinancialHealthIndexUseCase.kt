@@ -4,6 +4,12 @@ import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.summary.domain.model.FinancialHealthIndex
 import com.fintrack.shared.feature.summary.domain.model.PillarScore
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 class GetFinancialHealthIndexUseCase(
     private val getCashflowRunwayUseCase: GetCashflowRunwayUseCase,
@@ -11,12 +17,22 @@ class GetFinancialHealthIndexUseCase(
     private val getEmergencyFundScoreUseCase: GetEmergencyFundScoreUseCase? = null,
     private val getBudgetOptimizerUseCase: GetBudgetOptimizerUseCase? = null
 ) {
-    suspend operator fun invoke(accountId: String? = null): Result<FinancialHealthIndex> {
-        return try {
+    suspend operator fun invoke(accountId: String? = null): Result<FinancialHealthIndex> = withContext(Dispatchers.IO) {
+        try {
             val tips = mutableListOf<String>()
 
+            // Structured Concurrency: Execute 4 pillar queries in parallel via coroutineScope
+            val runwayDeferred = async { getCashflowRunwayUseCase(accountId) }
+            val netWorthDeferred = async { getNetWorthSummaryUseCase?.invoke(accountId) }
+            val emergencyDeferred = async { getEmergencyFundScoreUseCase?.invoke(accountId) }
+            val optimizerDeferred = async { getBudgetOptimizerUseCase?.invoke(accountId, days = 30) }
+
+            val runwayRes = runwayDeferred.await()
+            val netWorthRes = netWorthDeferred.await()
+            val emergencyRes = emergencyDeferred.await()
+            val optimizerRes = optimizerDeferred.await()
+
             // 1. Liquidity Pillar (Runway Depletion Days)
-            val runwayRes = getCashflowRunwayUseCase(accountId)
             var liquidityPts = 12
             var liquidityDetail = "15 days cashflow runway"
             if (runwayRes is Result.Success) {
@@ -37,66 +53,57 @@ class GetFinancialHealthIndexUseCase(
             // 2. Solvency Pillar (Debt-to-Asset Ratio)
             var solvencyPts = 15
             var solvencyDetail = "Healthy Debt Ratio"
-            if (getNetWorthSummaryUseCase != null) {
-                val netWorthRes = getNetWorthSummaryUseCase(accountId)
-                if (netWorthRes is Result.Success) {
-                    val summary = netWorthRes.data
-                    val ratio = summary.debtToAssetRatioPercentage.doubleValue(false)
-                    solvencyPts = when {
-                        ratio <= 15.0 -> 20
-                        ratio <= 30.0 -> 16
-                        ratio <= 50.0 -> 11
-                        else -> 5
-                    }
-                    solvencyDetail = "${ratio.toInt()}% Debt Ratio"
-                    if (summary.totalLiabilities.doubleValue(false) > 0.0) {
-                        tips.add("Solvency Tip: Paying off high-interest debt first lowers your ${ratio.toInt()}% debt ratio and frees up monthly cashflow surplus.")
-                    }
+            if (netWorthRes is Result.Success) {
+                val summary = netWorthRes.data
+                val ratio = summary.debtToAssetRatioPercentage.doubleValue(false)
+                solvencyPts = when {
+                    ratio <= 15.0 -> 20
+                    ratio <= 30.0 -> 16
+                    ratio <= 50.0 -> 11
+                    else -> 5
+                }
+                solvencyDetail = "${ratio.toInt()}% Debt Ratio"
+                if (summary.totalLiabilities.doubleValue(false) > 0.0) {
+                    tips.add("Solvency Tip: Paying off high-interest debt first lowers your ${ratio.toInt()}% debt ratio and frees up monthly cashflow surplus.")
                 }
             }
 
             // 3. Emergency Shield Pillar
             var emergencyPts = 10
             var emergencyDetail = "2.0 months buffer"
-            if (getEmergencyFundScoreUseCase != null) {
-                val emergencyRes = getEmergencyFundScoreUseCase(accountId)
-                if (emergencyRes is Result.Success) {
-                    val score = emergencyRes.data
-                    val months = score.monthsCovered.doubleValue(false)
-                    emergencyPts = when {
-                        months >= 6.0 -> 20
-                        months >= 3.0 -> 16
-                        months >= 1.0 -> 10
-                        else -> 4
-                    }
-                    val roundedMonths = kotlin.math.round(months * 10.0) / 10.0
-                    emergencyDetail = "$roundedMonths mo buffer"
-                    if (months < 3.0) {
-                        tips.add("Emergency Shield: Building a 3-month living expense buffer protects you from unexpected cash drops.")
-                    }
+            if (emergencyRes is Result.Success) {
+                val score = emergencyRes.data
+                val months = score.monthsCovered.doubleValue(false)
+                emergencyPts = when {
+                    months >= 6.0 -> 20
+                    months >= 3.0 -> 16
+                    months >= 1.0 -> 10
+                    else -> 4
+                }
+                val roundedMonths = kotlin.math.round(months * 10.0) / 10.0
+                emergencyDetail = "$roundedMonths mo buffer"
+                if (months < 3.0) {
+                    tips.add("Emergency Shield: Building a 3-month living expense buffer protects you from unexpected cash drops.")
                 }
             }
 
             // 4. Budget Alignment Pillar (50/30/20 Rule)
             var budgetPts = 14
             var budgetDetail = "70% Rule Align"
-            if (getBudgetOptimizerUseCase != null) {
-                val optimizerRes = getBudgetOptimizerUseCase(accountId, days = 30)
-                if (optimizerRes is Result.Success) {
-                    val optimizer = optimizerRes.data
-                    val score = optimizer.healthScore
-                    budgetPts = when {
-                        score >= 85 -> 20
-                        score >= 70 -> 16
-                        score >= 50 -> 12
-                        else -> 6
-                    }
-                    budgetDetail = "$score% Rule Align"
-                    val totalTrim = optimizer.recommendations.fold(BigDecimal.ZERO) { acc, r -> acc + r.suggestedTrimAmount }.doubleValue(false)
-                    if (totalTrim > 0) {
-                        val trimStr = totalTrim.toLong().toString()
-                        tips.add("Budget Optimization: Trimming non-essential discretionary spend by KES $trimStr/mo aligns your finances with the 50/30/20 rule.")
-                    }
+            if (optimizerRes is Result.Success) {
+                val optimizer = optimizerRes.data
+                val score = optimizer.healthScore
+                budgetPts = when {
+                    score >= 85 -> 20
+                    score >= 70 -> 16
+                    score >= 50 -> 12
+                    else -> 6
+                }
+                budgetDetail = "$score% Rule Align"
+                val totalTrim = optimizer.recommendations.fold(BigDecimal.ZERO) { acc, r -> acc + r.suggestedTrimAmount }.doubleValue(false)
+                if (totalTrim > 0) {
+                    val trimStr = totalTrim.toLong().toString()
+                    tips.add("Budget Optimization: Trimming non-essential discretionary spend by KES $trimStr/mo aligns your finances with the 50/30/20 rule.")
                 }
             }
 
