@@ -19,6 +19,8 @@ import com.ionspin.kotlin.bignum.decimal.DecimalMode
 import com.ionspin.kotlin.bignum.decimal.RoundingMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
@@ -38,8 +40,17 @@ class GetNetWorthSummaryUseCase(
         try {
             val targetAccountIds = accountId?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
 
-            // 1. Accounts Fetch
-            val accountsResult = accountRepository.getAccounts()
+            // Structured Concurrency: Parallel Database Queries via coroutineScope
+            val accDeferred = async { accountRepository.getAccounts() }
+            val goalsDeferred = async { savingsGoalRepository?.getSavingsGoals() }
+            val debtsDeferred = async { debtRepository?.getDebts() }
+            val txsDeferred = async { transactionRepository.getAllTransactions() }
+
+            val accountsResult = accDeferred.await()
+            val goalsResult = goalsDeferred.await()
+            val debtsResult = debtsDeferred.await()
+            val allTxsResult = txsDeferred.await()
+
             val accounts = (accountsResult as? Result.Success)?.data ?: emptyList()
             val targetAccounts = if (targetAccountIds.isNotEmpty()) {
                 accounts.filter { targetAccountIds.contains(it.id) }
@@ -66,7 +77,6 @@ class GetNetWorthSummaryUseCase(
             }
 
             // 2. Planning Screen Goals, MMFs, Saccos & Assets
-            val goalsResult = savingsGoalRepository?.getSavingsGoals()
             val savingsGoals = (goalsResult as? Result.Success)?.data ?: emptyList()
 
             savingsGoals.forEach { goal ->
@@ -103,7 +113,6 @@ class GetNetWorthSummaryUseCase(
             }
 
             // 3. Planning Screen Debts & Loans
-            val debtsResult = debtRepository?.getDebts()
             val debts = (debtsResult as? Result.Success)?.data ?: emptyList()
 
             debts.forEach { debt ->
@@ -309,27 +318,24 @@ class GetNetWorthSummaryUseCase(
                 estimatedYearsToFire = estYears
             )
 
-            // Compute 12-Month Historical Net Worth Trend Checkpoints
+            // Compute 12-Month Historical Net Worth Trend Checkpoints in Memory (Instant)
+            val allTransactions = (allTxsResult as? Result.Success)?.data ?: emptyList()
             val trendPoints = mutableListOf<Double>()
             val currentNwVal = netWorth.doubleValue(false)
             trendPoints.add(currentNwVal)
 
             var runningNwVal = currentNwVal
             repeat(11) { mIndex ->
-                val monthStart = today.minus(kotlinx.datetime.DatePeriod(months = mIndex + 1)).toString()
-                val monthEnd = today.minus(kotlinx.datetime.DatePeriod(months = mIndex)).toString()
+                val monthStart = today.minus(kotlinx.datetime.DatePeriod(months = mIndex + 1))
+                val monthEnd = today.minus(kotlinx.datetime.DatePeriod(months = mIndex))
 
-                val monthTxRes = transactionRepository.getAllTransactions(startDate = monthStart, endDate = monthEnd, accountId = singleAccountId)
-                val monthRawTx = (monthTxRes as? Result.Success)?.data ?: emptyList()
-                val monthFilteredTx = if (targetAccountIds.size > 1) {
-                    monthRawTx.filter { targetAccountIds.contains(it.accountId) }
-                } else monthRawTx
-
-                var monthNetFlow = 0.0
-                for (tx in monthFilteredTx) {
-                    val amt = tx.amount.doubleValue(false)
-                    if (tx.isIncome) monthNetFlow += amt else monthNetFlow -= amt
-                }
+                val monthNetFlow = allTransactions.filter { tx ->
+                    try {
+                        val matchesAccount = targetAccountIds.isEmpty() || targetAccountIds.contains(tx.accountId)
+                        val txDate = tx.dateTime.toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).date
+                        matchesAccount && txDate >= monthStart && txDate < monthEnd
+                    } catch (_: Exception) { false }
+                }.sumOf { if (it.isIncome) it.amount.doubleValue(false) else -it.amount.doubleValue(false) }
 
                 runningNwVal -= monthNetFlow
                 trendPoints.add(0, runningNwVal.coerceAtLeast(0.0))
