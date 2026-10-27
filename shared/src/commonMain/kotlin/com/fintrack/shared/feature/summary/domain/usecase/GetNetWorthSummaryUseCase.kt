@@ -309,6 +309,32 @@ class GetNetWorthSummaryUseCase(
                 estimatedYearsToFire = estYears
             )
 
+            // Compute 12-Month Historical Net Worth Trend Checkpoints
+            val trendPoints = mutableListOf<Double>()
+            val currentNwVal = netWorth.doubleValue(false)
+            trendPoints.add(currentNwVal)
+
+            var runningNwVal = currentNwVal
+            repeat(11) { mIndex ->
+                val monthStart = today.minus(kotlinx.datetime.DatePeriod(months = mIndex + 1)).toString()
+                val monthEnd = today.minus(kotlinx.datetime.DatePeriod(months = mIndex)).toString()
+
+                val monthTxRes = transactionRepository.getAllTransactions(startDate = monthStart, endDate = monthEnd, accountId = singleAccountId)
+                val monthRawTx = (monthTxRes as? Result.Success)?.data ?: emptyList()
+                val monthFilteredTx = if (targetAccountIds.size > 1) {
+                    monthRawTx.filter { targetAccountIds.contains(it.accountId) }
+                } else monthRawTx
+
+                var monthNetFlow = 0.0
+                for (tx in monthFilteredTx) {
+                    val amt = tx.amount.doubleValue(false)
+                    if (tx.isIncome) monthNetFlow += amt else monthNetFlow -= amt
+                }
+
+                runningNwVal -= monthNetFlow
+                trendPoints.add(0, runningNwVal.coerceAtLeast(0.0))
+            }
+
             Result.Success(
                 NetWorthSummary(
                     totalAssets = totalAssets,
@@ -323,7 +349,8 @@ class GetNetWorthSummaryUseCase(
                     liabilityBreakdown = liabilityItems,
                     portfolioAllocations = portfolioAllocations.sortedByDescending { it.totalAmount.toDouble() },
                     milestone = milestone,
-                    fireScore = fireScore
+                    fireScore = fireScore,
+                    historicalTrendPoints = trendPoints
                 )
             )
         } catch (e: Exception) {

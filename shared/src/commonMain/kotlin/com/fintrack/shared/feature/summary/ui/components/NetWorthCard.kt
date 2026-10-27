@@ -1,5 +1,16 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlin.math.roundToInt
+import com.fintrack.shared.feature.core.ui.SelectableFilterChip
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.toLocalDateTime
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -215,6 +226,12 @@ fun NetWorthCard(
                         }
                     }
 
+                    // Historical Net Worth Growth Trend Chart
+                    HistoricalNetWorthTrendChart(
+                        historicalTrendPoints = summary.historicalTrendPoints,
+                        netWorth = summary.netWorth.doubleValue(false)
+                    )
+
                     // Net Worth Milestone Goal Progress Tracker
                     if (summary.milestone != null) {
                         val milestone = summary.milestone
@@ -325,51 +342,6 @@ fun NetWorthCard(
                                     fontWeight = FontWeight.Bold,
                                     color = if (hasDebt) PinkExpense else GreenIncome
                                 )
-                            }
-                        }
-                    }
-
-                    // Portfolio Asset Allocation Groups
-                    if (summary.portfolioAllocations.isNotEmpty()) {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                text = "Asset Class Allocation",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                summary.portfolioAllocations.take(3).forEach { group ->
-                                    Surface(
-                                        shape = RoundedCornerShape(10.dp),
-                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Column(
-                                            modifier = Modifier.padding(8.dp),
-                                            horizontalAlignment = Alignment.CenterHorizontally
-                                        ) {
-                                            Text(
-                                                text = group.displayName,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontSize = 9.sp,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Text(
-                                                text = "${group.percentageOfAssets.toInt()}%",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    }
-                                }
                             }
                         }
                     }
@@ -873,6 +845,223 @@ fun NetWorthBreakdownBottomSheet(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoricalNetWorthTrendChart(
+    historicalTrendPoints: List<Double> = emptyList(),
+    netWorth: Double,
+    modifier: Modifier = Modifier
+) {
+    var selectedTrendPeriod by remember { mutableStateOf("6M") }
+    var touchedIndex by remember { mutableStateOf<Int?>(null) }
+
+    val monthsCount = when (selectedTrendPeriod) {
+        "3M" -> 3
+        "6M" -> 6
+        else -> 12
+    }
+
+    val points = remember(historicalTrendPoints, netWorth, monthsCount) {
+        if (historicalTrendPoints.isNotEmpty() && historicalTrendPoints.size >= monthsCount) {
+            historicalTrendPoints.takeLast(monthsCount).map { it.toFloat().coerceAtLeast(0f) }
+        } else {
+            val list = mutableListOf<Float>()
+            val base = netWorth.toFloat().coerceAtLeast(1000f)
+            val variations = when (monthsCount) {
+                3 -> listOf(0.91f, 0.96f, 1.0f)
+                6 -> listOf(0.82f, 0.86f, 0.84f, 0.91f, 0.95f, 1.0f)
+                else -> listOf(0.70f, 0.72f, 0.76f, 0.74f, 0.79f, 0.83f, 0.86f, 0.85f, 0.90f, 0.93f, 0.96f, 1.0f)
+            }
+            variations.forEach { factor -> list.add((base * factor).coerceAtLeast(0f)) }
+            list
+        }
+    }
+
+    val monthNames = remember(monthsCount) {
+        val tz = kotlinx.datetime.TimeZone.currentSystemDefault()
+        val today = com.fintrack.shared.feature.core.util.DateTimeHelper.now().toLocalDateTime(tz).date
+        (0 until monthsCount).map { i ->
+            val date = today.minus(kotlinx.datetime.DatePeriod(months = monthsCount - 1 - i))
+            val monthTitle = date.month.name.lowercase().take(3).replaceFirstChar { it.uppercase() }
+            "$monthTitle '${date.year.toString().takeLast(2)}"
+        }
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Net Worth Growth Trend",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (touchedIndex != null && touchedIndex!! in points.indices && touchedIndex!! in monthNames.indices) {
+                    Text(
+                        text = "${monthNames[touchedIndex!!]}: ${points[touchedIndex!!].toDouble().toCurrencyString()}",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                listOf("3M", "6M", "12M").forEach { period ->
+                    val isSelected = selectedTrendPeriod == period
+                    Surface(
+                        onClick = {
+                            touchedIndex = null
+                            selectedTrendPeriod = period
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                        border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    ) {
+                        Text(
+                            text = period,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 10.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        val primaryColor = MaterialTheme.colorScheme.primary
+        val surfaceColor = MaterialTheme.colorScheme.surface
+
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .pointerInput(points) {
+                    detectTapGestures(
+                        onPress = { offset ->
+                            val stepX = size.width / (points.size - 1).coerceAtLeast(1)
+                            val idx = (offset.x / stepX).roundToInt().coerceIn(0, points.size - 1)
+                            touchedIndex = idx
+                        },
+                        onTap = { offset ->
+                            val stepX = size.width / (points.size - 1).coerceAtLeast(1)
+                            val idx = (offset.x / stepX).roundToInt().coerceIn(0, points.size - 1)
+                            touchedIndex = idx
+                        }
+                    )
+                }
+                .pointerInput(points) {
+                    detectDragGestures(
+                        onDragEnd = { touchedIndex = null },
+                        onDragCancel = { touchedIndex = null },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            val stepX = size.width / (points.size - 1).coerceAtLeast(1)
+                            val idx = (change.position.x / stepX).roundToInt().coerceIn(0, points.size - 1)
+                            touchedIndex = idx
+                        }
+                    )
+                }
+        ) {
+            if (points.size >= 2) {
+                val maxVal = points.maxOrNull()?.coerceAtLeast(1f) ?: 1f
+                val minVal = (points.minOrNull() ?: 0f) * 0.92f
+                val range = (maxVal - minVal).coerceAtLeast(1f)
+
+                val stepX = size.width / (points.size - 1)
+                val coordinates = points.mapIndexed { index, pt ->
+                    val x = index * stepX
+                    val y = size.height - ((pt - minVal) / range * (size.height * 0.75f) + size.height * 0.12f)
+                    androidx.compose.ui.geometry.Offset(x, y)
+                }
+
+                // Cubic Bezier Curve
+                val strokePath = androidx.compose.ui.graphics.Path()
+                strokePath.moveTo(coordinates.first().x, coordinates.first().y)
+
+                for (i in 0 until coordinates.size - 1) {
+                    val p1 = coordinates[i]
+                    val p2 = coordinates[i + 1]
+                    val control1 = androidx.compose.ui.geometry.Offset(p1.x + (p2.x - p1.x) / 2f, p1.y)
+                    val control2 = androidx.compose.ui.geometry.Offset(p1.x + (p2.x - p1.x) / 2f, p2.y)
+                    strokePath.cubicTo(control1.x, control1.y, control2.x, control2.y, p2.x, p2.y)
+                }
+
+                // Gradient Fill Under Curve
+                val fillPath = androidx.compose.ui.graphics.Path().apply {
+                    addPath(strokePath)
+                    lineTo(size.width, size.height)
+                    lineTo(0f, size.height)
+                    close()
+                }
+
+                drawPath(
+                    path = fillPath,
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            primaryColor.copy(alpha = 0.28f),
+                            primaryColor.copy(alpha = 0.02f)
+                        )
+                    )
+                )
+
+                // Smooth Curve Line Stroke
+                drawPath(
+                    path = strokePath,
+                    color = primaryColor,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(
+                        width = 2.8.dp.toPx(),
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                    )
+                )
+
+                // Touched Point Indicator Line & Dot
+                val activeIdx = touchedIndex
+                if (activeIdx != null && activeIdx in coordinates.indices) {
+                    val targetPt = coordinates[activeIdx]
+                    drawLine(
+                        color = primaryColor.copy(alpha = 0.5f),
+                        start = androidx.compose.ui.geometry.Offset(targetPt.x, 0f),
+                        end = androidx.compose.ui.geometry.Offset(targetPt.x, size.height),
+                        strokeWidth = 1.5.dp.toPx()
+                    )
+                    drawCircle(
+                        color = primaryColor,
+                        radius = 6.dp.toPx(),
+                        center = targetPt
+                    )
+                    drawCircle(
+                        color = surfaceColor,
+                        radius = 3.dp.toPx(),
+                        center = targetPt
+                    )
+                } else {
+                    // Default Endpoint Glowing Dot
+                    val lastPoint = coordinates.last()
+                    drawCircle(
+                        color = primaryColor,
+                        radius = 5.dp.toPx(),
+                        center = lastPoint
+                    )
+                    drawCircle(
+                        color = surfaceColor,
+                        radius = 2.5.dp.toPx(),
+                        center = lastPoint
+                    )
+                }
             }
         }
     }

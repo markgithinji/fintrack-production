@@ -133,17 +133,18 @@ fun BudgetOptimizerCard(
 
                     Surface(
                         onClick = { onDaysSelected(days) },
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(8.dp),
                         color = animatedBgColor,
                         border = BorderStroke(
-                            width = if (isSelected) 1.5.dp else 1.dp,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            width = if (isSelected) 1.2.dp else 1.dp,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                         )
                     ) {
                         Text(
                             text = label,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall,
+                            fontSize = 10.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             color = animatedContentColor
                         )

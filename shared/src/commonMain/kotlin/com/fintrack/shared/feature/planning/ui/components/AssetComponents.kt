@@ -161,6 +161,42 @@ fun AssetsSummaryCard(
                 }
             }
 
+            // Portfolio Diversification & Concentration Advisory
+            val realEstateValue = assets.filter { it.assetType == AssetType.REAL_ESTATE }.sumOf { it.currentBalance }
+            val realEstatePct = if (totalValue > 0) (realEstateValue / totalValue) * 100.0 else 0.0
+            val liquidPct = if (totalValue > 0) (liquidValue / totalValue) * 100.0 else 0.0
+
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.08f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Portfolio Diversification & Liquidity",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+
+                    Text(
+                        text = when {
+                            realEstatePct >= 60.0 -> "Concentration Risk: ${realEstatePct.toInt()}% of your wealth is in illiquid Real Estate. Diversifying into MMFs improves your 24h emergency shield."
+                            liquidPct >= 30.0 -> "Well-Diversified: Your wealth is balanced with ${liquidPct.toInt()}% liquid cash reserves ready in 24h."
+                            else -> "Diversification Tip: Only ${liquidPct.toInt()}% of your assets are liquid. Reallocating to MMFs boosts emergency liquidity."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                    )
+                }
+            }
+
             if (purePassiveGrowth > 0) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
