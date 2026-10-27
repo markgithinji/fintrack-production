@@ -1,5 +1,7 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import com.fintrack.shared.feature.core.ui.StandardPeriodChip
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
@@ -87,38 +89,13 @@ fun TopMerchantsContainerCard(
             )
 
             // Duration Chips (Line 2 - Stays permanently mounted & interactive!)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(30 to "30d", 60 to "60d", 90 to "90d", 365 to "1yr").forEach { (days, label) ->
-                    val isSelected = selectedDays == days
-                    val animatedBgColor by animateColorAsState(
-                        targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-                        animationSpec = tween(150),
-                        label = "chipBg"
+                    StandardPeriodChip(
+                        selected = selectedDays == days,
+                        label = label,
+                        onClick = { onDaysSelected(days) }
                     )
-                    val animatedContentColor by animateColorAsState(
-                        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                        animationSpec = tween(150),
-                        label = "chipContent"
-                    )
-
-                    Surface(
-                        onClick = { onDaysSelected(days) },
-                        shape = RoundedCornerShape(8.dp),
-                        color = animatedBgColor,
-                        border = BorderStroke(
-                            width = if (isSelected) 1.2.dp else 1.dp,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                        )
-                    ) {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontSize = 10.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = animatedContentColor,
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                        )
-                    }
                 }
             }
 

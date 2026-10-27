@@ -1,5 +1,7 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import Period
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -125,6 +127,7 @@ fun CategoryTotalsCardWithTabs(
         mutableStateOf(-1)
     }
     var showHelpDialog by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
 
     if (showHelpDialog) {
         DistributionHelpDialog(
@@ -137,7 +140,11 @@ fun CategoryTotalsCardWithTabs(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .padding(top = 8.dp, bottom = 12.dp),
+            .padding(top = 8.dp, bottom = 12.dp)
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[ANALYTICS_DONUT_SIZE_LOG] CategoryTotalsCard Height: $heightDp (${coordinates.size.height}px) | State: ${if (distributionResult is Result.Success) "SUCCESS" else "LOADING"}")
+            },
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -475,24 +482,26 @@ fun LoadingCategoryList() {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 6.dp, horizontal = 12.dp),
+                    .padding(vertical = 13.5.dp, horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AnimatedShimmerBox(modifier = Modifier.size(10.dp).clip(CircleShape))
+                AnimatedShimmerBox(modifier = Modifier.size(36.dp).clip(CircleShape))
                 Spacer(Modifier.width(12.dp))
-                AnimatedShimmerBox(
-                    modifier = Modifier.width(120.dp).height(14.dp).clip(RoundedCornerShape(4.dp))
-                )
-                Spacer(Modifier.weight(1f))
-                Column(horizontalAlignment = Alignment.End) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     AnimatedShimmerBox(
-                        modifier = Modifier.width(80.dp).height(14.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                        modifier = Modifier.width(110.dp).height(14.dp).clip(RoundedCornerShape(4.dp))
                     )
-                    Spacer(Modifier.height(2.dp))
                     AnimatedShimmerBox(
-                        modifier = Modifier.width(40.dp).height(10.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                        modifier = Modifier.width(60.dp).height(10.dp).clip(RoundedCornerShape(3.dp))
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    AnimatedShimmerBox(
+                        modifier = Modifier.width(85.dp).height(14.dp).clip(RoundedCornerShape(4.dp))
+                    )
+                    AnimatedShimmerBox(
+                        modifier = Modifier.width(45.dp).height(10.dp).clip(RoundedCornerShape(3.dp))
                     )
                 }
             }

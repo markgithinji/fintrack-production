@@ -1,5 +1,7 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -83,10 +85,16 @@ fun InteractiveDonutWithText(
         animationSpec = tween(500)
     )
 
+    val density = LocalDensity.current
+
     Box(
         modifier = modifier
             .size(chartSize)
             .scale(chartScale)
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[ANALYTICS_DONUT_SIZE_LOG] InteractiveDonutWithText Height: $heightDp (${coordinates.size.height}px)")
+            }
             .pointerInput(selectedIndex) {
                 detectTapGestures { tapOffset ->
                     val center = Offset(size.width / 2f, size.height / 2f)

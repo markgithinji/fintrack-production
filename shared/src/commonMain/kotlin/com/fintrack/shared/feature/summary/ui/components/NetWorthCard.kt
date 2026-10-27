@@ -1,5 +1,7 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import com.fintrack.shared.feature.core.ui.StandardPeriodChip
+
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.Canvas
@@ -1034,25 +1036,14 @@ private fun HistoricalNetWorthTrendChart(
 
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf("3M", "6M", "12M").forEach { period ->
-                    val isSelected = selectedTrendPeriod == period
-                    Surface(
+                    StandardPeriodChip(
+                        selected = selectedTrendPeriod == period,
+                        label = period,
                         onClick = {
                             touchedIndex = null
                             selectedTrendPeriod = period
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                        border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                    ) {
-                        Text(
-                            text = period,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontSize = 10.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                        )
-                    }
+                        }
+                    )
                 }
             }
         }
