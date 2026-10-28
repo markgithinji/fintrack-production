@@ -1,14 +1,14 @@
 package com.fintrack.shared.feature.summary.domain.usecase
 
+import com.fintrack.shared.feature.account.domain.repository.AccountRepository
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.summary.domain.model.FinancialHealthIndex
 import com.fintrack.shared.feature.summary.domain.model.PillarScore
+import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 class GetFinancialHealthIndexUseCase(
@@ -16,23 +16,27 @@ class GetFinancialHealthIndexUseCase(
     private val getNetWorthSummaryUseCase: GetNetWorthSummaryUseCase? = null,
     private val getEmergencyFundScoreUseCase: GetEmergencyFundScoreUseCase? = null,
     private val getBudgetOptimizerUseCase: GetBudgetOptimizerUseCase? = null,
-    private val transactionRepository: com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository? = null,
-    private val accountRepository: com.fintrack.shared.feature.account.domain.repository.AccountRepository? = null
+    private val transactionRepository: TransactionRepository? = null,
+    private val accountRepository: AccountRepository? = null
 ) {
     suspend operator fun invoke(accountId: String? = null): Result<FinancialHealthIndex> = withContext(Dispatchers.IO) {
         try {
             val tips = mutableListOf<String>()
 
-            // Structured Concurrency: Execute 4 pillar queries in parallel via coroutineScope
+            // Structured Concurrency: Execute pillar queries, transaction fetching, and account fetching in parallel via async
             val runwayDeferred = async { getCashflowRunwayUseCase(accountId) }
             val netWorthDeferred = async { getNetWorthSummaryUseCase?.invoke(accountId) }
             val emergencyDeferred = async { getEmergencyFundScoreUseCase?.invoke(accountId) }
             val optimizerDeferred = async { getBudgetOptimizerUseCase?.invoke(accountId, days = 30) }
+            val transactionsDeferred = async { transactionRepository?.getAllTransactions() }
+            val accountsDeferred = async { accountRepository?.getAccounts() }
 
             val runwayRes = runwayDeferred.await()
             val netWorthRes = netWorthDeferred.await()
             val emergencyRes = emergencyDeferred.await()
             val optimizerRes = optimizerDeferred.await()
+            val transactionsRes = transactionsDeferred.await()
+            val accountsRes = accountsDeferred.await()
 
             // 1. Liquidity Pillar (Runway Depletion Days)
             var liquidityPts = 12
@@ -126,13 +130,20 @@ class GetFinancialHealthIndexUseCase(
                 tips.add("Great Job! Your finances are well balanced across all 5 core pillars. Continue investing surplus into MMFs for yield growth.")
             }
 
-            val allTxs = if (transactionRepository != null) {
-                ((transactionRepository.getAllTransactions() as? Result.Success)?.data) ?: emptyList()
-            } else emptyList()
+            // Respect accountId filter for wellbeing insights
+            val rawTxs = (transactionsRes as? Result.Success)?.data ?: emptyList()
+            val allTxs = if (accountId != null) {
+                rawTxs.filter { it.accountId == accountId }
+            } else {
+                rawTxs
+            }
 
-            val accountsList = if (accountRepository != null) {
-                ((accountRepository.getAccounts() as? Result.Success)?.data) ?: emptyList()
-            } else emptyList()
+            val rawAccounts = (accountsRes as? Result.Success)?.data ?: emptyList()
+            val accountsList = if (accountId != null) {
+                rawAccounts.filter { it.id == accountId }
+            } else {
+                rawAccounts
+            }
 
             val netWorthVal = (netWorthRes as? Result.Success)?.data?.netWorth?.doubleValue(false) ?: 0.0
             val liabilitiesVal = (netWorthRes as? Result.Success)?.data?.totalLiabilities?.doubleValue(false) ?: 0.0

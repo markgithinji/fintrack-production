@@ -1,6 +1,8 @@
 package com.fintrack.shared.feature.summary.domain.usecase
 
 import com.fintrack.shared.feature.account.domain.model.Account
+import com.fintrack.shared.feature.account.domain.model.PortfolioGroup
+import com.fintrack.shared.feature.account.domain.model.portfolioGroup
 import com.fintrack.shared.feature.core.util.toDouble
 import com.fintrack.shared.feature.summary.domain.model.FinancialWellbeingInsight
 import com.fintrack.shared.feature.summary.domain.model.WellbeingInsightCategory
@@ -22,7 +24,17 @@ object FinancialWellbeingInsightEngine {
     ): List<FinancialWellbeingInsight> {
         val insights = mutableListOf<FinancialWellbeingInsight>()
 
-        // 1. Real Top Category Spend Pattern
+        // 1. Calculate dynamic transaction timeframe span (Item 1)
+        val minTime = transactions.minOfOrNull { it.dateTime.toEpochMilliseconds() } ?: 0L
+        val maxTime = transactions.maxOfOrNull { it.dateTime.toEpochMilliseconds() } ?: 0L
+        val daysSpan = if (maxTime > minTime) {
+            ((maxTime - minTime) / (1000 * 60 * 60 * 24)).coerceAtLeast(1)
+        } else {
+            30
+        }
+        val monthsSpan = (daysSpan / 30.0).coerceAtLeast(1.0)
+
+        // Real Top Category Spend Pattern
         val topCategoryEntry = transactions
             .filter { !it.isIncome }
             .groupBy { it.category ?: "Uncategorized" }
@@ -32,7 +44,7 @@ object FinancialWellbeingInsightEngine {
         if (topCategoryEntry != null && topCategoryEntry.value >= 1500.0) {
             val catName = topCategoryEntry.key
             val totalCatSpend = topCategoryEntry.value.toLong()
-            val monthlyCatSpend = (totalCatSpend / 3.0).coerceAtLeast(100.0).toLong()
+            val monthlyCatSpend = (totalCatSpend / monthsSpan).coerceAtLeast(100.0).toLong()
             val suggestTrim = (monthlyCatSpend * 0.20).toLong()
             val annualTrim = suggestTrim * 12
 
@@ -41,7 +53,7 @@ object FinancialWellbeingInsightEngine {
                     id = "top_category_optimization_$catName",
                     category = WellbeingInsightCategory.EMERGENCY_SHIELD,
                     title = "$catName Spend Optimization (KES $monthlyCatSpend/mo)",
-                    actionTip = "Your highest spending category is $catName (KES $totalCatSpend spent over 90 days). Trimming 20% (KES $suggestTrim/mo) redirects KES $annualTrim/yr into high-yield MMF vaults.",
+                    actionTip = "Your highest spending category is $catName (KES $totalCatSpend spent over $daysSpan days). Trimming 20% (KES $suggestTrim/mo) redirects KES $annualTrim/yr into high-yield MMF vaults.",
                     estimatedMonthlyImpactAmount = suggestTrim.toDouble(),
                     iconName = "TrendingUp"
                 )
@@ -63,8 +75,10 @@ object FinancialWellbeingInsightEngine {
             )
         }
 
-        // 3. Real Emergency Cushion & Shortfall Analysis
-        val liquidCheckingBalance = accounts.sumOf { acc -> (acc.balance?.doubleValue(false) ?: 0.0).coerceAtLeast(0.0) }
+        // 3. Real Emergency Cushion & Shortfall Analysis (Item 3: Filter liquid cash accounts)
+        val liquidCheckingBalance = accounts
+            .filter { acc -> acc.type.portfolioGroup == PortfolioGroup.LIQUID_CASH }
+            .sumOf { acc -> (acc.balance?.doubleValue(false) ?: 0.0).coerceAtLeast(0.0) }
         val effectiveLivingCost = if (monthlyLivingExpenses > 0.0) monthlyLivingExpenses else 30000.0
         val target3MoBuffer = effectiveLivingCost * 3.0
         val bufferShortfall = (target3MoBuffer - liquidCheckingBalance).coerceAtLeast(0.0)
@@ -86,15 +100,16 @@ object FinancialWellbeingInsightEngine {
             )
         }
 
-        // 4. Real Discretionary Spend Optimization
+        // 4. Real Discretionary Spend Optimization (Item 4 & Item 1)
+        val essentialKeywords = setOf("rent", "groceries", "grocery", "utilities", "bills", "health", "healthcare", "medical", "education", "school", "tuition", "loan", "mortgage", "insurance")
         val totalDiscretionarySpend = transactions.filter { tx ->
             if (tx.isIncome) return@filter false
             val cat = tx.category?.lowercase() ?: ""
-            !cat.contains("rent") && !cat.contains("groceries") && !cat.contains("utilities") && !cat.contains("bills") && !cat.contains("health") && !cat.contains("education") && !cat.contains("loan")
+            essentialKeywords.none { keyword -> cat.contains(keyword) }
         }.sumOf { it.amount.doubleValue(false) }
 
         if (totalDiscretionarySpend >= 3000.0) {
-            val monthlyDiscretionary = (totalDiscretionarySpend / 3.0).toLong()
+            val monthlyDiscretionary = (totalDiscretionarySpend / monthsSpan).toLong()
             val suggestTrim = (monthlyDiscretionary * 0.20).toLong()
             val annualSavings = suggestTrim * 12
             insights.add(
@@ -102,30 +117,32 @@ object FinancialWellbeingInsightEngine {
                     id = "discretionary_lifestyle_trim",
                     category = WellbeingInsightCategory.FEE_LEAK_PREVENTION,
                     title = "Discretionary Lifestyle Trim Opportunity",
-                    actionTip = "Discretionary lifestyle spend averaged KES $monthlyDiscretionary/mo over 90 days. Trimming 20% (KES $suggestTrim/mo) frees up KES $annualSavings/yr toward your 20% savings goal.",
+                    actionTip = "Discretionary lifestyle spend averaged KES $monthlyDiscretionary/mo over $daysSpan days. Trimming 20% (KES $suggestTrim/mo) frees up KES $annualSavings/yr toward your 20% savings goal.",
                     estimatedMonthlyImpactAmount = suggestTrim.toDouble(),
                     iconName = "AccountBalance"
                 )
             )
         }
 
-        // 5. Real Cash Withdrawal Fee Leak Prevention
+        // 5. Real Cash Withdrawal Fee Leak Prevention (Item 4 & Item 1)
+        val feeKeywords = listOf("fee", "agent withdrawal", "atm withdrawal", "withdrawal fee", "cash withdrawal", "agent fee")
         val feeTxs = transactions.filter { tx ->
             if (tx.isIncome) return@filter false
             val cat = tx.category?.lowercase() ?: ""
             val desc = tx.description?.lowercase() ?: ""
-            cat.contains("fee") || desc.contains("agent withdrawal") || desc.contains("atm withdrawal") || desc.contains("withdrawal fee")
+            feeKeywords.any { keyword -> cat.contains(keyword) || desc.contains(keyword) }
         }
         val totalFeeSpend = feeTxs.sumOf { it.amount.doubleValue(false) }
         if (totalFeeSpend >= 150.0) {
-            val annualFeeLoss = totalFeeSpend * 4.0
+            val monthlyFeeLoss = (totalFeeSpend / monthsSpan)
+            val annualFeeLoss = monthlyFeeLoss * 12.0
             insights.add(
                 FinancialWellbeingInsight(
                     id = "fee_leak_prevention",
                     category = WellbeingInsightCategory.FEE_LEAK_PREVENTION,
                     title = "Eliminate Agent & ATM Withdrawal Fees",
-                    actionTip = "You paid KES ${totalFeeSpend.toLong()} in agent/ATM withdrawal fees over 90 days (KES ${annualFeeLoss.toLong()}/yr). Paying merchants directly via M-Pesa Buy Goods Till or Paybill is 100% free of withdrawal fees.",
-                    estimatedMonthlyImpactAmount = (totalFeeSpend / 3.0),
+                    actionTip = "You paid KES ${totalFeeSpend.toLong()} in agent/ATM withdrawal fees over $daysSpan days (KES ${annualFeeLoss.toLong()}/yr). Paying merchants directly via M-Pesa Buy Goods Till or Paybill is 100% free of withdrawal fees.",
+                    estimatedMonthlyImpactAmount = monthlyFeeLoss,
                     iconName = "AccountBalance"
                 )
             )
