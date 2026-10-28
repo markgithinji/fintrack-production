@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -78,24 +79,32 @@ fun TopMerchantsContainerCard(
                 .fillMaxWidth()
                 .padding(16.dp)
                 .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy)),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Header Title
-            Text(
-                text = cardTitle,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            // Header + Duration Chips Group
+            Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                Text(
+                    text = cardTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
 
-            // Duration Chips (Line 2 - Stays permanently mounted & interactive!)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf(30 to "30d", 60 to "60d", 90 to "90d", 365 to "1yr").forEach { (days, label) ->
-                    StandardPeriodChip(
-                        selected = selectedDays == days,
-                        label = label,
-                        onClick = { onDaysSelected(days) }
-                    )
+                // Duration Chips
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(x = (-4).dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    listOf(30 to "30d", 60 to "60d", 90 to "90d", 365 to "1yr").forEach { (days, label) ->
+                        StandardPeriodChip(
+                            selected = selectedDays == days,
+                            label = label,
+                            onClick = { onDaysSelected(days) }
+                        )
+                    }
                 }
             }
 

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -96,48 +97,59 @@ fun BudgetOptimizerCard(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Header Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            // Header + Duration Chips Group (Zero gap & flush left alignment)
+            Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                // Header Row
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable {
-                        if (optimizerResult is Result.Success) showBottomSheet = true
-                    }
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "50/30/20 Budget Optimizer",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        imageVector = Icons.Outlined.Info,
-                        contentDescription = "Optimizer Info",
-                        modifier = Modifier.size(15.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable {
+                            if (optimizerResult is Result.Success) showBottomSheet = true
+                        }
+                    ) {
+                        Text(
+                            text = "50/30/20 Budget Optimizer",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = "Optimizer Info",
+                            modifier = Modifier.size(15.dp),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                        )
+                    }
                 }
-            }
 
-            // Duration Filter Chips Row
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf(30 to "30d", 60 to "60d", 90 to "90d", 180 to "6mo", 365 to "1yr").forEach { (days, label) ->
-                    StandardPeriodChip(
-                        selected = selectedDays == days,
-                        label = label,
-                        onClick = { onDaysSelected(days) }
-                    )
+                // Duration Filter Chips Row (Flush left with title edge)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(x = (-4).dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    listOf(30 to "30d", 60 to "60d", 90 to "90d", 180 to "6mo", 365 to "1yr").forEach { (days, label) ->
+                        StandardPeriodChip(
+                            selected = selectedDays == days,
+                            label = label,
+                            onClick = { onDaysSelected(days) }
+                        )
+                    }
                 }
-            }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+                )
+            }
 
             when (optimizerResult) {
                 is Result.Loading -> {
