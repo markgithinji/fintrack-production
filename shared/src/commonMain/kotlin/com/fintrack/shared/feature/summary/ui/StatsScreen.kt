@@ -136,7 +136,9 @@ fun StatisticsScreen(
 
     val importStateMap by transactionsViewModel.importState.collectAsStateWithLifecycle()
 
-    val activeAccountId = viewModel.getEffectiveAccountId()
+    val activeAccountId = remember(selectedAccountIds) {
+        viewModel.getEffectiveAccountId()
+    }
 
     LaunchedEffect(Unit) {
         viewModel.loadAvailableAccounts()
