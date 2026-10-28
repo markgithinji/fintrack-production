@@ -188,10 +188,6 @@ fun HomeScreen(
             transactionsViewModel.loadRecentTransactions(acc.id)
             statsViewModel.loadOverview(acc.id)
             statsViewModel.loadCategoryComparisons(acc.id)
-
-            // Trigger auto-sync for account
-            println("[DEBUG_ANR] Triggering auto-sync for ${acc.id}")
-            transactionsViewModel.autoSyncTransactions(acc.id, acc.lastSyncedAt)
         }
     }
 
