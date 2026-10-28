@@ -155,7 +155,8 @@ fun EmergencyFundScoreCard(
                 is Result.Success -> {
                     val score = scoreResult.data
                     val monthsDouble = score.monthsCovered.doubleValue(false)
-                    val progressFloat = (monthsDouble / 6.0).toFloat().coerceIn(0f, 1f)
+                    val rawProgress = monthsDouble / 6.0
+                    val progressFloat = if (rawProgress.isNaN() || rawProgress.isInfinite()) 0f else rawProgress.toFloat().coerceIn(0f, 1f)
                     val isHealthy = monthsDouble >= 3.0
                     val formattedMonths = if (monthsDouble >= 10.0) "${monthsDouble.toInt()}" else ((monthsDouble * 10).toInt() / 10.0).toString()
 

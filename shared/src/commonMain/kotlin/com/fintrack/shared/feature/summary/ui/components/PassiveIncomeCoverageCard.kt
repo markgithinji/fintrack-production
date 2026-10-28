@@ -195,7 +195,8 @@ fun PassiveIncomeCoverageCard(
 
                 is Result.Success -> {
                     val coverage = coverageResult.data
-                    val progressFraction = (coverage.coveragePercentage / 100.0).coerceIn(0.0, 1.0).toFloat()
+                    val rawCoverage = coverage.coveragePercentage / 100.0
+                    val progressFraction = if (rawCoverage.isNaN() || rawCoverage.isInfinite()) 0f else rawCoverage.coerceIn(0.0, 1.0).toFloat()
 
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(

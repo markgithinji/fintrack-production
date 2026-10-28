@@ -304,15 +304,6 @@ class StatisticsViewModel(
         val effectiveAccountId = getEffectiveAccountId()
         resetStats()
         loadAvailablePeriods(effectiveAccountId, force = true)
-        loadOverview(effectiveAccountId, force = true)
-        loadCashflowRunway(effectiveAccountId, force = true)
-        loadNetWorthSummary(effectiveAccountId, force = true)
-        loadSpendSpikes(effectiveAccountId, force = true)
-        loadEmergencyFundScore(effectiveAccountId, force = true)
-        loadBudgetOptimizer(effectiveAccountId, force = true)
-        val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
-        loadHighlights(effectiveAccountId, yearCode, force = true)
-        reloadDistributionForCurrentSelection(effectiveAccountId, force = true)
     }
 
     fun getEffectiveAccountId(): String? {

@@ -198,7 +198,8 @@ fun FinancialHealthIndexCard(
 
                 is Result.Success -> {
                     val index = healthIndexResult.data
-                    val scoreFraction = (index.overallScore / 100f).coerceIn(0f, 1f)
+                    val rawScore = index.overallScore / 100f
+                    val scoreFraction = if (rawScore.isNaN() || rawScore.isInfinite()) 0f else rawScore.coerceIn(0f, 1f)
 
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         // Hero Score Row

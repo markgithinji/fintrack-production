@@ -244,7 +244,8 @@ fun NetWorthCard(
                     // Net Worth Milestone Goal Progress Tracker
                     if (summary.milestone != null) {
                         val milestone = summary.milestone
-                        val progressFloat = (milestone.currentProgressPercentage.doubleValue(false) / 100.0).toFloat().coerceIn(0f, 1f)
+                        val milestoneVal = milestone.currentProgressPercentage.doubleValue(false) / 100.0
+                        val progressFloat = if (milestoneVal.isNaN() || milestoneVal.isInfinite()) 0f else milestoneVal.toFloat().coerceIn(0f, 1f)
 
                         Surface(
                             shape = RoundedCornerShape(14.dp),
@@ -358,7 +359,8 @@ fun NetWorthCard(
                     // Net Worth Milestone Target Tracker
                     if (summary.milestone != null) {
                         val milestone = summary.milestone
-                        val progressFloat = (milestone.currentProgressPercentage.doubleValue(false) / 100.0).toFloat().coerceIn(0f, 1f)
+                        val milestoneVal = milestone.currentProgressPercentage.doubleValue(false) / 100.0
+                        val progressFloat = if (milestoneVal.isNaN() || milestoneVal.isInfinite()) 0f else milestoneVal.toFloat().coerceIn(0f, 1f)
                         val targetStr = milestone.targetAmount.toCurrencyString()
 
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -406,7 +408,8 @@ fun NetWorthCard(
                     // FIRE Score Target Tracker (25x Annual Living Expenses)
                     if (summary.fireScore != null) {
                         val fire = summary.fireScore
-                        val fireFloat = (fire.fireProgressPercentage / 100.0).toFloat().coerceIn(0f, 1f)
+                        val fireVal = fire.fireProgressPercentage / 100.0
+                        val fireFloat = if (fireVal.isNaN() || fireVal.isInfinite()) 0f else fireVal.toFloat().coerceIn(0f, 1f)
                         val fireTargetStr = fire.fireTargetAmount.toCurrencyString()
 
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -464,7 +467,8 @@ fun NetWorthCard(
                     }
 
                     // Debt-to-Asset Gauge Bar
-                    val ratioFloat = (summary.debtToAssetRatioPercentage.doubleValue(false) / 100.0).toFloat().coerceIn(0f, 1f)
+                    val ratioVal = summary.debtToAssetRatioPercentage.doubleValue(false) / 100.0
+                    val ratioFloat = if (ratioVal.isNaN() || ratioVal.isInfinite()) 0f else ratioVal.toFloat().coerceIn(0f, 1f)
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
