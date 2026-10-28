@@ -231,12 +231,17 @@ class StatisticsViewModel(
         loadTopMerchants(accountId, days)
     }
 
+    private var topMerchantsJob: Job? = null
+
     fun loadTopMerchants(accountId: String? = null, days: Int? = null) {
         if (getMerchantAnalyticsUseCase == null) return
         val targetDays = days ?: _selectedMerchantDays.value
         val isIncomeMode = _selectedTab.value is TabType.Income
-        viewModelScope.launch {
-            _topMerchants.value = Result.Loading
+
+        topMerchantsJob?.cancel()
+        _topMerchants.value = Result.Loading
+
+        topMerchantsJob = viewModelScope.launch {
             _topMerchants.value = getMerchantAnalyticsUseCase(accountId, targetDays, isIncome = isIncomeMode)
         }
     }
@@ -504,6 +509,18 @@ class StatisticsViewModel(
     }
 
     fun resetStats() {
+        highlightsJob?.cancel()
+        availablePeriodsJob?.cancel()
+        overviewJob?.cancel()
+        categoryComparisonsJob?.cancel()
+        transactionCountsJob?.cancel()
+        runwayJob?.cancel()
+        incomeDistributionJob?.cancel()
+        expenseDistributionJob?.cancel()
+        topMerchantsJob?.cancel()
+        netWorthJob?.cancel()
+        budgetOptimizerJob?.cancel()
+
         lastHighlightsAccountId = null
         lastHighlightsPeriod = null
         lastOverviewAccountId = null
@@ -527,6 +544,7 @@ class StatisticsViewModel(
         _expenseDistribution.value = Result.Loading
         _runway.value = Result.Loading
         _metadataState.value = Result.Loading
+        _topMerchants.value = Result.Loading
     }
 
     fun loadHighlights(accountId: String? = null, period: String? = null, force: Boolean = false) {
