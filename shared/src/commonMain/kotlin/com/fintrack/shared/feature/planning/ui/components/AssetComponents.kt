@@ -1,6 +1,7 @@
 package com.fintrack.shared.feature.planning.ui.components
 
 import com.fintrack.shared.feature.core.ui.SelectableFilterChip
+import com.fintrack.shared.feature.core.ui.AnimatedShimmerBox
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -525,6 +527,195 @@ fun AddEditAssetDialog(
                     ) {
                         Text(if (asset != null) "Update Asset" else "Add Asset", fontWeight = FontWeight.Bold)
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AssetShimmerLoading(
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // 1. Assets Summary Card Shimmer Placeholder
+        Card(
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(240.dp)
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(150.dp)
+                                .height(12.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                        )
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(130.dp)
+                                .height(24.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                        )
+                    }
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                    )
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f))
+
+                // Liquid Cash vs Passive Yield Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(110.dp)
+                                .height(10.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                        )
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(120.dp)
+                                .height(16.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                        )
+                    }
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(110.dp)
+                                .height(10.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                        )
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(90.dp)
+                                .height(16.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                        )
+                    }
+                }
+
+                // Diversification & Forecast Banner Shimmer
+                AnimatedShimmerBox(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+            }
+        }
+
+        // 2. Add Asset or Investment Button Shimmer
+        AnimatedShimmerBox(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .clip(RoundedCornerShape(16.dp))
+        )
+
+        // 3. Asset Item Card Shimmers (height = 132.dp matching AssetCard)
+        repeat(2) {
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(132.dp)
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            AnimatedShimmerBox(
+                                modifier = Modifier
+                                    .width(140.dp)
+                                    .height(18.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                AnimatedShimmerBox(
+                                    modifier = Modifier
+                                        .width(72.dp)
+                                        .height(16.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                )
+                                AnimatedShimmerBox(
+                                    modifier = Modifier
+                                        .width(54.dp)
+                                        .height(16.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                )
+                            }
+                        }
+
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            AnimatedShimmerBox(
+                                modifier = Modifier
+                                    .width(100.dp)
+                                    .height(20.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                            )
+                            AnimatedShimmerBox(
+                                modifier = Modifier
+                                    .width(70.dp)
+                                    .height(12.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                            )
+                        }
+                    }
+
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(22.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                    )
                 }
             }
         }

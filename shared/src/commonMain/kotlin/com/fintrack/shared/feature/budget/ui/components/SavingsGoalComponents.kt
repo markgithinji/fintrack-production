@@ -805,6 +805,14 @@ fun SavingsGoalShimmerLoading(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        AnimatedShimmerBox(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .clip(RoundedCornerShape(16.dp))
+        )
+
         repeat(3) {
             Card(
                 shape = RoundedCornerShape(22.dp),

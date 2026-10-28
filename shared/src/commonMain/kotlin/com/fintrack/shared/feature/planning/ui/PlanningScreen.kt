@@ -63,6 +63,8 @@ import com.fintrack.shared.feature.budget.ui.components.AddSavingsGoalDialog
 import com.fintrack.shared.feature.budget.ui.components.DepositToGoalDialog
 import com.fintrack.shared.feature.budget.ui.components.SavingsGoalCard
 import com.fintrack.shared.feature.budget.ui.components.SavingsGoalShimmerLoading
+import com.fintrack.shared.feature.planning.ui.components.AssetShimmerLoading
+import com.fintrack.shared.feature.planning.ui.components.DebtShimmerLoading
 import com.fintrack.shared.feature.budget.ui.components.SavingsGoalsInfoCard
 import com.fintrack.shared.feature.planning.ui.components.calculators.FinancialCalculatorsHubSheet
 import androidx.compose.material.icons.filled.Calculate
@@ -578,7 +580,7 @@ fun PlanningScreen(
                 when (val currentAssets = assets) {
                     is Result.Loading -> {
                         item(key = "assets_loading_shimmer") {
-                            SavingsGoalShimmerLoading()
+                            AssetShimmerLoading()
                         }
                     }
                     is Result.Error -> {
@@ -677,83 +679,101 @@ fun PlanningScreen(
                     }
                 }
             } else if (selectedTab == PlanningTab.DEBT_PAYOFF) {
-                if (payoffPlan != null && payoffPlan!!.orderedDebts.isNotEmpty()) {
-                    item(key = "debt_summary_card") {
-                        DebtPayoffSummaryCard(
-                            plan = payoffPlan!!,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
-                    }
-
-                    item(key = "debt_add_button") {
-                        Button(
-                            onClick = { showAddDebtDialog = true },
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                                .height(48.dp)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Add Loan or Debt", fontWeight = FontWeight.Bold)
+                when (val currentDebts = debts) {
+                    is Result.Loading -> {
+                        item(key = "debt_loading_shimmer") {
+                            DebtShimmerLoading()
                         }
                     }
-
-                    items(payoffPlan!!.orderedDebts, key = { "debt_${it.debt.id}" }) { debtSchedule ->
-                        DebtCard(
-                            debtSchedule = debtSchedule,
-                            onCardClick = { debtToEdit = debtSchedule.debt },
-                            onPayClick = { debtToPay = debtSchedule.debt },
-                            onDeleteClick = {
-                                pendingDeleteTarget = PendingDeleteTarget.DebtTarget(debtSchedule.debt.id, debtSchedule.debt.name)
-                            },
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
-                    }
-                } else {
-                    item(key = "debt_add_button_empty") {
-                        Button(
-                            onClick = { showAddDebtDialog = true },
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                                .height(48.dp)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Add Loan or Debt", fontWeight = FontWeight.Bold)
+                    is Result.Error -> {
+                        item(key = "debt_error") {
+                            CommonErrorState(
+                                title = "Unable to load debts",
+                                error = currentDebts.exception,
+                                onRetry = { viewModel.loadDebts() }
+                            )
                         }
                     }
+                    is Result.Success -> {
+                        if (payoffPlan != null && payoffPlan!!.orderedDebts.isNotEmpty()) {
+                            item(key = "debt_summary_card") {
+                                DebtPayoffSummaryCard(
+                                    plan = payoffPlan!!,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                                )
+                            }
 
-                    item(key = "debt_empty_state") {
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = "No Loans or Debts",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                            item(key = "debt_add_button") {
+                                Button(
+                                    onClick = { showAddDebtDialog = true },
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                                        .height(48.dp)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Add Loan or Debt", fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            items(payoffPlan!!.orderedDebts, key = { "debt_${it.debt.id}" }) { debtSchedule ->
+                                DebtCard(
+                                    debtSchedule = debtSchedule,
+                                    onCardClick = { debtToEdit = debtSchedule.debt },
+                                    onPayClick = { debtToPay = debtSchedule.debt },
+                                    onDeleteClick = {
+                                        pendingDeleteTarget = PendingDeleteTarget.DebtTarget(debtSchedule.debt.id, debtSchedule.debt.name)
+                                    },
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                                 )
-                                Text(
-                                    text = "Add bank loans, credit cards, or overdraft balances. Compare Debt Snowball vs Avalanche to eliminate debt fast!",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
-                                )
+                            }
+                        } else {
+                            item(key = "debt_add_button_empty") {
+                                Button(
+                                    onClick = { showAddDebtDialog = true },
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                                        .height(48.dp)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Add Loan or Debt", fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            item(key = "debt_empty_state") {
+                                Surface(
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(24.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "No Loans or Debts",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Add bank loans, credit cards, or overdraft balances. Compare Debt Snowball vs Avalanche to eliminate debt fast!",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

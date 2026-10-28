@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import com.fintrack.shared.feature.core.ui.AnimatedShimmerBox
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -733,6 +735,215 @@ fun LogDebtRepaymentDialog(
                     ) {
                         Text("Log Payment", fontWeight = FontWeight.Bold)
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DebtShimmerLoading(
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // 1. Debt Payoff Summary Card Shimmer
+        Card(
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp)
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(160.dp)
+                                .height(14.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                        )
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(110.dp)
+                                .height(10.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                        )
+                    }
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .width(80.dp)
+                            .height(20.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(90.dp)
+                                .height(10.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                        )
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(100.dp)
+                                .height(16.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                        )
+                    }
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(90.dp)
+                                .height(10.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                        )
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(80.dp)
+                                .height(16.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                        )
+                    }
+                }
+            }
+        }
+
+        // 2. Add Loan or Debt Button Shimmer
+        AnimatedShimmerBox(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .clip(RoundedCornerShape(16.dp))
+        )
+
+        // 3. Debt Card Item Shimmers (height 236.dp matching DebtCard)
+        repeat(2) {
+            Card(
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(236.dp)
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Header Row
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(140.dp)
+                                .height(16.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                        )
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(180.dp)
+                                .height(11.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                        )
+                    }
+
+                    // Balance & % Paid Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            AnimatedShimmerBox(
+                                modifier = Modifier
+                                    .width(130.dp)
+                                    .height(22.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                            )
+                            AnimatedShimmerBox(
+                                modifier = Modifier
+                                    .width(100.dp)
+                                    .height(10.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                            )
+                        }
+
+                        AnimatedShimmerBox(
+                            modifier = Modifier
+                                .width(60.dp)
+                                .height(16.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                        )
+                    }
+
+                    // Progress Bar
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(CircleShape)
+                    )
+
+                    // Payoff Tile
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            AnimatedShimmerBox(
+                                modifier = Modifier
+                                    .width(160.dp)
+                                    .height(12.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                            )
+                            AnimatedShimmerBox(
+                                modifier = Modifier
+                                    .width(80.dp)
+                                    .height(12.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                            )
+                        }
+                    }
+
+                    // Payment Button
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(38.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
                 }
             }
         }
