@@ -129,6 +129,13 @@ fun CustomAnalysisScreen(
         }
     }
 
+    LaunchedEffect(state.error) {
+        state.error?.let { message ->
+            onShowToast(message, true)
+            viewModel.clearError()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -488,8 +495,10 @@ fun CustomAnalysisScreen(
                                                 )
                                             }
                                             Spacer(modifier = Modifier.height(4.dp))
+                                            val rawPct = share.percentage / 100.0
+                                            val progressFloat = if (rawPct.isNaN() || rawPct.isInfinite()) 0f else rawPct.toFloat().coerceIn(0f, 1f)
                                             LinearProgressIndicator(
-                                                progress = { (share.percentage / 100.0).toFloat().coerceIn(0f, 1f) },
+                                                progress = { progressFloat },
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     .height(6.dp)

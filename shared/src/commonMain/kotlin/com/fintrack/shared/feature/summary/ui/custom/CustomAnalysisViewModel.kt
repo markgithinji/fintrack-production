@@ -292,7 +292,7 @@ class CustomAnalysisViewModel(
             val net = income - expense
             val count = filtered.size
             val avg = if (count > 0) (income + expense) / count else 0.0
-            val highest = filtered.maxByOrNull { it.amount.doubleValue(false) }
+            val highest = filtered.maxByOrNull { it.totalAmount.doubleValue(false) }
 
             // Category breakdown
             val categoryGrouped = filtered.groupBy { it.categoryId }
@@ -347,15 +347,26 @@ class CustomAnalysisViewModel(
 
             val savedPath = fileSaver.saveFile(filename, content)
             _state.update {
-                it.copy(
-                    isExporting = false,
-                    exportSuccessMessage = if (savedPath != null) "Exported report to $savedPath successfully!" else "Export failed or cancelled."
-                )
+                if (savedPath != null) {
+                    it.copy(
+                        isExporting = false,
+                        exportSuccessMessage = "Exported report to $savedPath successfully!"
+                    )
+                } else {
+                    it.copy(
+                        isExporting = false,
+                        error = "Export failed or cancelled"
+                    )
+                }
             }
         }
     }
 
     fun clearExportMessage() {
         _state.update { it.copy(exportSuccessMessage = null) }
+    }
+
+    fun clearError() {
+        _state.update { it.copy(error = null) }
     }
 }
