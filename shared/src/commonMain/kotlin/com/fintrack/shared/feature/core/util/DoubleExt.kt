@@ -74,3 +74,35 @@ fun BigDecimal.toInt(): Int = this.toDouble().toInt()
 
 fun Double.formatToCurrency(symbol: String = "KSh", showDecimals: Boolean = true): String = try { BigDecimal.fromDouble(this).formatToCurrency(symbol, showDecimals) } catch(e: Exception) { "$symbol $this" }
 fun Double.formatToAmount(showDecimals: Boolean = true): String = try { BigDecimal.fromDouble(this).formatToAmount(showDecimals) } catch(e: Exception) { this.toString() }
+
+fun BigDecimal.formatToCompactCurrency(symbol: String = "KSh"): String {
+    val doubleVal = this.toDouble()
+    val absVal = kotlin.math.abs(doubleVal)
+    val sign = if (doubleVal < 0) "-" else ""
+
+    val numStr = when {
+        absVal >= 1_000_000_000.0 -> {
+            val v = (kotlin.math.round((absVal / 1_000_000_000.0) * 100.0) / 100.0)
+            "${v}B"
+        }
+        absVal >= 1_000_000.0 -> {
+            val v = (kotlin.math.round((absVal / 1_000_000.0) * 100.0) / 100.0)
+            "${v}M"
+        }
+        absVal >= 100_000.0 -> {
+            val v = (kotlin.math.round((absVal / 1_000.0) * 10.0) / 10.0)
+            "${v}K"
+        }
+        else -> {
+            this.formatToAmount(showDecimals = false)
+        }
+    }
+
+    return "$sign$symbol $numStr"
+}
+
+fun Double.formatToCompactCurrency(symbol: String = "KSh"): String = try {
+    BigDecimal.fromDouble(this).formatToCompactCurrency(symbol)
+} catch (e: Exception) {
+    "$symbol $this"
+}

@@ -250,7 +250,10 @@ fun CompactMerchantRow(
                 )
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(1.dp)
+            ) {
                 Text(
                     text = merchant.merchantName,
                     style = MaterialTheme.typography.bodyMedium,
@@ -260,7 +263,7 @@ fun CompactMerchantRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${merchant.visitCount} visits • Avg ${merchant.averageTransactionCost.toCurrencyString()}/visit",
+                    text = "${merchant.visitCount} visits • Avg ${merchant.averageTransactionCost.toCurrencyString(compact = true)}/visit",
                     style = MaterialTheme.typography.labelSmall,
                     fontSize = 10.sp,
                     lineHeight = 12.sp,
@@ -269,12 +272,14 @@ fun CompactMerchantRow(
             }
         }
 
+        Spacer(Modifier.width(12.dp))
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = merchant.totalSpent.toCurrencyString(),
+                text = merchant.totalSpent.toCurrencyString(compact = true),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = PinkExpense
