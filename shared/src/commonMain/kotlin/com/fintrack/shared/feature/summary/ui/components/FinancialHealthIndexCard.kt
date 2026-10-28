@@ -305,6 +305,46 @@ fun FinancialHealthIndexCard(
                                 }
                             }
                         }
+
+                        // Smart Financial Wellbeing & Protection Opportunities
+                        if (index.wellbeingInsights.isNotEmpty()) {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    text = "Smart Protection & Wellbeing Opportunities:",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+
+                                index.wellbeingInsights.forEach { insight ->
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(10.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(
+                                                text = insight.title,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                            Text(
+                                                text = insight.actionTip,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontSize = 11.sp,
+                                                lineHeight = 15.sp,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

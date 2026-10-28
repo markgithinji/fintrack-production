@@ -15,7 +15,9 @@ class GetFinancialHealthIndexUseCase(
     private val getCashflowRunwayUseCase: GetCashflowRunwayUseCase,
     private val getNetWorthSummaryUseCase: GetNetWorthSummaryUseCase? = null,
     private val getEmergencyFundScoreUseCase: GetEmergencyFundScoreUseCase? = null,
-    private val getBudgetOptimizerUseCase: GetBudgetOptimizerUseCase? = null
+    private val getBudgetOptimizerUseCase: GetBudgetOptimizerUseCase? = null,
+    private val transactionRepository: com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository? = null,
+    private val accountRepository: com.fintrack.shared.feature.account.domain.repository.AccountRepository? = null
 ) {
     suspend operator fun invoke(accountId: String? = null): Result<FinancialHealthIndex> = withContext(Dispatchers.IO) {
         try {
@@ -124,6 +126,35 @@ class GetFinancialHealthIndexUseCase(
                 tips.add("Great Job! Your finances are well balanced across all 5 core pillars. Continue investing surplus into MMFs for yield growth.")
             }
 
+            val allTxs = if (transactionRepository != null) {
+                ((transactionRepository.getAllTransactions() as? Result.Success)?.data) ?: emptyList()
+            } else emptyList()
+
+            val accountsList = if (accountRepository != null) {
+                ((accountRepository.getAccounts() as? Result.Success)?.data) ?: emptyList()
+            } else emptyList()
+
+            val netWorthVal = (netWorthRes as? Result.Success)?.data?.netWorth?.doubleValue(false) ?: 0.0
+            val liabilitiesVal = (netWorthRes as? Result.Success)?.data?.totalLiabilities?.doubleValue(false) ?: 0.0
+            val debtRatioVal = (netWorthRes as? Result.Success)?.data?.debtToAssetRatioPercentage?.doubleValue(false) ?: 0.0
+            val bufferMonthsVal = (emergencyRes as? Result.Success)?.data?.monthsCovered?.doubleValue(false) ?: 0.0
+            val livingCostVal = (emergencyRes as? Result.Success)?.data?.monthlyEssentialExpenses?.doubleValue(false) ?: 0.0
+
+            val monthlyIncomeVal = (optimizerRes as? Result.Success)?.data?.totalIncome?.doubleValue(false) ?: 0.0
+            val monthlyExpenseVal = (optimizerRes as? Result.Success)?.data?.totalExpense?.doubleValue(false) ?: 0.0
+            val surplusVal = (monthlyIncomeVal - monthlyExpenseVal).coerceAtLeast(0.0)
+
+            val wellbeingInsights = FinancialWellbeingInsightEngine.analyzeWellbeingInsights(
+                transactions = allTxs,
+                accounts = accountsList,
+                netWorth = netWorthVal,
+                totalLiabilities = liabilitiesVal,
+                debtToAssetRatio = debtRatioVal,
+                monthlySurplus = surplusVal,
+                monthlyLivingExpenses = livingCostVal,
+                emergencyBufferMonths = bufferMonthsVal
+            )
+
             Result.Success(
                 FinancialHealthIndex(
                     overallScore = totalScore,
@@ -133,7 +164,8 @@ class GetFinancialHealthIndexUseCase(
                     savingsRatePillar = PillarScore("Savings Rate", savingsPts, 20, savingsDetail),
                     emergencyShieldPillar = PillarScore("Emergency Shield", emergencyPts, 20, emergencyDetail),
                     budgetAlignmentPillar = PillarScore("Budget Alignment", budgetPts, 20, budgetDetail),
-                    actionableTips = tips
+                    actionableTips = tips,
+                    wellbeingInsights = wellbeingInsights
                 )
             )
         } catch (e: Exception) {

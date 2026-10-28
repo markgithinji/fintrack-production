@@ -19,5 +19,6 @@ data class FinancialHealthIndex(
     val savingsRatePillar: PillarScore = PillarScore("Savings Rate"),
     val emergencyShieldPillar: PillarScore = PillarScore("Emergency Shield"),
     val budgetAlignmentPillar: PillarScore = PillarScore("Budget Alignment"),
-    val actionableTips: List<String> = emptyList()
+    val actionableTips: List<String> = emptyList(),
+    val wellbeingInsights: List<FinancialWellbeingInsight> = emptyList()
 )
