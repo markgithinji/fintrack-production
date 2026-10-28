@@ -83,13 +83,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fintrack.shared.feature.category.domain.model.Category
+import com.fintrack.shared.feature.category.domain.model.fromId
+import com.fintrack.shared.feature.category.ui.util.toColor
 import com.fintrack.shared.feature.category.ui.util.toIcon
 import com.fintrack.shared.feature.core.ui.AnimatedShimmerBox
 import com.fintrack.shared.feature.core.ui.FintrackDatePickerDialog
@@ -97,6 +102,7 @@ import com.fintrack.shared.feature.navigation.ui.LocalCurrency
 import com.fintrack.shared.feature.navigation.ui.toCurrencyString
 import com.fintrack.shared.ui.theme.GreenIncome
 import com.fintrack.shared.ui.theme.PinkExpense
+import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -523,7 +529,10 @@ fun CustomAnalysisScreen(
                             )
                         }
                     } else {
-                        items(state.matchingTransactions) { tx ->
+                        items(
+                            items = state.matchingTransactions,
+                            key = { tx -> tx.id ?: tx.hashCode().toString() }
+                        ) { tx ->
                             val formattedDate = remember(tx.dateTime) {
                                 try {
                                     tx.dateTime.toLocalDateTime(TimeZone.currentSystemDefault()).date.toString()
@@ -532,10 +541,17 @@ fun CustomAnalysisScreen(
                                 }
                             }
 
-                            val category = state.allCategories.find { it.id == tx.categoryId }
+                            val category = remember(tx.categoryId, tx.category, tx.isIncome) {
+                                Category.fromId(
+                                    tx.categoryId,
+                                    name = tx.category ?: state.allCategories.find { it.id == tx.categoryId }?.name,
+                                    isExpense = !tx.isIncome
+                                )
+                            }
+                            val amountColor = if (tx.isIncome) GreenIncome else PinkExpense
 
                             Card(
-                                shape = RoundedCornerShape(14.dp),
+                                shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = colorScheme.surface
                                 ),
@@ -549,72 +565,113 @@ fun CustomAnalysisScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = if (!tx.isIncome) PinkExpense.copy(alpha = 0.1f) else GreenIncome.copy(alpha = 0.1f),
-                                        modifier = Modifier.size(38.dp)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
                                     ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                imageVector = category?.toIcon() ?: Icons.Default.Category,
-                                                contentDescription = null,
-                                                tint = if (!tx.isIncome) PinkExpense else GreenIncome,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.width(10.dp))
-
-                                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                                        val descriptionText = tx.description ?: tx.category ?: "Transaction"
-                                        val highlightedDescription = remember(descriptionText, state.searchQuery, colorScheme.primary) {
-                                            buildHighlightedText(
-                                                text = descriptionText,
-                                                query = state.searchQuery,
-                                                highlightColor = colorScheme.primary
-                                            )
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = category.toColor().copy(alpha = 0.12f),
+                                            modifier = Modifier.size(42.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = category.toIcon(),
+                                                    contentDescription = category.name,
+                                                    tint = category.toColor(),
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
                                         }
 
-                                        Text(
-                                            text = highlightedDescription,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = "$formattedDate • ${tx.category ?: "Uncategorized"}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
 
-                                        val rawSmsText = tx.rawMessage
-                                        if (!rawSmsText.isNullOrBlank() && state.searchQuery.isNotBlank() && rawSmsText.lowercase().contains(state.searchQuery.lowercase().trim())) {
-                                            val highlightedRaw = remember(rawSmsText, state.searchQuery, colorScheme.primary) {
+                                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                            val descriptionText = tx.description ?: tx.category ?: "Transaction"
+                                            val highlightedDescription = remember(descriptionText, state.searchQuery, colorScheme.primary) {
                                                 buildHighlightedText(
-                                                    text = rawSmsText.take(80) + if (rawSmsText.length > 80) "..." else "",
+                                                    text = descriptionText,
                                                     query = state.searchQuery,
                                                     highlightColor = colorScheme.primary
                                                 )
                                             }
-                                            Spacer(modifier = Modifier.height(2.dp))
+
                                             Text(
-                                                text = highlightedRaw,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                                text = highlightedDescription,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = "$formattedDate • ${tx.category ?: category.name}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+
+                                            val rawSmsText = tx.rawMessage
+                                            if (!rawSmsText.isNullOrBlank() && state.searchQuery.isNotBlank() && rawSmsText.lowercase().contains(state.searchQuery.lowercase().trim())) {
+                                                val highlightedRaw = remember(rawSmsText, state.searchQuery, colorScheme.primary) {
+                                                    buildHighlightedText(
+                                                        text = rawSmsText.take(80) + if (rawSmsText.length > 80) "..." else "",
+                                                        query = state.searchQuery,
+                                                        highlightColor = colorScheme.primary
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = highlightedRaw,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
                                         }
                                     }
 
+                                    Spacer(modifier = Modifier.width(12.dp))
+
+                                    // Amount & Cost Readout Column
+                                    Column(
+                                        horizontalAlignment = Alignment.End,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = "${if (tx.isIncome) "+" else "-"}${tx.totalAmount.toCurrencyString()}",
+                                            color = amountColor,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+
+                                        if (tx.transactionCost > BigDecimal.ZERO) {
+                                            Text(
+                                                text = "Fee: ${tx.transactionCost.toCurrencyString()}",
+                                                style = TextStyle(
+                                                    fontSize = 10.sp,
+                                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                                )
+                                            )
+                                        }
+
+                                        if (tx.balance != null) {
+                                            Text(
+                                                text = "Bal: ${tx.balance.toCurrencyString()}",
+                                                style = TextStyle(
+                                                    fontSize = 10.sp,
+                                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
