@@ -407,8 +407,14 @@ fun HighlightCard(
     color: Color,
     badge: Pair<String, Color>? = null
 ) {
+    val density = LocalDensity.current
     Card(
-        modifier = modifier.height(112.dp),
+        modifier = modifier
+            .height(96.dp)
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[HIGHLIGHT_CARD_SIZE_LOG] HighlightCard ($title) Height: $heightDp (${coordinates.size.height}px)")
+            },
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -416,9 +422,9 @@ fun HighlightCard(
     ) {
         Column(
             modifier = Modifier
-                .padding(12.dp)
+                .padding(10.dp)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -427,7 +433,7 @@ fun HighlightCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(30.dp)
                         .background(color.copy(alpha = 0.15f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
@@ -435,7 +441,7 @@ fun HighlightCard(
                         imageVector = icon,
                         contentDescription = null,
                         tint = color,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                 }
 
@@ -490,15 +496,22 @@ fun HealthSummaryCard(
     savingsRate: BigDecimal?,
     essentialRatio: BigDecimal?
 ) {
+    val density = LocalDensity.current
     Card(
-        modifier = Modifier.fillMaxWidth().height(112.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(108.dp)
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[HIGHLIGHT_CARD_SIZE_LOG] HealthSummaryCard Height: $heightDp (${coordinates.size.height}px)")
+            },
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(12.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (savingsRate != null) {
@@ -551,8 +564,8 @@ private fun HealthMetricItem(
     badge: String? = null
 ) {
     Column(
-        modifier = modifier.padding(horizontal = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = modifier.padding(horizontal = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -561,7 +574,7 @@ private fun HealthMetricItem(
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(30.dp)
                     .background(color.copy(alpha = 0.15f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -569,7 +582,7 @@ private fun HealthMetricItem(
                     imageVector = icon,
                     contentDescription = null,
                     tint = color,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
             }
 
@@ -615,15 +628,22 @@ private fun HealthMetricItem(
 
 @Composable
 fun LoadingHealthSummaryCard() {
+    val density = LocalDensity.current
     Card(
-        modifier = Modifier.fillMaxWidth().height(112.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(108.dp)
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[HIGHLIGHT_CARD_SIZE_LOG] LoadingHealthSummaryCard Height: $heightDp (${coordinates.size.height}px)")
+            },
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(12.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             LoadingHealthMetricItem(modifier = Modifier.weight(1f))
@@ -642,15 +662,15 @@ fun LoadingHealthSummaryCard() {
 @Composable
 private fun LoadingHealthMetricItem(modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.padding(horizontal = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        modifier = modifier.padding(horizontal = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
-            AnimatedShimmerBox(modifier = Modifier.size(32.dp).clip(CircleShape))
+            AnimatedShimmerBox(modifier = Modifier.size(30.dp).clip(CircleShape))
             AnimatedShimmerBox(modifier = Modifier.width(44.dp).height(16.dp).clip(RoundedCornerShape(6.dp)))
         }
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -669,8 +689,14 @@ private fun LoadingHealthMetricItem(modifier: Modifier = Modifier) {
 
 @Composable
 fun LoadingHighlightCard(modifier: Modifier = Modifier) {
+    val density = LocalDensity.current
     Card(
-        modifier = modifier.height(112.dp),
+        modifier = modifier
+            .height(96.dp)
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[HIGHLIGHT_CARD_SIZE_LOG] LoadingHighlightCard Height: $heightDp (${coordinates.size.height}px)")
+            },
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -678,9 +704,9 @@ fun LoadingHighlightCard(modifier: Modifier = Modifier) {
     ) {
         Column(
             modifier = Modifier
-                .padding(12.dp)
+                .padding(10.dp)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -689,7 +715,7 @@ fun LoadingHighlightCard(modifier: Modifier = Modifier) {
             ) {
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(30.dp)
                         .background(
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
                             CircleShape
@@ -698,7 +724,7 @@ fun LoadingHighlightCard(modifier: Modifier = Modifier) {
                 ) {
                     AnimatedShimmerBox(
                         modifier = Modifier
-                            .size(16.dp)
+                            .size(15.dp)
                             .clip(CircleShape)
                     )
                 }
