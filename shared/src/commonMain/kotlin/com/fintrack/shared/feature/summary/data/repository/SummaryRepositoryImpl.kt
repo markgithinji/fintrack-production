@@ -1030,25 +1030,12 @@ class SummaryRepositoryImpl(
                 val dateTime: kotlinx.datetime.Instant
             )
 
-            val filteredTx: List<TempTxRow> = if (days >= 365) {
-                queries.selectAllTransactionsWithRawMessage(offlineUserId).executeAsList().map {
-                    TempTxRow(it.isIncome, it.accountId, it.description, it.merchantName, it.amount, it.dateTime)
-                }
-            } else {
-                val rangeRes = queries.selectTransactionsByRange(
-                    userId = offlineUserId,
-                    dateTime = startDaysAgo,
-                    dateTime_ = nowInstant
-                ).executeAsList()
-                if (rangeRes.isEmpty()) {
-                    queries.selectAllTransactionsWithRawMessage(offlineUserId).executeAsList().map {
-                        TempTxRow(it.isIncome, it.accountId, it.description, it.merchantName, it.amount, it.dateTime)
-                    }
-                } else {
-                    rangeRes.map {
-                        TempTxRow(it.isIncome, it.accountId, it.description, it.merchantName, it.amount, it.dateTime)
-                    }
-                }
+            val filteredTx: List<TempTxRow> = queries.selectTransactionsByRange(
+                userId = offlineUserId,
+                dateTime = startDaysAgo,
+                dateTime_ = nowInstant
+            ).executeAsList().map {
+                TempTxRow(it.isIncome, it.accountId, it.description, it.merchantName, it.amount, it.dateTime)
             }.filter { tx ->
                 val matchesType = if (isIncome) tx.isIncome != 0L else tx.isIncome == 0L
                 val matchesAccount = if (targetAccountIds.isNotEmpty()) {
