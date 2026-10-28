@@ -80,7 +80,8 @@ class MpesaImporter(
         isPortfolioSeed: Boolean,
         onProgress: (Float) -> Unit
     ) {
-        val transactions = mutableListOf<Transaction>()
+        val batch = mutableListOf<Transaction>()
+        var totalParsedCount = 0
         var latestBalance: BigDecimal? = null
 
         if (!isPortfolioSeed) {
@@ -91,12 +92,13 @@ class MpesaImporter(
                 throw Exception("Permission denied: READ_SMS is required for M-Pesa sync")
             }
 
+            val dateOneYearAgo = System.currentTimeMillis() - (365L * 24 * 60 * 60 * 1000L)
             val cursor = try {
                 context.contentResolver.query(
                     Telephony.Sms.Inbox.CONTENT_URI,
                     arrayOf(Telephony.Sms.Inbox.BODY, Telephony.Sms.Inbox.ADDRESS, Telephony.Sms.Inbox.DATE),
-                    "${Telephony.Sms.Inbox.ADDRESS} LIKE ? OR ${Telephony.Sms.Inbox.ADDRESS} LIKE ?",
-                    arrayOf("%MPESA%", "%M-PESA%"),
+                    "(${Telephony.Sms.Inbox.ADDRESS} LIKE ? OR ${Telephony.Sms.Inbox.ADDRESS} LIKE ?) AND ${Telephony.Sms.Inbox.DATE} >= ?",
+                    arrayOf("%MPESA%", "%M-PESA%", dateOneYearAgo.toString()),
                     "${Telephony.Sms.Inbox.DATE} DESC"
                 )
             } catch (e: SecurityException) {
@@ -107,7 +109,6 @@ class MpesaImporter(
             val totalMessages = cursor?.count ?: 0
             Log.d(TAG, "M-Pesa SMS query returned $totalMessages messages.")
 
-            val geminiParser = GeminiSmsParser(context)
             try {
                 cursor?.use { smsCursor ->
                     val bodyIndex = smsCursor.getColumnIndex(Telephony.Sms.Inbox.BODY)
@@ -126,8 +127,6 @@ class MpesaImporter(
 
                         val parsed = MpesaParser.parse(body, accountId, smsInstant, rules, categories)
 
-                        logMpesaSmsComparison(body, parsed)
-
                         if (parsed != null) {
                             val categoryName = parsed.category
                             val isExpense = !parsed.isIncome
@@ -141,36 +140,38 @@ class MpesaImporter(
                                 ?: categories.firstOrNull()?.id
                                 ?: if (isExpense) Category.UncategorizedExpense.id else Category.UncategorizedIncome.id
 
-                            transactions.add(parsed.copy(categoryId = finalCategoryId))
+                            batch.add(parsed.copy(categoryId = finalCategoryId))
+
+                            if (batch.size >= 250) {
+                                val result = transactionRepository.importMpesaTransactions(batch)
+                                if (result is Result.Error) throw result.exception
+                                totalParsedCount += batch.size
+                                batch.clear()
+                            }
                         }
 
                         loggedCount++
-                        if (loggedCount % 500 == 0 && totalMessages > 0) onProgress(0.05f + (loggedCount.toFloat() / totalMessages) * 0.25f)
+                        if (loggedCount % 200 == 0 && totalMessages > 0) {
+                            onProgress(0.05f + (loggedCount.toFloat() / totalMessages) * 0.85f)
+                        }
+                    }
+
+                    if (batch.isNotEmpty()) {
+                        val result = transactionRepository.importMpesaTransactions(batch)
+                        if (result is Result.Error) throw result.exception
+                        totalParsedCount += batch.size
+                        batch.clear()
                     }
                 }
-            } finally {
-                geminiParser.close()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during SMS parsing and importing", e)
+                throw e
             }
-            Log.d(TAG, "M-Pesa SMS parsing complete: ${transactions.size} valid transactions parsed from $totalMessages SMS messages.")
+            Log.d(TAG, "M-Pesa SMS parsing complete: $totalParsedCount valid transactions imported from $totalMessages SMS messages.")
         } else {
             val dummyTransactions = portfolioSeeder.generateDummyTransactions(accountId, categories)
-            transactions.addAll(dummyTransactions)
-        }
-
-        if (transactions.isNotEmpty()) {
-            onProgress(0.3f)
-            Log.d(TAG, "Inserting ${transactions.size} parsed M-Pesa transactions into local database for account $accountId...")
-            val chunks = transactions.chunked(250)
-            chunks.forEachIndexed { index, chunk ->
-                currentCoroutineContext().job.ensureActive()
-                val result = transactionRepository.importMpesaTransactions(chunk)
-                if (result is Result.Error) {
-                    Log.e(TAG, "Error saving M-Pesa chunk $index to database", result.exception)
-                    throw result.exception
-                }
-                onProgress(0.3f + ((index + 1).toFloat() / chunks.size) * 0.6f)
-            }
-            Log.d(TAG, "M-Pesa database insertion finished successfully!")
+            transactionRepository.importMpesaTransactions(dummyTransactions)
+            totalParsedCount = dummyTransactions.size
         }
 
         val accountResult = accountRepository.getAccountById(accountId)
@@ -178,7 +179,7 @@ class MpesaImporter(
             val account = accountResult.data
             val newBalance = when {
                 isPortfolioSeed -> BigDecimal.fromInt(72450)
-                transactions.isNotEmpty() -> latestBalance ?: account.balance
+                totalParsedCount > 0 -> latestBalance ?: account.balance
                 else -> account.balance
             }
 

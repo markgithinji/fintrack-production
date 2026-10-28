@@ -39,9 +39,17 @@ class GetCashflowRunwayUseCase(
         }
         val currentBalance = targetAccounts.fold(BigDecimal.ZERO) { acc, a -> acc + (a.balance ?: BigDecimal.ZERO) }
 
-        // 2. Query All Transactions ONCE for Account & Filter in Memory
+        val ninetyDaysAgoStr = today.minus(DatePeriod(days = 90)).toString()
+        val thirtyDaysAgo = today.minus(DatePeriod(days = 30)).toString()
+        val todayStr = today.toString()
+
+        // 2. Query Transactions for Past 90 Days for Account
         val singleAccountId = if (targetAccountIds.size == 1) targetAccountIds.first() else null
-        val allTxResult = transactionRepository.getAllTransactions(startDate = null, endDate = null, accountId = singleAccountId)
+        val allTxResult = transactionRepository.getAllTransactions(
+            startDate = ninetyDaysAgoStr,
+            endDate = todayStr,
+            accountId = singleAccountId
+        )
         val rawTx = (allTxResult as? Result.Success)?.data ?: emptyList()
 
         val allTx = if (targetAccountIds.size > 1) {
@@ -49,9 +57,6 @@ class GetCashflowRunwayUseCase(
         } else {
             rawTx
         }
-
-        val thirtyDaysAgo = today.minus(DatePeriod(days = 30)).toString()
-        val todayStr = today.toString()
 
         val past30Expenses = allTx.filter { tx ->
             if (!isRealVariableExpense(tx)) return@filter false

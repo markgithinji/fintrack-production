@@ -23,6 +23,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.atTime
@@ -252,9 +255,24 @@ class TransactionRepositoryImpl(
     ): Result<List<Transaction>> = withContext(Dispatchers.IO) {
         try {
             val targetAccountIds = accountId?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+            val tz = TimeZone.currentSystemDefault()
 
-            val transactions = if (targetAccountIds.size == 1) {
-                queries.selectTransactionsWithRawMessageByAccount(targetAccountIds.first()).executeAsList().map { row ->
+            val startInstant = if (!startDate.isNullOrBlank()) {
+                try {
+                    val date = kotlinx.datetime.LocalDate.parse(startDate)
+                    date.atStartOfDayIn(tz)
+                } catch (_: Exception) { null }
+            } else null
+
+            val endInstant = if (!endDate.isNullOrBlank()) {
+                try {
+                    val date = kotlinx.datetime.LocalDate.parse(endDate)
+                    date.atTime(23, 59, 59).toInstant(tz)
+                } catch (_: Exception) { null }
+            } else null
+
+            val rawList: List<Transaction> = if (startInstant != null && endInstant != null) {
+                queries.selectTransactionsByRange(offlineUserId, startInstant, endInstant).executeAsList().map { row ->
                     Transaction(
                         id = row.id,
                         accountId = row.accountId,
@@ -268,11 +286,33 @@ class TransactionRepositoryImpl(
                         merchantName = row.merchantName ?: row.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                         externalId = row.externalId,
                         balance = row.balance?.let { BigDecimal.parseString(it) },
-                        rawMessage = row.rawMessage
+                        rawMessage = null
+                    )
+                }.let { list ->
+                    if (targetAccountIds.isNotEmpty()) {
+                        list.filter { targetAccountIds.contains(it.accountId) }
+                    } else list
+                }
+            } else if (targetAccountIds.size == 1) {
+                queries.selectTransactionsByAccount(targetAccountIds.first()).executeAsList().map { row ->
+                    Transaction(
+                        id = row.id,
+                        accountId = row.accountId,
+                        isIncome = row.isIncome != 0L,
+                        amount = BigDecimal.parseString(row.amount),
+                        transactionCost = BigDecimal.parseString(row.transactionCost),
+                        category = row.categoryName ?: "Uncategorized",
+                        categoryId = row.categoryId,
+                        dateTime = row.dateTime,
+                        description = row.description,
+                        merchantName = row.merchantName ?: row.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
+                        externalId = row.externalId,
+                        balance = row.balance?.let { BigDecimal.parseString(it) },
+                        rawMessage = null
                     )
                 }
             } else {
-                val all = queries.selectAllTransactionsWithRawMessage(offlineUserId).executeAsList().map { row ->
+                val all = queries.selectAllTransactions(offlineUserId).executeAsList().map { row ->
                     Transaction(
                         id = row.id,
                         accountId = row.accountId,
@@ -286,7 +326,7 @@ class TransactionRepositoryImpl(
                         merchantName = row.merchantName ?: row.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                         externalId = row.externalId,
                         balance = row.balance?.let { BigDecimal.parseString(it) },
-                        rawMessage = row.rawMessage
+                        rawMessage = null
                     )
                 }
                 if (targetAccountIds.size > 1) {
@@ -295,14 +335,15 @@ class TransactionRepositoryImpl(
             }
 
             val filtered = if (!startDate.isNullOrBlank() || !endDate.isNullOrBlank()) {
-                val tz = TimeZone.currentSystemDefault()
-                transactions.filter { tx ->
-                    val txDateStr = tx.dateTime.toLocalDateTime(tz).date.toString()
-                    val afterStart = startDate.isNullOrBlank() || txDateStr >= startDate
-                    val beforeEnd = endDate.isNullOrBlank() || txDateStr <= endDate
+                rawList.filter { tx ->
+                    val txDateStr = try {
+                        tx.dateTime.toLocalDateTime(tz).date.toString()
+                    } catch (_: Exception) { null }
+                    val afterStart = startDate.isNullOrBlank() || (txDateStr != null && txDateStr >= startDate)
+                    val beforeEnd = endDate.isNullOrBlank() || (txDateStr != null && txDateStr <= endDate)
                     afterStart && beforeEnd
                 }
-            } else transactions
+            } else rawList
 
             Result.Success(filtered)
         } catch (e: Exception) {
