@@ -4,7 +4,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -80,10 +79,7 @@ fun InteractiveDonutWithText(
         )
     }
 
-    val chartScale by animateFloatAsState(
-        targetValue = if (entranceProgress.value < 1f) 0.8f + (0.2f * entranceProgress.value) else 1f,
-        animationSpec = tween(500)
-    )
+    val chartScale = 1f
 
     val density = LocalDensity.current
 

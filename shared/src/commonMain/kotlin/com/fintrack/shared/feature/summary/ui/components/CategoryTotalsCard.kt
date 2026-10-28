@@ -248,7 +248,10 @@ fun CategoryTotalsCardWithTabs(
                     ) {
                         when (result) {
                             is Result.Loading -> {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
                                     LoadingDonutChartSection()
                                     Spacer(Modifier.height(16.dp))
                                     LoadingCategoryList()
@@ -456,15 +459,18 @@ fun LoadingInteractiveDonutWithText(
             }
         }
 
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 40.dp)
+        ) {
             AnimatedShimmerBox(modifier = Modifier.size(24.dp).clip(CircleShape))
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             AnimatedShimmerBox(
-                modifier = Modifier.width(80.dp).height(14.dp).clip(RoundedCornerShape(4.dp))
+                modifier = Modifier.width(60.dp).height(14.dp).clip(RoundedCornerShape(4.dp))
             )
             Spacer(modifier = Modifier.height(4.dp))
             AnimatedShimmerBox(
-                modifier = Modifier.width(120.dp).height(24.dp).clip(RoundedCornerShape(4.dp))
+                modifier = Modifier.width(110.dp).height(20.dp).clip(RoundedCornerShape(4.dp))
             )
         }
     }
