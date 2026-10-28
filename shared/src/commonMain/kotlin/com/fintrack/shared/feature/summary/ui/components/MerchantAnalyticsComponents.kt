@@ -368,58 +368,65 @@ fun MerchantDetailBottomSheet(
 
             // Main Stat Metrics Grid Card
             Card(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.3f)),
                 border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.3f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column {
+                    // Top Hero Total Spent Readout
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
                             text = "Total Spent",
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelMedium,
                             color = colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = merchant.totalSpent.toCurrencyString(),
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = PinkExpense
                         )
                     }
 
-                    Column {
-                        Text(
-                            text = "Visit Count",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "${merchant.visitCount} visits",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = colorScheme.onSurface
-                        )
-                    }
+                    HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.2f))
 
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "Avg per Visit",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = merchant.averageTransactionCost.toCurrencyString(),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = colorScheme.primary
-                        )
+                    // Bottom 2-Column Breakdown
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Visit Count",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "${merchant.visitCount} visits",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = colorScheme.onSurface
+                            )
+                        }
+
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = "Avg per Visit",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = merchant.averageTransactionCost.toCurrencyString(),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = colorScheme.primary
+                            )
+                        }
                     }
                 }
             }
