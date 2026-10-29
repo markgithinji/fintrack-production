@@ -179,16 +179,6 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(selectedAccountResult) {
-        val account = (selectedAccountResult as? Result.Success)?.data
-        println("[DEBUG_ANR] LaunchedEffect(selectedAccount=${account?.id})")
-        account?.let { acc ->
-            transactionsViewModel.loadRecentTransactions(acc.id)
-            statsViewModel.loadOverview(acc.id)
-            statsViewModel.loadCategoryComparisons(acc.id)
-        }
-    }
-
     val bottomPadding = paddingValues.calculateBottomPadding()
     var lastBottomPadding by remember { mutableStateOf(80.dp) }
     LaunchedEffect(bottomPadding) {
