@@ -8,6 +8,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 
 import com.fintrack.shared.feature.core.ui.SelectableFilterChip
+import androidx.compose.material3.Switch
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.filled.DateRange
 import com.fintrack.shared.feature.core.ui.FintrackDatePickerDialog

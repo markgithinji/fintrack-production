@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -163,10 +164,16 @@ fun AssetsSummaryCard(
                 }
             }
 
-            // Portfolio Diversification & Concentration Advisory
-            val realEstateValue = assets.filter { it.assetType == AssetType.REAL_ESTATE }.sumOf { it.currentBalance }
-            val realEstatePct = if (totalValue > 0) (realEstateValue / totalValue) * 100.0 else 0.0
-            val liquidPct = if (totalValue > 0) (liquidValue / totalValue) * 100.0 else 0.0
+            // Asset Allocation Target vs Actual Breakdown Bar
+            val mmfValue = assets.filter { it.assetType == AssetType.MMF_YIELD || it.assetType == AssetType.CASH_SAVINGS }.sumOf { it.currentBalance }
+            val saccoValue = assets.filter { it.assetType == AssetType.SACCO_SHARES }.sumOf { it.currentBalance }
+            val realEstateVal = assets.filter { it.assetType == AssetType.REAL_ESTATE }.sumOf { it.currentBalance }
+            val stocksVal = assets.filter { it.assetType == AssetType.STOCKS_CRYPTO || it.assetType == AssetType.GENERAL_ASSET }.sumOf { it.currentBalance }
+
+            val mmfPct = if (totalValue > 0) (mmfValue / totalValue).toFloat() else 0f
+            val saccoPct = if (totalValue > 0) (saccoValue / totalValue).toFloat() else 0f
+            val realEstateFraction = if (totalValue > 0) (realEstateVal / totalValue).toFloat() else 0f
+            val stocksPct = if (totalValue > 0) (stocksVal / totalValue).toFloat() else 0f
 
             Surface(
                 shape = RoundedCornerShape(12.dp),
@@ -175,27 +182,40 @@ fun AssetsSummaryCard(
             ) {
                 Column(
                     modifier = Modifier.padding(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "Portfolio Diversification & Liquidity",
+                        text = "Asset Allocation (Target: 40% MMF / 30% Sacco / 30% Fixed)",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
 
-                    Text(
-                        text = when {
-                            realEstatePct >= 60.0 -> "Concentration Risk: ${realEstatePct.toInt()}% of your wealth is in illiquid Real Estate. Diversifying into MMFs improves your 24h emergency shield."
-                            liquidPct >= 30.0 -> "Well-Diversified: Your wealth is balanced with ${liquidPct.toInt()}% liquid cash reserves ready in 24h."
-                            else -> "Diversification Tip: Only ${liquidPct.toInt()}% of your assets are liquid. Reallocating to MMFs boosts emergency liquidity."
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        fontSize = 11.sp,
-                        lineHeight = 14.sp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
-                    )
+                    // Stacked Segment Allocation Bar
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                    ) {
+                        if (mmfPct > 0f) Box(Modifier.weight(mmfPct).fillMaxHeight().background(GreenIncome))
+                        if (saccoPct > 0f) Box(Modifier.weight(saccoPct).fillMaxHeight().background(com.fintrack.shared.ui.theme.SegmentColor3))
+                        if (realEstateFraction > 0f) Box(Modifier.weight(realEstateFraction).fillMaxHeight().background(com.fintrack.shared.ui.theme.SegmentColor1))
+                        if (stocksPct > 0f) Box(Modifier.weight(stocksPct).fillMaxHeight().background(com.fintrack.shared.ui.theme.SegmentColor4))
+                        if (totalValue <= 0) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f)))
+                    }
+
+                    // Legend Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text("MMF: ${kotlin.math.round(mmfPct * 100).toInt()}%", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = GreenIncome, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("Sacco: ${kotlin.math.round(saccoPct * 100).toInt()}%", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = com.fintrack.shared.ui.theme.SegmentColor3, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("Property: ${kotlin.math.round(realEstateFraction * 100).toInt()}%", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = com.fintrack.shared.ui.theme.SegmentColor1, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("Stocks: ${kotlin.math.round(stocksPct * 100).toInt()}%", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = com.fintrack.shared.ui.theme.SegmentColor4, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
             }
 

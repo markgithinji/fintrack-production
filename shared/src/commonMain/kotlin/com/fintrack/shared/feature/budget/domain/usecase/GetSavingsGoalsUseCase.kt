@@ -87,17 +87,12 @@ class GetSavingsGoalsUseCase(
 
                     val isTimelineOnPace = goal.isCompleted || monthsPassed == 0 || actualProgressRatio >= timeElapsedRatio
                     val isCashflowSufficient = goal.isCompleted || requiredMonthly <= 0.0 || (goalSurplus > 0.0 && requiredMonthly <= goalSurplus)
-
-                    // Goal is On Track ONLY if both timeline pace AND cashflow capacity are sufficient
                     val isOnTrack = goal.isCompleted || (isTimelineOnPace && isCashflowSufficient)
 
-                    val (recMonths, recDateStr) = if (!isCashflowSufficient && goalSurplus > 0.0 && goal.remainingAmount > 0) {
-                        val monthsNeeded = kotlin.math.ceil(goal.remainingAmount / goalSurplus).toInt().coerceAtLeast(1)
-                        val futureDate = now.plus(DatePeriod(months = monthsNeeded))
-                        monthsNeeded to futureDate.toString()
-                    } else {
-                        null to null
-                    }
+                    val recommendedTargetDate = if (!isCashflowSufficient && goalSurplus > 0.0 && goal.remainingAmount > 0) {
+                        val neededMonths = kotlin.math.ceil(goal.remainingAmount / goalSurplus).toInt().coerceAtLeast(1)
+                        now.plus(DatePeriod(months = neededMonths)).toString()
+                    } else null
 
                     val statusReasonText = when {
                         goal.isCompleted -> "Target reached 100%!"
@@ -106,11 +101,6 @@ class GetSavingsGoalsUseCase(
                         else -> "Saved ${(actualProgressRatio * 100).toInt()}% vs ${(timeElapsedRatio * 100).toInt()}% time passed"
                     }
 
-                    println("[SAVINGS_GOAL_CALC_LOG] Goal Name: '${goal.name}' | Linked Account: ${linkedAccount?.name ?: "All Accounts"} | Target: KES ${goal.targetAmount} | Saved: KES ${goal.currentAmount} | Remaining: KES ${goal.remainingAmount}")
-                    println("[SAVINGS_GOAL_CALC_LOG]   Target Date: ${goal.targetDate} | Months Left: $monthsLeft | Required Monthly: KES $requiredMonthly/mo")
-                    println("[SAVINGS_GOAL_CALC_LOG]   Time Elapsed: $monthsPassed / $totalMonths months (${(timeElapsedRatio * 100).toInt()}%) | Actual Progress: ${(actualProgressRatio * 100).toInt()}% | isOnTrack: $isOnTrack | Reason: $statusReasonText")
-                    println("[SAVINGS_GOAL_CALC_LOG]   Account Cashflow Surplus: KES $goalSurplus/mo | isCashflowSufficient: $isCashflowSufficient | Rec Months: $recMonths | Rec Date: $recDateStr")
-
                     SavingsGoalWithCalculation(
                         goal = goal,
                         requiredMonthlyContribution = requiredMonthly,
@@ -118,83 +108,57 @@ class GetSavingsGoalsUseCase(
                         isFeasible = isOnTrack,
                         monthlySurplus = goalSurplus,
                         uncommittedMonthlyCashflow = goalSurplus,
-                        recommendedMonthsNeeded = recMonths,
-                        recommendedTargetDate = recDateStr,
+                        recommendedMonthsNeeded = if (!isCashflowSufficient && goalSurplus > 0.0 && goal.remainingAmount > 0) kotlin.math.ceil(goal.remainingAmount / goalSurplus).toInt().coerceAtLeast(1) else null,
+                        recommendedTargetDate = recommendedTargetDate,
                         isCashflowSufficient = isCashflowSufficient,
                         statusReason = statusReasonText
                     )
                 }
-                println("[SAVINGS_GOAL_CALC_LOG] ==================== SAVINGS GOAL CALCULATION END ====================")
 
                 Result.Success(calculatedGoals)
             }
         }
     }
 
-    private suspend fun calculateMonthlySurplus(accountId: String? = null): Double {
-        when (val res = transactionRepository.getAllTransactions()) {
-            is Result.Success -> {
-                val transactions = res.data
-                val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
-                val sixMonthsAgo = Clock.System.now().minus(180, kotlinx.datetime.DateTimeUnit.DAY, TimeZone.currentSystemDefault())
+    private suspend fun calculateMonthlySurplus(targetAccountId: String?): Double {
+        val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+        val thirtyDaysAgo = today.minus(DatePeriod(days = 30)).toString()
+        val todayStr = today.toString()
 
-                val targetAccountIds = accountId?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+        val txResult = transactionRepository.getAllTransactions(
+            startDate = thirtyDaysAgo,
+            endDate = todayStr,
+            accountId = targetAccountId
+        )
+        val txs = (txResult as? Result.Success)?.data ?: emptyList()
 
-                val filteredTxs = transactions.filter { tx ->
-                    val isWithinTime = tx.dateTime >= sixMonthsAgo
-                    val matchesAccount = targetAccountIds.isEmpty() || targetAccountIds.contains(tx.accountId)
-                    val isNotTransfer = tx.category == null || !tx.category.contains("transfer", ignoreCase = true)
-                    isWithinTime && matchesAccount && isNotTransfer
-                }
+        var totalIncome = 0.0
+        var totalExpense = 0.0
 
-                if (filteredTxs.isNotEmpty()) {
-                    val oldestTxDate = filteredTxs.minOf { it.dateTime }.toLocalDateTime(TimeZone.currentSystemDefault()).date
-                    val daysSpan = (now.toEpochDays() - oldestTxDate.toEpochDays()).coerceAtLeast(30)
-                    val monthsSpan = (daysSpan / 30.0).coerceAtLeast(1.0)
-
-                    val totalIncome = filteredTxs.filter { it.isIncome }.sumOf { it.amount.doubleValue(false) }
-                    val totalExpense = filteredTxs.filter { !it.isIncome }.sumOf { it.amount.doubleValue(false) }
-
-                    val avgMonthlyIncome = totalIncome / monthsSpan
-                    val avgMonthlyExpense = totalExpense / monthsSpan
-                    val netMonthlySurplus = avgMonthlyIncome - avgMonthlyExpense
-
-                    println("[SAVINGS_GOAL_CALC_LOG] 6-Month Analysis for Account [${accountId ?: "All Accounts"}] (${monthsSpan.toInt()} mo span, ${filteredTxs.size} txs):")
-                    println("[SAVINGS_GOAL_CALC_LOG]   Income: Total KES $totalIncome (Avg: KES $avgMonthlyIncome/mo)")
-                    println("[SAVINGS_GOAL_CALC_LOG]   Expense: Total KES $totalExpense (Avg: KES $avgMonthlyExpense/mo)")
-                    println("[SAVINGS_GOAL_CALC_LOG]   Net Surplus: KES $netMonthlySurplus/mo")
-
-                    return netMonthlySurplus
-                }
-            }
-            else -> {}
-        }
-
-        if (accountRepository != null) {
-            when (val accRes = accountRepository.getAccounts()) {
-                is Result.Success -> {
-                    val accounts = accRes.data
-                    val totalAccountCash = accounts.sumOf { (it.balance?.doubleValue(false) ?: 0.0) }
-                    println("[SAVINGS_GOAL_CALC_LOG] Fallback Checking Account Balances Total: KES $totalAccountCash")
-                    if (totalAccountCash > 0) {
-                        return totalAccountCash
-                    }
-                }
-                else -> {}
+        txs.forEach { tx ->
+            val amt = tx.amount.doubleValue(false)
+            if (tx.isIncome) {
+                totalIncome += amt
+            } else {
+                totalExpense += amt
             }
         }
 
-        return 0.0
+        return (totalIncome - totalExpense).coerceAtLeast(0.0)
     }
 
-    private fun calculateRemainingMonths(currentDate: LocalDate, targetDateString: String): Int {
+    private fun calculateRemainingMonths(fromDate: LocalDate, targetDateStr: String): Int {
         return try {
-            val targetDate = LocalDate.parse(targetDateString)
-            val yearsDiff = targetDate.year - currentDate.year
-            val monthsDiff = targetDate.month.number - currentDate.month.number
-            val totalMonths = yearsDiff * 12 + monthsDiff
-            totalMonths.coerceAtLeast(1)
-        } catch (e: Exception) {
+            val targetDate = LocalDate.parse(targetDateStr)
+            val yearsDiff = targetDate.year - fromDate.year
+            val monthsDiff = targetDate.month.number - fromDate.month.number
+            val totalMonths = (yearsDiff * 12) + monthsDiff
+            if (targetDate.dayOfMonth < fromDate.dayOfMonth && totalMonths > 0) {
+                (totalMonths - 1).coerceAtLeast(1)
+            } else {
+                totalMonths.coerceAtLeast(0)
+            }
+        } catch (_: Exception) {
             1
         }
     }
