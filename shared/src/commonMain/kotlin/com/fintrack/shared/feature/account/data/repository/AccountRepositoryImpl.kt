@@ -38,15 +38,12 @@ class AccountRepositoryImpl(
                 val expense = BigDecimal.fromDouble(highlights?.expenseTotal ?: 0.0)
                 val manualBalance = BigDecimal.parseString(entity.balance)
                 
-                // Backend Balance Derivation Logic
-                val derivedBalance = if (latestTxBalance != null) {
-                    BigDecimal.parseString(latestTxBalance)
-                } else if (manualBalance != BigDecimal.ZERO || entity.lastSyncedAt != null) {
-                    manualBalance
-                } else if (income != BigDecimal.ZERO || expense != BigDecimal.ZERO) {
-                    income - expense
-                } else {
-                    manualBalance
+                // Synced accounts (M-Pesa/linked sources) treat the SMS-extracted account balance as source of truth.
+                val derivedBalance = when {
+                    entity.lastSyncedAt != null -> manualBalance
+                    latestTxBalance != null -> BigDecimal.parseString(latestTxBalance)
+                    income != BigDecimal.ZERO || expense != BigDecimal.ZERO -> income - expense
+                    else -> manualBalance
                 }
                 
                 entity.toDomain().copy(
@@ -81,15 +78,12 @@ class AccountRepositoryImpl(
             val expense = BigDecimal.fromDouble(highlights?.expenseTotal ?: 0.0)
             val manualBalance = BigDecimal.parseString(entity.balance)
             
-            // Backend Balance Derivation Logic
-            val derivedBalance = if (latestTxBalance != null) {
-                BigDecimal.parseString(latestTxBalance)
-            } else if (manualBalance != BigDecimal.ZERO || entity.lastSyncedAt != null) {
-                manualBalance
-            } else if (income != BigDecimal.ZERO || expense != BigDecimal.ZERO) {
-                income - expense
-            } else {
-                manualBalance
+            // Synced accounts (M-Pesa/linked sources) treat the SMS-extracted account balance as source of truth.
+            val derivedBalance = when {
+                entity.lastSyncedAt != null -> manualBalance
+                latestTxBalance != null -> BigDecimal.parseString(latestTxBalance)
+                income != BigDecimal.ZERO || expense != BigDecimal.ZERO -> income - expense
+                else -> manualBalance
             }
 
             val account = entity.toDomain().copy(
