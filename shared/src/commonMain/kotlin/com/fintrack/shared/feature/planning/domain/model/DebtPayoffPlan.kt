@@ -8,7 +8,9 @@ data class DebtWithSchedule(
     val payOffRank: Int,
     val estimatedPayoffMonths: Int,
     val estimatedFreedomDate: String,
-    val totalInterestPaid: Double
+    val totalInterestPaid: Double,
+    val isNegativeAmortization: Boolean = false,
+    val minPaymentRequiredToAmortize: Double? = null
 )
 
 @Serializable
@@ -19,5 +21,6 @@ data class DebtPayoffPlan(
     val interestSavedVsOtherStrategy: Double,
     val estimatedPayoffMonths: Int,
     val estimatedFreedomDate: String,
-    val orderedDebts: List<DebtWithSchedule>
+    val orderedDebts: List<DebtWithSchedule>,
+    val hasNegativeAmortization: Boolean = false
 )

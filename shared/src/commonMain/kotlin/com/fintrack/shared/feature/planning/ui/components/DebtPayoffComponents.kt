@@ -406,6 +406,25 @@ fun DebtCard(
                 drawStopIndicator = {}
             )
 
+            if (debtSchedule.isNegativeAmortization) {
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = PinkExpense.copy(alpha = 0.15f),
+                    border = BorderStroke(1.dp, PinkExpense.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "⚠️ Negative Amortization Warning: Min payment (${debt.minimumPayment.toCurrencyString()}/mo) does not cover monthly interest (${((debt.balance * (debt.interestRate / 100.0)) / 12.0).toCurrencyString()}/mo). Increase payment to avoid growing debt balance!",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                        lineHeight = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = PinkExpense,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                    )
+                }
+            }
+
             Surface(
                 shape = RoundedCornerShape(10.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),

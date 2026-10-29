@@ -70,7 +70,9 @@ class CalculateDebtPayoffPlanUseCase {
 
         while (simList.any { it.balance > 0 } && currentMonth < maxSimMonths) {
             currentMonth++
-            var availableExtra = extraMonthlyPayment
+
+            // Calculate rollover extra payment pool = base extra + minimum payments of paid-off debts (Snowball/Avalanche rollover!)
+            var rolloverExtra = extraMonthlyPayment + simList.filter { it.balance <= 0 }.sumOf { it.debt.minimumPayment }
 
             simList.filter { it.balance > 0 }.forEach { sim ->
                 val monthlyRate = (sim.debt.interestRate / 100.0) / 12.0
@@ -92,10 +94,10 @@ class CalculateDebtPayoffPlanUseCase {
             for (sim in simList) {
                 if (sim.balance <= 0) continue
 
-                if (availableExtra > 0) {
-                    val extraPay = availableExtra.coerceAtMost(sim.balance)
+                if (rolloverExtra > 0) {
+                    val extraPay = rolloverExtra.coerceAtMost(sim.balance)
                     sim.balance -= extraPay
-                    availableExtra -= extraPay
+                    rolloverExtra -= extraPay
 
                     if (sim.balance <= 0.001) {
                         sim.balance = 0.0
@@ -105,7 +107,7 @@ class CalculateDebtPayoffPlanUseCase {
                     }
                 }
 
-                if (availableExtra <= 0) break
+                if (rolloverExtra <= 0) break
             }
         }
 
@@ -116,17 +118,25 @@ class CalculateDebtPayoffPlanUseCase {
         val freedomDate = today + DatePeriod(months = totalMonths)
         val freedomDateStr = "${freedomDate.month.name.take(3)} ${freedomDate.year}"
 
+        var anyNegativeAmortization = false
+
         val orderedDebtsWithSchedule = sortedDebts.mapIndexed { index, debt ->
             val months = payoffMonthsPerDebt[debt.id] ?: totalMonths
             val debtFreedom = today + DatePeriod(months = months)
             val debtFreedomStr = "${debtFreedom.month.name.take(3)} ${debtFreedom.year}"
+
+            val initialMonthlyInterest = (debt.balance * (debt.interestRate / 100.0)) / 12.0
+            val isNegativeAmort = debt.interestRate > 0 && debt.minimumPayment <= initialMonthlyInterest
+            if (isNegativeAmort) anyNegativeAmortization = true
 
             DebtWithSchedule(
                 debt = debt,
                 payOffRank = index + 1,
                 estimatedPayoffMonths = months,
                 estimatedFreedomDate = debtFreedomStr,
-                totalInterestPaid = interestPaidPerDebt[debt.id] ?: 0.0
+                totalInterestPaid = interestPaidPerDebt[debt.id] ?: 0.0,
+                isNegativeAmortization = isNegativeAmort,
+                minPaymentRequiredToAmortize = initialMonthlyInterest + 100.0
             )
         }
 
@@ -137,7 +147,8 @@ class CalculateDebtPayoffPlanUseCase {
             interestSavedVsOtherStrategy = 0.0,
             estimatedPayoffMonths = totalMonths,
             estimatedFreedomDate = freedomDateStr,
-            orderedDebts = orderedDebtsWithSchedule
+            orderedDebts = orderedDebtsWithSchedule,
+            hasNegativeAmortization = anyNegativeAmortization
         )
     }
 }
