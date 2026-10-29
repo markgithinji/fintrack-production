@@ -269,8 +269,9 @@ fun CompactMerchantRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                val visitLabel = if (merchant.visitCount == 1) "1 visit" else "${merchant.visitCount} visits"
                 Text(
-                    text = "${merchant.visitCount} visits • Avg ${merchant.averageTransactionCost.toCurrencyString(compact = true)}/visit",
+                    text = "$visitLabel • Avg ${merchant.averageTransactionCost.toCurrencyString(compact = true)}/visit",
                     style = MaterialTheme.typography.labelSmall,
                     fontSize = 10.sp,
                     lineHeight = 12.sp,

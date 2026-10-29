@@ -249,7 +249,7 @@ private fun SuccessContent(
                 modifier = Modifier.weight(1f),
                 title = if (isIncome) "Best Month" else "Busiest Month",
                 value = highlights.highestMonth?.value?.toMonthName() ?: "N/A",
-                subValue = highlights.highestMonth?.amount?.toCurrencyString() ?: "$0",
+                subValue = highlights.highestMonth?.amount?.toCurrencyString() ?: BigDecimal.ZERO.toCurrencyString(),
                 icon = Icons.Default.CalendarMonth,
                 color = SegmentColor3
             )
@@ -259,7 +259,7 @@ private fun SuccessContent(
                 modifier = Modifier.weight(1f),
                 title = "Top Category",
                 value = highlights.highestCategory?.value ?: "N/A",
-                subValue = highlights.highestCategory?.amount?.toCurrencyString() ?: "$0",
+                subValue = highlights.highestCategory?.amount?.toCurrencyString() ?: BigDecimal.ZERO.toCurrencyString(),
                 icon = Icons.Default.Category,
                 color = SegmentColor4,
                 badge = volatility?.let {
@@ -325,7 +325,7 @@ private fun SuccessContent(
                 modifier = Modifier.weight(1f),
                 title = "Peak Day",
                 value = highlights.highestDay?.value?.toFormattedDate() ?: "N/A",
-                subValue = highlights.highestDay?.amount?.toCurrencyString() ?: "$0",
+                subValue = highlights.highestDay?.amount?.toCurrencyString() ?: BigDecimal.ZERO.toCurrencyString(),
                 icon = Icons.Default.Today,
                 color = SegmentColor5
             )
@@ -808,7 +808,7 @@ fun YearSelectorDropdown(
             horizontalArrangement = Arrangement.Center
         ) {
             Text(
-                text = selectedYear.ifBlank { "2026" },
+                text = selectedYear.ifBlank { com.fintrack.shared.feature.core.util.DateTimeHelper.currentMonthCode().substringBefore("-") },
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,

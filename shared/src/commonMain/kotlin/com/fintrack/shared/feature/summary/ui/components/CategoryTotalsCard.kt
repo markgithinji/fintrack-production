@@ -579,8 +579,8 @@ fun CategoryList(
             val amount = model.amount
             val percent = if (totalAmount > BigDecimal.ZERO) {
                 try {
-                    // Calculate using double precision to avoid BigDecimal division truncation (which returns 0 if amount < totalAmount)
-                    (amount.toDouble() / totalAmount.toDouble() * 100).toInt()
+                    // Calculate using double precision with rounding
+                    kotlin.math.round(amount.toDouble() / totalAmount.toDouble() * 100).toInt()
                 } catch (e: Exception) {
                     0
                 }
@@ -752,29 +752,21 @@ fun PeriodSelector(
     var expanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
-    val (options, selectedCode, onSelected, currentType) = when (selectedPeriod) {
-        is Period.Week -> Triple(availableWeeks, selectedPeriod.code, onWeekSelected).let {
-            it.copy(
-                fourth = TimeSpan.WEEK
-            )
-        }
-
-        is Period.Month -> Triple(
-            availableMonths,
-            selectedPeriod.code,
-            onMonthSelected
-        ).let { it.copy(fourth = TimeSpan.MONTH) }
-
-        is Period.Year -> Triple(availableYears, selectedPeriod.code, onYearSelected).let {
-            it.copy(
-                fourth = TimeSpan.YEAR
-            )
-        }
+    val selectionState = when (selectedPeriod) {
+        is Period.Week -> PeriodSelectionState(availableWeeks, selectedPeriod.code, onWeekSelected, TimeSpan.WEEK)
+        is Period.Month -> PeriodSelectionState(availableMonths, selectedPeriod.code, onMonthSelected, TimeSpan.MONTH)
+        is Period.Year -> PeriodSelectionState(availableYears, selectedPeriod.code, onYearSelected, TimeSpan.YEAR)
     }
+    val options = selectionState.options
+    val selectedCode = selectionState.selectedCode
+    val onSelected = selectionState.onSelected
+    val currentType = selectionState.currentType
 
     val selectedIndex = remember(options, selectedCode) {
         options.indexOf(selectedCode).coerceAtLeast(0)
     }
+
+    val density = LocalDensity.current
 
     LaunchedEffect(currentType) {
         // Reset scroll position when switching between Week/Month/Year tabs 
@@ -784,7 +776,8 @@ fun PeriodSelector(
 
     LaunchedEffect(expanded) {
         if (expanded && selectedIndex >= 0) {
-            scrollState.scrollTo(selectedIndex * 120)
+            val itemHeightPx = with(density) { 48.dp.toPx() }.toInt()
+            scrollState.scrollTo((selectedIndex * itemHeightPx).coerceIn(0, scrollState.maxValue))
         }
     }
 
@@ -981,15 +974,11 @@ private fun formatPeriodCode(code: String, type: TimeSpan): String {
     }
 }
 
-private fun <A, B, C> Triple<A, B, C>.copy(fourth: TimeSpan): Quadruple<A, B, C, TimeSpan> {
-    return Quadruple(first, second, third, fourth)
-}
-
-data class Quadruple<out A, out B, out C, out D>(
-    val first: A,
-    val second: B,
-    val third: C,
-    val fourth: D
+private data class PeriodSelectionState(
+    val options: List<String>,
+    val selectedCode: String?,
+    val onSelected: (String) -> Unit,
+    val currentType: TimeSpan
 )
 
 val SegmentColors = listOf(
