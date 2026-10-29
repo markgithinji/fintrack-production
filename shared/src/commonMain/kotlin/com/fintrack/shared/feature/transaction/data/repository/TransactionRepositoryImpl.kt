@@ -509,9 +509,9 @@ class TransactionRepositoryImpl(
 
     override suspend fun getRecurringBills(): Result<List<RecurringBill>> = withContext(Dispatchers.IO) {
         try {
-            // 1. Fetch last 90 days of transactions (Backend Parity)
+            // 1. Fetch 365 days (1 year) of transactions to validate long-term recurring bill patterns
             val now = DateTimeHelper.now()
-            val analysisStart = Instant.fromEpochMilliseconds(now.toEpochMilliseconds() - 90 * 24 * 60 * 60 * 1000L)
+            val analysisStart = Instant.fromEpochMilliseconds(now.toEpochMilliseconds() - 365L * 24 * 60 * 60 * 1000L)
             
             val transactions = queries.selectTransactionsByRange(
                 offlineUserId,
@@ -543,9 +543,16 @@ class TransactionRepositoryImpl(
                     val avgInterval = if (intervals.isEmpty()) 0.0 else intervals.average()
 
                     val (isRegular, frequencyEnum, intervalDays) = when {
-                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 2.5 } && avgInterval in 5.0..9.0 -> Triple(true, RecurringFrequency.WEEKLY, 7)
-                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 3.5 } && avgInterval in 12.0..16.0 -> Triple(true, RecurringFrequency.BI_WEEKLY, 14)
-                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 5.0 } && avgInterval in 25.0..35.0 -> Triple(true, RecurringFrequency.MONTHLY, 30)
+                        // Bi-Weekly bills require a 1-year pattern with at least 8 occurrences to prevent false positives
+                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 3.5 } && avgInterval in 12.0..16.0 -> {
+                            Triple(txns.size >= 8, RecurringFrequency.BI_WEEKLY, 14)
+                        }
+                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 2.5 } && avgInterval in 5.0..9.0 -> {
+                            Triple(txns.size >= 4, RecurringFrequency.WEEKLY, 7)
+                        }
+                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 5.0 } && avgInterval in 25.0..35.0 -> {
+                            Triple(txns.size >= 2, RecurringFrequency.MONTHLY, 30)
+                        }
                         else -> Triple(false, RecurringFrequency.CUSTOM, 30)
                     }
 
