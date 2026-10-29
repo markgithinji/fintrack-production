@@ -12,6 +12,7 @@ import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.core.util.randomUUID
 import com.fintrack.shared.feature.core.util.toDouble
 import com.fintrack.shared.feature.transaction.domain.model.RecurringBill
+import com.fintrack.shared.feature.transaction.domain.model.RecurringFrequency
 import com.fintrack.shared.feature.transaction.domain.model.Transaction
 import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
@@ -541,11 +542,11 @@ class TransactionRepositoryImpl(
 
                     val avgInterval = if (intervals.isEmpty()) 0.0 else intervals.average()
 
-                    val (isRegular, frequency, intervalDays) = when {
-                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 2.5 } && avgInterval in 5.0..9.0 -> Triple(true, "Weekly", 7)
-                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 3.5 } && avgInterval in 12.0..16.0 -> Triple(true, "Bi-Weekly", 14)
-                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 5.0 } && avgInterval in 25.0..35.0 -> Triple(true, "Monthly", 30)
-                        else -> Triple(false, "Custom", 30)
+                    val (isRegular, frequencyEnum, intervalDays) = when {
+                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 2.5 } && avgInterval in 5.0..9.0 -> Triple(true, RecurringFrequency.WEEKLY, 7)
+                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 3.5 } && avgInterval in 12.0..16.0 -> Triple(true, RecurringFrequency.BI_WEEKLY, 14)
+                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 5.0 } && avgInterval in 25.0..35.0 -> Triple(true, RecurringFrequency.MONTHLY, 30)
+                        else -> Triple(false, RecurringFrequency.CUSTOM, 30)
                     }
 
                     if (isRegular) {
@@ -569,7 +570,7 @@ class TransactionRepositoryImpl(
                                 amount = BigDecimal.fromDouble(avgAmountRaw),
                                 category = lastTxn.categoryName ?: "General",
                                 categoryId = lastTxn.categoryId,
-                                frequency = frequency,
+                                frequency = frequencyEnum,
                                 nextDueDate = nextDueDate,
                                 isActive = true
                             )

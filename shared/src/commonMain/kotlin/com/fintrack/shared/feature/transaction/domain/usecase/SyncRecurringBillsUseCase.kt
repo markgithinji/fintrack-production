@@ -21,7 +21,8 @@ class SyncRecurringBillsUseCase(
         if (result is Result.Success) {
             val bills = result.data
             bills.forEach { bill ->
-                if (bill.isActive) {
+                // Schedule notifications for Monthly & Bi-Weekly recurring fixed bills
+                if (bill.shouldScheduleNotification) {
                     notificationService.scheduleBillReminder(
                         billName = bill.name,
                         amount = bill.amount,

@@ -6,6 +6,14 @@ import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 
 @Serializable
+enum class RecurringFrequency {
+    WEEKLY,
+    BI_WEEKLY,
+    MONTHLY,
+    CUSTOM
+}
+
+@Serializable
 data class RecurringBill(
     val id: String,
     val name: String,
@@ -13,7 +21,10 @@ data class RecurringBill(
     val amount: BigDecimal,
     val categoryId: String,
     val category: String? = null,
-    val frequency: String, // "Monthly", "Weekly", etc.
+    val frequency: RecurringFrequency = RecurringFrequency.MONTHLY,
     val nextDueDate: LocalDate,
     val isActive: Boolean = true
-)
+) {
+    val shouldScheduleNotification: Boolean
+        get() = isActive && (frequency == RecurringFrequency.MONTHLY || frequency == RecurringFrequency.BI_WEEKLY)
+}
