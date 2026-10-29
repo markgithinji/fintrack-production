@@ -619,10 +619,11 @@ class SummaryRepositoryImpl(
     override suspend fun getAvailableWeeks(accountId: String?): Result<AvailableWeeks> = withContext(Dispatchers.IO) {
         try {
             val targetAccountId = accountId
+            val ceilingWeekCode = com.fintrack.shared.feature.core.util.DateTimeHelper.currentSqliteWeekCode()
             val rawWeeks = queries.selectDistinctWeeks(offlineUserId, targetAccountId).executeAsList()
             val validWeeks = rawWeeks.filter { weekStr ->
                 val yearPart = weekStr.split("-").firstOrNull()?.toIntOrNull()
-                yearPart != null && yearPart > 1970 && yearPart <= 2100
+                yearPart != null && yearPart > 1970 && yearPart <= 2100 && weekStr <= ceilingWeekCode
             }
             Result.Success(AvailableWeeks(validWeeks))
         } catch (e: Exception) {
@@ -633,10 +634,11 @@ class SummaryRepositoryImpl(
     override suspend fun getAvailableMonths(accountId: String?): Result<AvailableMonths> = withContext(Dispatchers.IO) {
         try {
             val targetAccountId = accountId
+            val ceilingMonthCode = com.fintrack.shared.feature.core.util.DateTimeHelper.currentMonthCode()
             val rawMonths = queries.selectDistinctMonths(offlineUserId, targetAccountId).executeAsList()
             val validMonths = rawMonths.filter { monthStr ->
                 val yearPart = monthStr.split("-").firstOrNull()?.toIntOrNull()
-                yearPart != null && yearPart > 1970 && yearPart <= 2100
+                yearPart != null && yearPart > 1970 && yearPart <= 2100 && monthStr <= ceilingMonthCode
             }
             Result.Success(AvailableMonths(validMonths))
         } catch (e: Exception) {
@@ -647,10 +649,11 @@ class SummaryRepositoryImpl(
     override suspend fun getAvailableYears(accountId: String?): Result<AvailableYears> = withContext(Dispatchers.IO) {
         try {
             val targetAccountId = accountId
+            val ceilingYearCode = com.fintrack.shared.feature.core.util.DateTimeHelper.currentYearCode()
             val rawYears = queries.selectDistinctYears(offlineUserId, targetAccountId).executeAsList()
             val validYears = rawYears.filter { yr ->
                 val num = yr.toIntOrNull()
-                num != null && num > 1970 && num <= 2100
+                num != null && num > 1970 && num <= 2100 && yr <= ceilingYearCode
             }
             Result.Success(AvailableYears(validYears))
         } catch (e: Exception) {
