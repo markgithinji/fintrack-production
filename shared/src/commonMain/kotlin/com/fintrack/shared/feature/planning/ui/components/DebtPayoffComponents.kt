@@ -654,6 +654,7 @@ fun LogDebtRepaymentDialog(
 ) {
     var amountText by remember { mutableStateOf("") }
     var errorMsg by remember { mutableStateOf<String?>(null) }
+    val formattedBalance = currentBalance.toCurrencyString()
 
     BasicAlertDialog(
         onDismissRequest = onDismiss,
@@ -745,6 +746,8 @@ fun LogDebtRepaymentDialog(
                             val amount = amountText.toDoubleOrNull()
                             if (amount == null || amount <= 0) {
                                 errorMsg = "Please enter a valid repayment amount"
+                            } else if (amount > currentBalance) {
+                                errorMsg = "Repayment amount exceeds current balance ($formattedBalance)"
                             } else {
                                 onRepaymentLogged(amount)
                                 onDismiss()

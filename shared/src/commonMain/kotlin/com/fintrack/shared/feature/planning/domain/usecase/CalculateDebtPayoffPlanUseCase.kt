@@ -121,13 +121,14 @@ class CalculateDebtPayoffPlanUseCase {
         var anyNegativeAmortization = false
 
         val orderedDebtsWithSchedule = sortedDebts.mapIndexed { index, debt ->
-            val months = payoffMonthsPerDebt[debt.id] ?: totalMonths
-            val debtFreedom = today + DatePeriod(months = months)
-            val debtFreedomStr = "${debtFreedom.month.name.take(3)} ${debtFreedom.year}"
-
             val initialMonthlyInterest = (debt.balance * (debt.interestRate / 100.0)) / 12.0
             val isNegativeAmort = debt.interestRate > 0 && debt.minimumPayment <= initialMonthlyInterest
             if (isNegativeAmort) anyNegativeAmortization = true
+
+            val rawMonths = payoffMonthsPerDebt[debt.id] ?: 0
+            val months = if (rawMonths == 0 && isNegativeAmort) maxSimMonths else if (rawMonths == 0) totalMonths else rawMonths
+            val debtFreedom = today + DatePeriod(months = months)
+            val debtFreedomStr = if (isNegativeAmort && rawMonths == 0) "Never (Min < Interest)" else "${debtFreedom.month.name.take(3)} ${debtFreedom.year}"
 
             DebtWithSchedule(
                 debt = debt,
