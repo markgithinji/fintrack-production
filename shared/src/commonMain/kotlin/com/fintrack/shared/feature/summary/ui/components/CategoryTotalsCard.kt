@@ -312,7 +312,8 @@ fun CategoryTotalsCardWithTabs(
                                             categorySums = categorySums,
                                             totalAmount = totalAmount.toDouble().toFloat(),
                                             selectedIndex = selectedIndex,
-                                            onSelectedIndexChange = { index -> selectedIndex = index }
+                                            onSelectedIndexChange = { index -> selectedIndex = index },
+                                            isIncome = tabType is TabType.Income
                                         )
                                         Spacer(Modifier.height(16.dp))
                                         CategoryList(

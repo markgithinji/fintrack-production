@@ -55,6 +55,7 @@ fun InteractiveDonutWithText(
     onSelectedIndexChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
     chartSize: Dp = 250.dp,
+    isIncome: Boolean = false,
     gapPercentage: Float = 0.03f,
     segmentColors: List<Color> = SegmentColors
 ) {
@@ -73,10 +74,12 @@ fun InteractiveDonutWithText(
 
     // Animate stroke width on selection
     val animatedStrokes = List(categorySums.size) { index ->
-        animateDpAsState(
-            targetValue = if (selectedIndex == index) 52.dp else 36.dp,
-            animationSpec = tween(300)
-        )
+        androidx.compose.runtime.key(categorySums.getOrNull(index)?.first ?: index) {
+            animateDpAsState(
+                targetValue = if (selectedIndex == index) 52.dp else 36.dp,
+                animationSpec = tween(300)
+            )
+        }
     }
 
     val chartScale = 1f
@@ -121,7 +124,11 @@ fun InteractiveDonutWithText(
 
             categorySums.forEachIndexed { index, (_, amount) ->
                 val allocatedAngle = ((amount / totalAmount) * 360.0).toFloat()
-                val sweep = (allocatedAngle * entranceProgress.value - 360f * gapPercentage).coerceAtLeast(0.1f)
+                val sweep = allocatedAngle * entranceProgress.value - 360f * gapPercentage
+                if (sweep <= 0.5f) {
+                    startAngle += allocatedAngle
+                    return@forEachIndexed
+                }
                 
                 val isSelected = selectedIndex == index
                 val strokeWidth = animatedStrokes[index].value.toPx()
@@ -179,7 +186,7 @@ fun InteractiveDonutWithText(
             modifier = Modifier.padding(horizontal = 40.dp)
         ) {
             if (!isShowingOverallTotal) {
-                val category = Category.fromName(displayText, isExpense = true)
+                val category = Category.fromName(displayText, isExpense = !isIncome)
                 val icon = category.toIcon()
 
                 Icon(
