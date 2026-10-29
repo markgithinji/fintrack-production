@@ -29,6 +29,7 @@ import com.fintrack.shared.feature.summary.domain.usecase.GetMerchantAnalyticsUs
 import com.fintrack.shared.feature.summary.domain.model.BudgetOptimizerSummary
 import com.fintrack.shared.feature.summary.domain.usecase.GetBudgetOptimizerUseCase
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import com.fintrack.shared.feature.core.util.DateTimeHelper
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
@@ -253,7 +254,7 @@ class StatisticsViewModel(
     val selectedAccountIds: StateFlow<Set<String>> = _selectedAccountIds.asStateFlow()
 
     val selectedAccountFilter: StateFlow<String?> = _selectedAccountIds
-        .combine(_selectedAccountIds) { _, _ -> getEffectiveAccountId() }
+        .map { getEffectiveAccountId() }
         .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
     private val _runway = MutableStateFlow<Result<CashflowRunway>>(Result.Loading)
@@ -654,9 +655,12 @@ class StatisticsViewModel(
 
         availablePeriodsJob = viewModelScope.launch {
             try {
-                val weeksResult = summaryRepository.getAvailableWeeks(accountId)
-                val monthsResult = summaryRepository.getAvailableMonths(accountId)
-                val yearsResult = summaryRepository.getAvailableYears(accountId)
+                val weeksDeferred = async { summaryRepository.getAvailableWeeks(accountId) }
+                val monthsDeferred = async { summaryRepository.getAvailableMonths(accountId) }
+                val yearsDeferred = async { summaryRepository.getAvailableYears(accountId) }
+                val weeksResult = weeksDeferred.await()
+                val monthsResult = monthsDeferred.await()
+                val yearsResult = yearsDeferred.await()
 
                 if (weeksResult is Result.Error || monthsResult is Result.Error || yearsResult is Result.Error) {
                     val error = (weeksResult as? Result.Error ?: monthsResult as? Result.Error ?: yearsResult as? Result.Error)!!.exception
@@ -757,29 +761,34 @@ class StatisticsViewModel(
         }
 
         categoryComparisonsJob = viewModelScope.launch {
-            val start = DateTimeHelper.now()
-            println("[DEBUG_ANR] Start fetching category comparisons")
-            lastCategoryComparisonAccountId = accountId
-            lastCategoryComparisonPeriod = period
+            try {
+                val start = DateTimeHelper.now()
+                println("[DEBUG_ANR] Start fetching category comparisons")
+                lastCategoryComparisonAccountId = accountId
+                lastCategoryComparisonPeriod = period
 
-            // If no period provided, try to find the last active month
-            val targetPeriod = period ?: if (_availableMonths.value.isNotEmpty()) {
-                _availableMonths.value.first()
-            } else {
-                // Fetch available months if they aren't loaded yet
-                val result = summaryRepository.getAvailableMonths(accountId)
-                if (result is Result.Success && result.data.months.isNotEmpty()) {
-                    val months = result.data.months
-                    _availableMonths.value = months
-                    months.first()
+                // If no period provided, try to find the last active month
+                val targetPeriod = period ?: if (_availableMonths.value.isNotEmpty()) {
+                    _availableMonths.value.first()
                 } else {
-                    null
+                    // Fetch available months if they aren't loaded yet
+                    val result = summaryRepository.getAvailableMonths(accountId)
+                    if (result is Result.Success && result.data.months.isNotEmpty()) {
+                        val months = result.data.months
+                        _availableMonths.value = months
+                        months.first()
+                    } else {
+                        null
+                    }
                 }
-            }
 
-            _categoryComparisons.value = summaryRepository.getCategoryComparisons(accountId, targetPeriod)
-            val end = DateTimeHelper.now()
-            println("[DEBUG_ANR] Finished fetching category comparisons in ${end.toEpochMilliseconds() - start.toEpochMilliseconds()}ms")
+                _categoryComparisons.value = summaryRepository.getCategoryComparisons(accountId, targetPeriod)
+                val end = DateTimeHelper.now()
+                println("[DEBUG_ANR] Finished fetching category comparisons in ${end.toEpochMilliseconds() - start.toEpochMilliseconds()}ms")
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _categoryComparisons.value = Result.Error(e)
+            }
         }
     }
 

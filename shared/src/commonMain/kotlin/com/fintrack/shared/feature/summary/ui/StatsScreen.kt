@@ -70,10 +70,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -159,6 +156,7 @@ fun StatisticsScreen(
     }
 
     LaunchedEffect(activeAccountId, refreshTrigger, activeSubTab) {
+        selectedMerchant = null
         val force = refreshTrigger > lastProcessedRefreshTrigger && lastProcessedRefreshTrigger != -1
         if (force) {
             viewModel.resetStats()
@@ -322,7 +320,7 @@ fun StatisticsScreen(
                 item(key = "spendingHighlights") {
                     SpendingHighlightsSection(
                         tabType = selectedTab,
-                        selectedYear = selectedOverviewPeriod?.code?.split("-")?.firstOrNull() ?: selectedOverviewPeriod?.code ?: "2026",
+                        selectedYear = selectedOverviewPeriod?.code?.split("-")?.firstOrNull() ?: selectedOverviewPeriod?.code ?: com.fintrack.shared.feature.core.util.DateTimeHelper.currentMonthCode().substringBefore("-"),
                         highlightsResult = highlights,
                         availableYears = availableYears,
                         onYearSelected = { year: String ->
@@ -554,7 +552,7 @@ private fun getDefaultPeriod(
         availableWeeks.isNotEmpty() -> Period.Week(availableWeeks.first())
         availableMonths.isNotEmpty() -> Period.Month(availableMonths.first())
         availableYears.isNotEmpty() -> Period.Year(availableYears.first())
-        else -> Period.Week("2024-W01")
+        else -> Period.Month(com.fintrack.shared.feature.core.util.DateTimeHelper.currentMonthCode())
     }
 }
 
