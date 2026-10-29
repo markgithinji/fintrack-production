@@ -1,6 +1,7 @@
 package com.fintrack.shared.feature.summary.domain.usecase
 
 import com.fintrack.shared.feature.account.domain.repository.AccountRepository
+import com.fintrack.shared.feature.category.domain.model.*
 import com.fintrack.shared.feature.core.util.DateTimeHelper
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.summary.domain.model.EmergencyFundScore
@@ -87,10 +88,22 @@ class GetEmergencyFundScoreUseCase(
                 true
             }
 
-            val essentialCategories = listOf("rent", "food", "groceries", "utilities", "bills", "healthcare", "housing", "home")
+            val essentialCategoryIds = setOf(
+                Category.Rent.id,
+                Category.Groceries.id,
+                Category.Utilities.id,
+                Category.Health.id,
+                Category.Education.id,
+                Category.Insurance.id,
+                Category.Loans.id,
+                Category.Bills.id
+            )
+            val essentialKeywords = listOf("rent", "food", "groceries", "utilities", "bills", "healthcare", "housing", "home")
             val essentialExpenses = realExpenses.filter { tx ->
+                val matchesId = essentialCategoryIds.contains(tx.categoryId)
                 val catName = tx.category?.lowercase() ?: ""
-                essentialCategories.any { catName.contains(it) }
+                val matchesKeyword = essentialKeywords.any { catName.contains(it) }
+                matchesId || matchesKeyword
             }
 
             val essentialExpensesTotal = essentialExpenses.fold(BigDecimal.ZERO) { sum, tx -> sum + tx.amount }
