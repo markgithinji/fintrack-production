@@ -291,19 +291,25 @@ SELECT 1;
 selectDistinctMonths:
 SELECT DISTINCT strftime('%Y-%m', dateTime / 1000, 'unixepoch') AS month
 FROM TransactionEntity
-WHERE userId = ? AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
+WHERE userId = ?
+  AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
+  AND dateTime > 0
 ORDER BY month DESC;
 
 selectDistinctYears:
 SELECT DISTINCT strftime('%Y', dateTime / 1000, 'unixepoch') AS year
 FROM TransactionEntity
-WHERE userId = ? AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
+WHERE userId = ?
+  AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
+  AND dateTime > 0
 ORDER BY year DESC;
 
 selectDistinctWeeks:
 SELECT DISTINCT strftime('%Y-W%W', dateTime / 1000, 'unixepoch') AS week
 FROM TransactionEntity
-WHERE userId = ? AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
+WHERE userId = ?
+  AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
+  AND dateTime > 0
 ORDER BY week DESC;
 
 getTransactionCountSummary:
