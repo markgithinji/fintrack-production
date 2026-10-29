@@ -259,7 +259,7 @@ class GetNetWorthSummaryUseCase(
 
             val remainingMilestone = if (targetMilestone > netWorth) targetMilestone - netWorth else BigDecimal.ZERO
             val estMonths = if (past30dNetIncome > BigDecimal.ZERO && remainingMilestone > BigDecimal.ZERO) {
-                (remainingMilestone.toDouble() / past30dNetIncome.toDouble()).toInt().coerceAtLeast(1)
+                kotlin.math.ceil(remainingMilestone.toDouble() / past30dNetIncome.toDouble()).toInt().coerceAtLeast(1)
             } else null
 
             val milestone = NetWorthMilestone(
@@ -307,6 +307,8 @@ class GetNetWorthSummaryUseCase(
             val estYears = if (netMonthlySavings > 0 && remainingFireCash > 0) {
                 val yrs = remainingFireCash / (netMonthlySavings * 12.0)
                 kotlin.math.round(yrs * 10.0) / 10.0
+            } else if (remainingFireCash <= 0) {
+                0.0
             } else null
 
             val fireScore = FireScore(

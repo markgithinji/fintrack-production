@@ -347,59 +347,10 @@ fun NetWorthCard(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = if (hasDebt) summary.totalLiabilities.toCurrencyString() else "$0 (Debt-Free)",
+                                    text = if (hasDebt) summary.totalLiabilities.toCurrencyString() else "${BigDecimal.ZERO.toCurrencyString()} (Debt-Free)",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = if (hasDebt) PinkExpense else GreenIncome
-                                )
-                            }
-                        }
-                    }
-
-                    // Net Worth Milestone Target Tracker
-                    if (summary.milestone != null) {
-                        val milestone = summary.milestone
-                        val milestoneVal = milestone.currentProgressPercentage.doubleValue(false) / 100.0
-                        val progressFloat = if (milestoneVal.isNaN() || milestoneVal.isInfinite()) 0f else milestoneVal.toFloat().coerceIn(0f, 1f)
-                        val targetStr = milestone.targetAmount.toCurrencyString()
-
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Target Milestone ($targetStr)",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "${milestone.currentProgressPercentage.toInt()}%",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = GreenIncome
-                                )
-                            }
-
-                            LinearProgressIndicator(
-                                progress = { progressFloat },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp)),
-                                color = GreenIncome,
-                                trackColor = GreenIncome.copy(alpha = 0.15f),
-                                drawStopIndicator = {}
-                            )
-
-                            if (milestone.estimatedMonthsToTarget != null) {
-                                Text(
-                                    text = "Est. target completion in ~${milestone.estimatedMonthsToTarget} months at current net savings rate",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontSize = 10.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
