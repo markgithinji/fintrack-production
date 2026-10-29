@@ -156,9 +156,14 @@ fun CustomAnalysisScreen(
             ) {
                 DatePreset.entries.forEach { preset ->
                     val isSelected = state.datePreset == preset
+                    val label = if (preset == DatePreset.CUSTOM && state.startDate != null) {
+                        "Custom: ${state.startDate?.takeLast(5)}"
+                    } else {
+                        preset.label
+                    }
                     SelectableFilterChip(
                         selected = isSelected,
-                        label = preset.label,
+                        label = label,
                         onClick = {
                             viewModel.applyDatePreset(preset)
                             if (preset == DatePreset.CUSTOM) {
@@ -440,7 +445,7 @@ fun CustomAnalysisScreen(
                                             color = colorScheme.onSurfaceVariant
                                         )
                                         Text(
-                                            text = state.highestTransaction?.amount?.doubleValue(false)?.toCurrencyString() ?: "${LocalCurrency.current.symbol} 0.00",
+                                            text = state.highestTransaction?.totalAmount?.doubleValue(false)?.toCurrencyString() ?: "${LocalCurrency.current.symbol} 0.00",
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = colorScheme.onSurface,
@@ -1027,9 +1032,9 @@ fun CustomAnalysisScreen(
         val initial = try { state.startDate?.let { LocalDate.parse(it) } } catch (_: Exception) { null }
         FintrackDatePickerDialog(
             initialDate = initial,
-            onDateSelected = { pickedStart ->
+            onDateSelected = { pickedDate ->
                 showStartDatePicker = false
-                viewModel.setCustomDateRange(pickedStart.toString(), state.endDate ?: pickedStart.toString())
+                viewModel.setCustomDate(pickedDate.toString())
             },
             onDismiss = { showStartDatePicker = false }
         )
