@@ -233,7 +233,7 @@ fun StatisticsScreen(
                             .weight(1f)
                             .height(44.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (activeSubTab == 0) MaterialTheme.colorScheme.surface else Color.Transparent)
+                            .background(if (activeSubTab == 0) Color.White else Color.Transparent)
                             .clickable { activeSubTab = 0 },
                         contentAlignment = Alignment.Center
                     ) {
@@ -241,7 +241,7 @@ fun StatisticsScreen(
                             text = "Analytics",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = if (activeSubTab == 0) FontWeight.Bold else FontWeight.Medium,
-                            color = if (activeSubTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (activeSubTab == 0) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -251,7 +251,7 @@ fun StatisticsScreen(
                             .weight(1f)
                             .height(44.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (activeSubTab == 1) MaterialTheme.colorScheme.surface else Color.Transparent)
+                            .background(if (activeSubTab == 1) Color.White else Color.Transparent)
                             .clickable { activeSubTab = 1 },
                         contentAlignment = Alignment.Center
                     ) {
@@ -259,7 +259,7 @@ fun StatisticsScreen(
                             text = "Portfolio",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = if (activeSubTab == 1) FontWeight.Bold else FontWeight.Medium,
-                            color = if (activeSubTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (activeSubTab == 1) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

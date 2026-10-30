@@ -193,7 +193,7 @@ fun PlanningScreen(
                     Surface(
                         onClick = { viewModel.selectTab(PlanningTab.SPENDING_BUDGETS) },
                         shape = RoundedCornerShape(12.dp),
-                        color = if (selectedTab == PlanningTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.surface else Color.Transparent,
+                        color = if (selectedTab == PlanningTab.SPENDING_BUDGETS) Color.White else Color.Transparent,
                         modifier = Modifier.weight(1f)
                     ) {
                         Row(
@@ -205,14 +205,14 @@ fun PlanningScreen(
                                 imageVector = Icons.Default.PieChart,
                                 contentDescription = null,
                                 modifier = Modifier.size(15.dp),
-                                tint = if (selectedTab == PlanningTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (selectedTab == PlanningTab.SPENDING_BUDGETS) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
                                 text = "Budgets",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (selectedTab == PlanningTab.SPENDING_BUDGETS) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTab == PlanningTab.SPENDING_BUDGETS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (selectedTab == PlanningTab.SPENDING_BUDGETS) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -222,7 +222,7 @@ fun PlanningScreen(
                     Surface(
                         onClick = { viewModel.selectTab(PlanningTab.SAVINGS_GOALS) },
                         shape = RoundedCornerShape(12.dp),
-                        color = if (selectedTab == PlanningTab.SAVINGS_GOALS) MaterialTheme.colorScheme.surface else Color.Transparent,
+                        color = if (selectedTab == PlanningTab.SAVINGS_GOALS) Color.White else Color.Transparent,
                         modifier = Modifier.weight(1f)
                     ) {
                         Row(
@@ -234,14 +234,14 @@ fun PlanningScreen(
                                 imageVector = Icons.Default.Savings,
                                 contentDescription = null,
                                 modifier = Modifier.size(15.dp),
-                                tint = if (selectedTab == PlanningTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (selectedTab == PlanningTab.SAVINGS_GOALS) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
                                 text = "Goals",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (selectedTab == PlanningTab.SAVINGS_GOALS) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTab == PlanningTab.SAVINGS_GOALS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (selectedTab == PlanningTab.SAVINGS_GOALS) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -251,7 +251,7 @@ fun PlanningScreen(
                     Surface(
                         onClick = { viewModel.selectTab(PlanningTab.ASSETS_PORTFOLIO) },
                         shape = RoundedCornerShape(12.dp),
-                        color = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) MaterialTheme.colorScheme.surface else Color.Transparent,
+                        color = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) Color.White else Color.Transparent,
                         modifier = Modifier.weight(1f)
                     ) {
                         Row(
@@ -263,14 +263,14 @@ fun PlanningScreen(
                                 imageVector = Icons.AutoMirrored.Filled.TrendingUp,
                                 contentDescription = null,
                                 modifier = Modifier.size(15.dp),
-                                tint = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
                                 text = "Assets",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -280,7 +280,7 @@ fun PlanningScreen(
                     Surface(
                         onClick = { viewModel.selectTab(PlanningTab.DEBT_PAYOFF) },
                         shape = RoundedCornerShape(12.dp),
-                        color = if (selectedTab == PlanningTab.DEBT_PAYOFF) MaterialTheme.colorScheme.surface else Color.Transparent,
+                        color = if (selectedTab == PlanningTab.DEBT_PAYOFF) Color.White else Color.Transparent,
                         modifier = Modifier.weight(1f)
                     ) {
                         Row(
@@ -292,14 +292,14 @@ fun PlanningScreen(
                                 imageVector = Icons.Default.CreditCard,
                                 contentDescription = null,
                                 modifier = Modifier.size(15.dp),
-                                tint = if (selectedTab == PlanningTab.DEBT_PAYOFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (selectedTab == PlanningTab.DEBT_PAYOFF) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
                                 text = "Debts",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (selectedTab == PlanningTab.DEBT_PAYOFF) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTab == PlanningTab.DEBT_PAYOFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (selectedTab == PlanningTab.DEBT_PAYOFF) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )

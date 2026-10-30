@@ -190,14 +190,14 @@ fun DebtStrategySwitcher(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Surface(
             onClick = { onStrategySelected(DebtStrategy.SNOWBALL) },
             shape = RoundedCornerShape(12.dp),
-            color = if (selectedStrategy == DebtStrategy.SNOWBALL) MaterialTheme.colorScheme.surface else Color.Transparent,
+            color = if (selectedStrategy == DebtStrategy.SNOWBALL) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
             modifier = Modifier.weight(1f)
         ) {
             Row(
@@ -209,14 +209,14 @@ fun DebtStrategySwitcher(
                     imageVector = Icons.Default.Opacity,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
-                    tint = if (selectedStrategy == DebtStrategy.SNOWBALL) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (selectedStrategy == DebtStrategy.SNOWBALL) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
                     text = "Snowball (Smallest First)",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = if (selectedStrategy == DebtStrategy.SNOWBALL) FontWeight.Bold else FontWeight.Medium,
-                    color = if (selectedStrategy == DebtStrategy.SNOWBALL) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (selectedStrategy == DebtStrategy.SNOWBALL) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -224,7 +224,7 @@ fun DebtStrategySwitcher(
         Surface(
             onClick = { onStrategySelected(DebtStrategy.AVALANCHE) },
             shape = RoundedCornerShape(12.dp),
-            color = if (selectedStrategy == DebtStrategy.AVALANCHE) MaterialTheme.colorScheme.surface else Color.Transparent,
+            color = if (selectedStrategy == DebtStrategy.AVALANCHE) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
             modifier = Modifier.weight(1f)
         ) {
             Row(
@@ -236,14 +236,14 @@ fun DebtStrategySwitcher(
                     imageVector = Icons.Default.FlashOn,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
-                    tint = if (selectedStrategy == DebtStrategy.AVALANCHE) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (selectedStrategy == DebtStrategy.AVALANCHE) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
                     text = "Avalanche (Highest APR)",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = if (selectedStrategy == DebtStrategy.AVALANCHE) FontWeight.Bold else FontWeight.Medium,
-                    color = if (selectedStrategy == DebtStrategy.AVALANCHE) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (selectedStrategy == DebtStrategy.AVALANCHE) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
