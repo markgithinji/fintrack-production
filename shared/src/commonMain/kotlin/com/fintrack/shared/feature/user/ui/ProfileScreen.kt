@@ -50,7 +50,7 @@ fun ProfileScreen(
     var showLogoutConfirmation by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        viewModel.refreshProfile()
+        viewModel.refreshProfile(force = true)
     }
 
     if (showLogoutConfirmation) {
@@ -337,8 +337,8 @@ private fun ProfileMetricItem(
     modifier: Modifier = Modifier
 ) {
     val fontSize = when {
-        value.length > 14 -> 10.sp
-        value.length > 11 -> 11.sp
+        value.length > 14 -> 9.5.sp
+        value.length > 11 -> 10.5.sp
         value.length > 8 -> 12.sp
         else -> 13.sp
     }

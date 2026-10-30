@@ -95,10 +95,10 @@ class ProfileViewModel(
         _editState.value = SaveState.Idle
     }
 
-    fun refreshProfile() {
+    fun refreshProfile(force: Boolean = false) {
         viewModelScope.launch {
             // Refresh profile summary (Metrics + User Info)
-            if (_metricsState.value !is Result.Success) {
+            if (force || _metricsState.value !is Result.Success) {
                 _metricsState.value = Result.Loading
             }
             
