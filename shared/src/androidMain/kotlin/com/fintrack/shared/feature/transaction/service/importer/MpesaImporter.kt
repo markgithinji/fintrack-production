@@ -92,13 +92,12 @@ class MpesaImporter(
                 throw Exception("Permission denied: READ_SMS is required for M-Pesa sync")
             }
 
-            val dateOneYearAgo = System.currentTimeMillis() - (365L * 24 * 60 * 60 * 1000L)
             val cursor = try {
                 context.contentResolver.query(
                     Telephony.Sms.Inbox.CONTENT_URI,
                     arrayOf(Telephony.Sms.Inbox.BODY, Telephony.Sms.Inbox.ADDRESS, Telephony.Sms.Inbox.DATE),
-                    "(${Telephony.Sms.Inbox.ADDRESS} LIKE ? OR ${Telephony.Sms.Inbox.ADDRESS} LIKE ?) AND ${Telephony.Sms.Inbox.DATE} >= ?",
-                    arrayOf("%MPESA%", "%M-PESA%", dateOneYearAgo.toString()),
+                    "${Telephony.Sms.Inbox.ADDRESS} LIKE ? OR ${Telephony.Sms.Inbox.ADDRESS} LIKE ? OR ${Telephony.Sms.Inbox.ADDRESS} LIKE ? OR ${Telephony.Sms.Inbox.BODY} LIKE ? OR ${Telephony.Sms.Inbox.BODY} LIKE ?",
+                    arrayOf("%MPESA%", "%M-PESA%", "%Mpesa%", "%MPESA%", "%M-PESA%"),
                     "${Telephony.Sms.Inbox.DATE} DESC"
                 )
             } catch (e: SecurityException) {
@@ -114,6 +113,7 @@ class MpesaImporter(
                     val bodyIndex = smsCursor.getColumnIndex(Telephony.Sms.Inbox.BODY)
                     val dateIndex = smsCursor.getColumnIndex(Telephony.Sms.Inbox.DATE)
                     var loggedCount = 0
+                    var checkedBalanceCount = 0
 
                     while (smsCursor.moveToNext()) {
                         currentCoroutineContext().job.ensureActive()
@@ -121,8 +121,9 @@ class MpesaImporter(
                         val timestamp = smsCursor.getLong(dateIndex)
                         val smsInstant = Instant.fromEpochMilliseconds(timestamp)
 
-                        if (latestBalance == null) {
+                        if (latestBalance == null && checkedBalanceCount < 10) {
                             latestBalance = MpesaParser.parseBalance(body)
+                            checkedBalanceCount++
                         }
 
                         val parsed = MpesaParser.parse(body, accountId, smsInstant, rules, categories)
