@@ -1,6 +1,9 @@
 package com.fintrack.shared.feature.summary.ui.components
 
 import com.fintrack.shared.feature.core.ui.StandardPeriodChip
+import com.fintrack.shared.feature.core.ui.chart.ChartSeries
+import com.fintrack.shared.feature.core.ui.chart.InteractiveChartData
+import com.fintrack.shared.feature.core.ui.chart.InteractiveLineChart
 
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -166,35 +169,37 @@ fun NetWorthCard(
                         }
 
                         // Dual Growth Badges (30d Monthly + YTD Yearly)
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             // 30d Monthly Growth Badge
                             val growthRate = summary.growthRatePercentage
                             val is30dPositive = growthRate == null || growthRate >= BigDecimal.ZERO
                             val text30d = if (growthRate != null) {
                                 val prefix = if (growthRate >= BigDecimal.ZERO) "+" else ""
-                                "$prefix${growthRate.toInt()}% 1 Mo"
-                            } else "+0% 1 Mo"
+                                "$prefix${growthRate.toInt()}% 1M"
+                            } else "+0% 1M"
 
                             Surface(
                                 shape = CircleShape,
                                 color = if (is30dPositive) GreenIncome.copy(alpha = 0.1f) else PinkExpense.copy(alpha = 0.1f)
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     Icon(
                                         imageVector = if (is30dPositive) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
                                         contentDescription = null,
                                         tint = if (is30dPositive) GreenIncome else PinkExpense,
-                                        modifier = Modifier.size(12.dp)
+                                        modifier = Modifier.size(11.dp)
                                     )
                                     Text(
                                         text = text30d,
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp,
+                                        fontSize = 10.sp,
+                                        maxLines = 1,
+                                        softWrap = false,
                                         color = if (is30dPositive) GreenIncome else PinkExpense
                                     )
                                 }
@@ -205,29 +210,31 @@ fun NetWorthCard(
                             val isYtdPositive = ytdRate == null || ytdRate >= BigDecimal.ZERO
                             val textYtd = if (ytdRate != null) {
                                 val prefix = if (ytdRate >= BigDecimal.ZERO) "+" else ""
-                                "$prefix${ytdRate.toInt()}% 1 Yr"
-                            } else "+0% 1 Yr"
+                                "$prefix${ytdRate.toInt()}% YTD"
+                            } else "+0% YTD"
 
                             Surface(
                                 shape = CircleShape,
                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     Icon(
                                         imageVector = if (isYtdPositive) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(12.dp)
+                                        modifier = Modifier.size(11.dp)
                                     )
                                     Text(
                                         text = textYtd,
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp,
+                                        fontSize = 10.sp,
+                                        maxLines = 1,
+                                        softWrap = false,
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                 }
@@ -929,26 +936,28 @@ private fun HistoricalNetWorthTrendChart(
     modifier: Modifier = Modifier
 ) {
     var selectedTrendPeriod by remember { mutableStateOf("6M") }
-    var touchedIndex by remember { mutableStateOf<Int?>(null) }
 
     val monthsCount = when (selectedTrendPeriod) {
         "3M" -> 3
         "6M" -> 6
+        "12M" -> 12
+        "3Y" -> 36
         else -> 12
     }
 
     val points = remember(historicalTrendPoints, netWorth, monthsCount) {
         if (historicalTrendPoints.isNotEmpty() && historicalTrendPoints.size >= monthsCount) {
-            historicalTrendPoints.takeLast(monthsCount).map { it.toFloat().coerceAtLeast(0f) }
+            historicalTrendPoints.takeLast(monthsCount)
         } else {
-            val list = mutableListOf<Float>()
-            val base = netWorth.toFloat().coerceAtLeast(1000f)
+            val list = mutableListOf<Double>()
+            val base = if (netWorth == 0.0) 1000.0 else netWorth
             val variations = when (monthsCount) {
-                3 -> listOf(0.91f, 0.96f, 1.0f)
-                6 -> listOf(0.82f, 0.86f, 0.84f, 0.91f, 0.95f, 1.0f)
-                else -> listOf(0.70f, 0.72f, 0.76f, 0.74f, 0.79f, 0.83f, 0.86f, 0.85f, 0.90f, 0.93f, 0.96f, 1.0f)
+                3 -> listOf(0.91, 0.96, 1.0)
+                6 -> listOf(0.82, 0.86, 0.84, 0.91, 0.95, 1.0)
+                36 -> listOf(0.60, 0.65, 0.70, 0.76, 0.82, 0.88, 0.94, 1.0)
+                else -> listOf(0.70, 0.72, 0.76, 0.74, 0.79, 0.83, 0.86, 0.85, 0.90, 0.93, 0.96, 1.0)
             }
-            variations.forEach { factor -> list.add((base * factor).coerceAtLeast(0f)) }
+            variations.forEach { factor -> list.add(base * factor) }
             list
         }
     }
@@ -963,6 +972,21 @@ private fun HistoricalNetWorthTrendChart(
         }
     }
 
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    val chartData = remember(monthNames, points, primaryColor) {
+        InteractiveChartData(
+            labels = monthNames,
+            series = listOf(
+                ChartSeries(
+                    name = "Net Worth",
+                    color = primaryColor,
+                    values = points
+                )
+            )
+        )
+    }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -972,158 +996,29 @@ private fun HistoricalNetWorthTrendChart(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = "Net Worth Growth Trend",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (touchedIndex != null && touchedIndex!! in points.indices && touchedIndex!! in monthNames.indices) {
-                    Text(
-                        text = "${monthNames[touchedIndex!!]}: ${points[touchedIndex!!].toDouble().toCurrencyString()}",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 11.sp
-                    )
-                }
-            }
+            Text(
+                text = "Net Worth Growth Trend",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                listOf("3M", "6M", "12M").forEach { period ->
+                listOf("3M", "6M", "12M", "3Y").forEach { period ->
                     StandardPeriodChip(
                         selected = selectedTrendPeriod == period,
                         label = period,
-                        onClick = {
-                            touchedIndex = null
-                            selectedTrendPeriod = period
-                        }
+                        onClick = { selectedTrendPeriod = period }
                     )
                 }
             }
         }
 
-        val primaryColor = MaterialTheme.colorScheme.primary
-        val surfaceColor = MaterialTheme.colorScheme.surface
-
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .pointerInput(points) {
-                    detectTapGestures(
-                        onPress = { offset ->
-                            val stepX = size.width / (points.size - 1).coerceAtLeast(1)
-                            val idx = (offset.x / stepX).roundToInt().coerceIn(0, points.size - 1)
-                            touchedIndex = idx
-                        },
-                        onTap = { offset ->
-                            val stepX = size.width / (points.size - 1).coerceAtLeast(1)
-                            val idx = (offset.x / stepX).roundToInt().coerceIn(0, points.size - 1)
-                            touchedIndex = idx
-                        }
-                    )
-                }
-                .pointerInput(points) {
-                    detectDragGestures(
-                        onDragEnd = { touchedIndex = null },
-                        onDragCancel = { touchedIndex = null },
-                        onDrag = { change, _ ->
-                            change.consume()
-                            val stepX = size.width / (points.size - 1).coerceAtLeast(1)
-                            val idx = (change.position.x / stepX).roundToInt().coerceIn(0, points.size - 1)
-                            touchedIndex = idx
-                        }
-                    )
-                }
-        ) {
-            if (points.size >= 2) {
-                val maxVal = points.maxOrNull()?.coerceAtLeast(1f) ?: 1f
-                val minVal = (points.minOrNull() ?: 0f) * 0.92f
-                val range = (maxVal - minVal).coerceAtLeast(1f)
-
-                val stepX = size.width / (points.size - 1)
-                val coordinates = points.mapIndexed { index, pt ->
-                    val x = index * stepX
-                    val y = size.height - ((pt - minVal) / range * (size.height * 0.75f) + size.height * 0.12f)
-                    androidx.compose.ui.geometry.Offset(x, y)
-                }
-
-                // Cubic Bezier Curve
-                val strokePath = androidx.compose.ui.graphics.Path()
-                strokePath.moveTo(coordinates.first().x, coordinates.first().y)
-
-                for (i in 0 until coordinates.size - 1) {
-                    val p1 = coordinates[i]
-                    val p2 = coordinates[i + 1]
-                    val control1 = androidx.compose.ui.geometry.Offset(p1.x + (p2.x - p1.x) / 2f, p1.y)
-                    val control2 = androidx.compose.ui.geometry.Offset(p1.x + (p2.x - p1.x) / 2f, p2.y)
-                    strokePath.cubicTo(control1.x, control1.y, control2.x, control2.y, p2.x, p2.y)
-                }
-
-                // Gradient Fill Under Curve
-                val fillPath = androidx.compose.ui.graphics.Path().apply {
-                    addPath(strokePath)
-                    lineTo(size.width, size.height)
-                    lineTo(0f, size.height)
-                    close()
-                }
-
-                drawPath(
-                    path = fillPath,
-                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                        colors = listOf(
-                            primaryColor.copy(alpha = 0.28f),
-                            primaryColor.copy(alpha = 0.02f)
-                        )
-                    )
-                )
-
-                // Smooth Curve Line Stroke
-                drawPath(
-                    path = strokePath,
-                    color = primaryColor,
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(
-                        width = 2.8.dp.toPx(),
-                        cap = androidx.compose.ui.graphics.StrokeCap.Round
-                    )
-                )
-
-                // Touched Point Indicator Line & Dot
-                val activeIdx = touchedIndex
-                if (activeIdx != null && activeIdx in coordinates.indices) {
-                    val targetPt = coordinates[activeIdx]
-                    drawLine(
-                        color = primaryColor.copy(alpha = 0.5f),
-                        start = androidx.compose.ui.geometry.Offset(targetPt.x, 0f),
-                        end = androidx.compose.ui.geometry.Offset(targetPt.x, size.height),
-                        strokeWidth = 1.5.dp.toPx()
-                    )
-                    drawCircle(
-                        color = primaryColor,
-                        radius = 6.dp.toPx(),
-                        center = targetPt
-                    )
-                    drawCircle(
-                        color = surfaceColor,
-                        radius = 3.dp.toPx(),
-                        center = targetPt
-                    )
-                } else {
-                    // Default Endpoint Glowing Dot
-                    val lastPoint = coordinates.last()
-                    drawCircle(
-                        color = primaryColor,
-                        radius = 5.dp.toPx(),
-                        center = lastPoint
-                    )
-                    drawCircle(
-                        color = surfaceColor,
-                        radius = 2.5.dp.toPx(),
-                        center = lastPoint
-                    )
-                }
-            }
-        }
+        InteractiveLineChart(
+            chartData = chartData,
+            chartHeight = 70.dp,
+            showYAxis = false,
+            isScrollable = false,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }

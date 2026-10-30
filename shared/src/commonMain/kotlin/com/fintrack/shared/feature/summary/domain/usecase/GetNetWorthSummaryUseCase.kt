@@ -328,7 +328,7 @@ class GetNetWorthSummaryUseCase(
             trendPoints.add(currentNwVal)
 
             var runningNwVal = currentNwVal
-            repeat(11) { mIndex ->
+            repeat(35) { mIndex ->
                 val monthStart = today.minus(kotlinx.datetime.DatePeriod(months = mIndex + 1))
                 val monthEnd = today.minus(kotlinx.datetime.DatePeriod(months = mIndex))
 
@@ -341,7 +341,7 @@ class GetNetWorthSummaryUseCase(
                 }.sumOf { if (it.isIncome) it.amount.doubleValue(false) else -it.amount.doubleValue(false) }
 
                 runningNwVal -= monthNetFlow
-                trendPoints.add(0, runningNwVal.coerceAtLeast(0.0))
+                trendPoints.add(0, runningNwVal)
             }
 
             Result.Success(
