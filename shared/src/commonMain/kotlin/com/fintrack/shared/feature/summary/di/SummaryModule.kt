@@ -6,6 +6,7 @@ import com.fintrack.shared.feature.summary.domain.usecase.DetectSpendSpikesUseCa
 import com.fintrack.shared.feature.summary.domain.usecase.GetBudgetOptimizerUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.GetCashflowRunwayUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.GetEmergencyFundScoreUseCase
+import com.fintrack.shared.feature.summary.domain.usecase.GetFinancialHealthIndexUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.GetMerchantAnalyticsUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.GetNetWorthSummaryUseCase
 import com.fintrack.shared.feature.summary.domain.usecase.GetPassiveIncomeCoverageUseCase
@@ -13,6 +14,7 @@ import com.fintrack.shared.feature.summary.domain.usecase.SimulateAffordabilityU
 import com.fintrack.shared.feature.summary.ui.StatisticsViewModel
 import com.fintrack.shared.feature.summary.ui.custom.CustomAnalysisViewModel
 import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
@@ -35,11 +37,16 @@ val summaryModule = module {
             debtRepository = getOrNull()
         )
     }
-    singleOf(::DetectSpendSpikesUseCase)
+    single<DetectSpendSpikesUseCase> {
+        DetectSpendSpikesUseCase(
+            transactionRepository = get(),
+            notificationService = getOrNull()
+        )
+    }
     singleOf(::GetEmergencyFundScoreUseCase)
     singleOf(::GetPassiveIncomeCoverageUseCase)
     single {
-        com.fintrack.shared.feature.summary.domain.usecase.GetFinancialHealthIndexUseCase(
+        GetFinancialHealthIndexUseCase(
             getCashflowRunwayUseCase = get(),
             getNetWorthSummaryUseCase = getOrNull(),
             getEmergencyFundScoreUseCase = getOrNull(),
@@ -62,6 +69,19 @@ val summaryModule = module {
         )
     }
 
-    viewModelOf(::StatisticsViewModel)
+    viewModel {
+        StatisticsViewModel(
+            summaryRepository = get(),
+            accountRepository = get(),
+            getCashflowRunwayUseCase = get(),
+            getNetWorthSummaryUseCase = getOrNull(),
+            detectSpendSpikesUseCase = getOrNull(),
+            getEmergencyFundScoreUseCase = getOrNull(),
+            getMerchantAnalyticsUseCase = getOrNull(),
+            getBudgetOptimizerUseCase = getOrNull(),
+            getPassiveIncomeCoverageUseCase = getOrNull(),
+            getFinancialHealthIndexUseCase = getOrNull()
+        )
+    }
     viewModelOf(::CustomAnalysisViewModel)
 }

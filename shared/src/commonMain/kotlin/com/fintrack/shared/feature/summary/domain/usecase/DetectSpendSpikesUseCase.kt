@@ -1,5 +1,6 @@
 package com.fintrack.shared.feature.summary.domain.usecase
 
+import com.fintrack.shared.feature.core.domain.service.NotificationService
 import com.fintrack.shared.feature.core.util.DateTimeHelper
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.summary.domain.model.SpendSpikeAnomaly
@@ -17,9 +18,11 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
 
 class DetectSpendSpikesUseCase(
-    private val transactionRepository: TransactionRepository
+    private val transactionRepository: TransactionRepository,
+    private val notificationService: NotificationService? = null
 ) {
     private val decimalMode = DecimalMode(decimalPrecision = 20, roundingMode = RoundingMode.ROUND_HALF_CEILING)
+    private val notifiedSpikesInMonth = mutableSetOf<String>()
 
     suspend operator fun invoke(
         accountId: String? = null,
@@ -109,7 +112,25 @@ class DetectSpendSpikesUseCase(
                 }
             }
 
-            Result.Success(anomalies.sortedByDescending { it.spikePercentage.doubleValue(false) })
+            val currentMonthKey = "${today.year}-${today.monthNumber.toString().padStart(2, '0')}"
+            val sortedAnomalies = anomalies.sortedByDescending { it.spikePercentage.doubleValue(false) }
+
+            // Dispatch system notification ONLY ONCE per category per calendar month
+            val unnotifiedAnomaly = sortedAnomalies.firstOrNull { anomaly ->
+                val key = "$currentMonthKey:${anomaly.categoryId}"
+                !notifiedSpikesInMonth.contains(key)
+            }
+
+            if (unnotifiedAnomaly != null) {
+                val key = "$currentMonthKey:${unnotifiedAnomaly.categoryId}"
+                notifiedSpikesInMonth.add(key)
+                notificationService?.showSummaryNotification(
+                    title = "Category Spend Spike Alert",
+                    content = unnotifiedAnomaly.alertMessage
+                )
+            }
+
+            Result.Success(sortedAnomalies)
         } catch (e: Exception) {
             Result.Error(e)
         }
