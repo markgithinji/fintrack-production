@@ -121,6 +121,7 @@ class SettingsViewModel(
     val defaultAccountId: StateFlow<String?> = settingsDataSource.defaultAccountId
     val exportFormat: StateFlow<ExportFormat> = settingsDataSource.exportFormat
     val isSmsRationaleHidden: StateFlow<Boolean> = settingsDataSource.isSmsRationaleHidden
+    val isCategorySpikeAlertEnabled: StateFlow<Boolean> = settingsDataSource.isCategorySpikeAlertEnabled
 
     val allCategories: StateFlow<List<Category>> = localCategoryDataSource.categories
         .map { categories ->
@@ -379,6 +380,12 @@ class SettingsViewModel(
     fun setSmsRationaleHidden(hidden: Boolean) {
         viewModelScope.launch {
             settingsDataSource.setSmsRationaleHidden(hidden)
+        }
+    }
+
+    fun setCategorySpikeAlertEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsDataSource.setCategorySpikeAlertEnabled(enabled)
         }
     }
 

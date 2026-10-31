@@ -94,6 +94,8 @@ class OnboardingViewModelTest {
         override suspend fun setExportFormat(format: ExportFormat) {}
         override val isSmsRationaleHidden: StateFlow<Boolean> = MutableStateFlow(false)
         override suspend fun setSmsRationaleHidden(hidden: Boolean) {}
+        override val isCategorySpikeAlertEnabled: StateFlow<Boolean> = MutableStateFlow(true)
+        override suspend fun setCategorySpikeAlertEnabled(enabled: Boolean) {}
         override val userName: StateFlow<String> = MutableStateFlow("User")
         override suspend fun setUserName(name: String) {}
         override suspend fun clear() {}

@@ -222,6 +222,16 @@ class IOSSettingsDataSource : SettingsDataSource {
         _isSmsRationaleHidden.value = hidden
     }
 
+    private val _isCategorySpikeAlertEnabled = MutableStateFlow(
+        if (defaults.objectForKey("category_spike_alert_enabled") != null) defaults.boolForKey("category_spike_alert_enabled") else true
+    )
+    override val isCategorySpikeAlertEnabled: StateFlow<Boolean> = _isCategorySpikeAlertEnabled.asStateFlow()
+
+    override suspend fun setCategorySpikeAlertEnabled(enabled: Boolean) {
+        defaults.setBool(enabled, "category_spike_alert_enabled")
+        _isCategorySpikeAlertEnabled.value = enabled
+    }
+
     private val _userName = MutableStateFlow(defaults.stringForKey("user_name") ?: "User")
     override val userName: StateFlow<String> = _userName.asStateFlow()
 

@@ -162,6 +162,7 @@ fun SettingsScreen(
     val summaryNotificationTime by viewModel.summaryNotificationTime.collectAsStateWithLifecycle()
     val exportFormat by viewModel.exportFormat.collectAsStateWithLifecycle()
     val isSmsRationaleHidden by viewModel.isSmsRationaleHidden.collectAsStateWithLifecycle()
+    val isCategorySpikeAlertEnabled by viewModel.isCategorySpikeAlertEnabled.collectAsStateWithLifecycle()
     val budgetsResult by viewModel.budgets.collectAsStateWithLifecycle()
     val reminderTime by viewModel.reminderTime.collectAsStateWithLifecycle()
     val showPermissionRequest by viewModel.showPermissionRequest.collectAsStateWithLifecycle()
@@ -573,6 +574,20 @@ fun SettingsScreen(
                             icon = Icons.Default.DateRange,
                             checked = isWeeklySummaryEnabled,
                             onCheckedChange = { viewModel.setWeeklySummaryEnabled(it) }
+                        )
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+
+                        SettingsToggleItem(
+                            title = "Category Spend Spike Alerts",
+                            subtitle = "Notify when category spending spikes 15%+ above baseline",
+                            icon = Icons.AutoMirrored.Filled.TrendingUp,
+                            checked = isCategorySpikeAlertEnabled,
+                            onCheckedChange = { viewModel.setCategorySpikeAlertEnabled(it) }
                         )
 
                         AnimatedVisibility(

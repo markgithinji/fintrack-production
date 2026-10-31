@@ -61,6 +61,9 @@ class CheckBudgetThresholdsUseCaseTest {
         override val alertBudgetId: StateFlow<String?> = _alertBudgetId.asStateFlow()
         override suspend fun setAlertBudgetId(budgetId: String?) { _alertBudgetId.value = budgetId }
 
+        override val isCategorySpikeAlertEnabled: StateFlow<Boolean> = MutableStateFlow(true).asStateFlow()
+        override suspend fun setCategorySpikeAlertEnabled(enabled: Boolean) {}
+
         override val theme: StateFlow<AppTheme> = MutableStateFlow(AppTheme.SYSTEM)
         override suspend fun setTheme(theme: AppTheme) {}
         override val timeFormat: StateFlow<TimeFormat> = MutableStateFlow(TimeFormat.TWENTY_FOUR_HOUR)

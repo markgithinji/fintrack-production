@@ -241,6 +241,14 @@ class AndroidSettingsDataSource(
         context.settingsDataStore.edit { it[Keys.SMS_RATIONALE_HIDDEN] = hidden }
     }
 
+    override val isCategorySpikeAlertEnabled: StateFlow<Boolean> = context.settingsDataStore.data
+        .map { it[Keys.CATEGORY_SPIKE_ALERT_ENABLED] ?: true }
+        .stateIn(scope, SharingStarted.Eagerly, true)
+
+    override suspend fun setCategorySpikeAlertEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.CATEGORY_SPIKE_ALERT_ENABLED] = enabled }
+    }
+
     override val userName: StateFlow<String> = context.settingsDataStore.data
         .map { prefs -> prefs[Keys.USER_NAME] ?: "User" }
         .stateIn(scope, SharingStarted.Eagerly, "User")
@@ -287,6 +295,7 @@ class AndroidSettingsDataSource(
         val DEFAULT_ACCOUNT_ID = stringPreferencesKey("default_account_id")
         val EXPORT_FORMAT = stringPreferencesKey("export_format")
         val SMS_RATIONALE_HIDDEN = booleanPreferencesKey("sms_rationale_hidden")
+        val CATEGORY_SPIKE_ALERT_ENABLED = booleanPreferencesKey("category_spike_alert_enabled")
         val USER_NAME = stringPreferencesKey("user_name")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }

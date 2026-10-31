@@ -84,6 +84,9 @@ interface SettingsDataSource {
     val isSmsRationaleHidden: StateFlow<Boolean>
     suspend fun setSmsRationaleHidden(hidden: Boolean)
 
+    val isCategorySpikeAlertEnabled: StateFlow<Boolean>
+    suspend fun setCategorySpikeAlertEnabled(enabled: Boolean)
+
     val userName: StateFlow<String>
     suspend fun setUserName(name: String)
 

@@ -3,6 +3,7 @@ package com.fintrack.shared.feature.summary.domain.usecase
 import com.fintrack.shared.feature.core.domain.service.NotificationService
 import com.fintrack.shared.feature.core.util.DateTimeHelper
 import com.fintrack.shared.feature.core.util.Result
+import com.fintrack.shared.feature.settings.domain.datasource.SettingsDataSource
 import com.fintrack.shared.feature.summary.domain.model.SpendSpikeAnomaly
 import com.fintrack.shared.feature.transaction.domain.model.Transaction
 import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository
@@ -11,6 +12,7 @@ import com.ionspin.kotlin.bignum.decimal.DecimalMode
 import com.ionspin.kotlin.bignum.decimal.RoundingMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.TimeZone
@@ -19,7 +21,8 @@ import kotlinx.datetime.toLocalDateTime
 
 class DetectSpendSpikesUseCase(
     private val transactionRepository: TransactionRepository,
-    private val notificationService: NotificationService? = null
+    private val notificationService: NotificationService? = null,
+    private val settingsDataSource: SettingsDataSource? = null
 ) {
     private val decimalMode = DecimalMode(decimalPrecision = 20, roundingMode = RoundingMode.ROUND_HALF_CEILING)
     private val notifiedSpikesInMonth = mutableSetOf<String>()
@@ -112,22 +115,26 @@ class DetectSpendSpikesUseCase(
                 }
             }
 
-            val currentMonthKey = "${today.year}-${today.monthNumber.toString().padStart(2, '0')}"
             val sortedAnomalies = anomalies.sortedByDescending { it.spikePercentage.doubleValue(false) }
+            val isAlertEnabled = settingsDataSource?.isCategorySpikeAlertEnabled?.first() ?: true
 
-            // Dispatch system notification ONLY ONCE per category per calendar month
-            val unnotifiedAnomaly = sortedAnomalies.firstOrNull { anomaly ->
-                val key = "$currentMonthKey:${anomaly.categoryId}"
-                !notifiedSpikesInMonth.contains(key)
-            }
+            if (isAlertEnabled) {
+                val currentMonthKey = "${today.year}-${today.monthNumber.toString().padStart(2, '0')}"
 
-            if (unnotifiedAnomaly != null) {
-                val key = "$currentMonthKey:${unnotifiedAnomaly.categoryId}"
-                notifiedSpikesInMonth.add(key)
-                notificationService?.showSummaryNotification(
-                    title = "Category Spend Spike Alert",
-                    content = unnotifiedAnomaly.alertMessage
-                )
+                // Dispatch system notification ONLY ONCE per category per calendar month
+                val unnotifiedAnomaly = sortedAnomalies.firstOrNull { anomaly ->
+                    val key = "$currentMonthKey:${anomaly.categoryId}"
+                    !notifiedSpikesInMonth.contains(key)
+                }
+
+                if (unnotifiedAnomaly != null) {
+                    val key = "$currentMonthKey:${unnotifiedAnomaly.categoryId}"
+                    notifiedSpikesInMonth.add(key)
+                    notificationService?.showSummaryNotification(
+                        title = "Category Spend Spike Alert",
+                        content = unnotifiedAnomaly.alertMessage
+                    )
+                }
             }
 
             Result.Success(sortedAnomalies)
