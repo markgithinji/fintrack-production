@@ -18,6 +18,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -61,5 +62,30 @@ class PlanningViewModelTest {
         assertEquals("", formState.amount)
         assertTrue(formState.selectedCategories.isEmpty())
         assertTrue(formState.selectedAccounts.isEmpty())
+    }
+
+    @Test
+    fun `selectTab updates selectedTab state flow across all planning tabs`() = runTest(testDispatcher) {
+        viewModel.selectTab(PlanningTab.SAVINGS_GOALS)
+        assertEquals(PlanningTab.SAVINGS_GOALS, viewModel.selectedTab.value)
+
+        viewModel.selectTab(PlanningTab.ASSETS_PORTFOLIO)
+        assertEquals(PlanningTab.ASSETS_PORTFOLIO, viewModel.selectedTab.value)
+
+        viewModel.selectTab(PlanningTab.DEBT_PAYOFF)
+        assertEquals(PlanningTab.DEBT_PAYOFF, viewModel.selectedTab.value)
+
+        viewModel.selectTab(PlanningTab.SPENDING_BUDGETS)
+        assertEquals(PlanningTab.SPENDING_BUDGETS, viewModel.selectedTab.value)
+    }
+
+    @Test
+    fun `form setters update form state fields correctly`() = runTest(testDispatcher) {
+        viewModel.setName("Monthly Groceries")
+        viewModel.setIsExpense(true)
+
+        val formState = viewModel.formState.value
+        assertEquals("Monthly Groceries", formState.name)
+        assertTrue(formState.isExpense)
     }
 }
