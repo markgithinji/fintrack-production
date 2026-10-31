@@ -166,147 +166,152 @@ fun PlanningScreen(
         }
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
+            .padding(top = paddingValues.calculateTopPadding())
             .background(MaterialTheme.colorScheme.background)
     ) {
+        // Fixed Top Segmented Tab Switcher (OUTSIDE SCROLL CONTAINER)
+        Surface(
+            color = MaterialTheme.colorScheme.background,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Surface(
+                    onClick = { viewModel.selectTab(PlanningTab.SPENDING_BUDGETS) },
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (selectedTab == PlanningTab.SPENDING_BUDGETS) Color.White else Color.Transparent,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PieChart,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp),
+                            tint = if (selectedTab == PlanningTab.SPENDING_BUDGETS) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "Budgets",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (selectedTab == PlanningTab.SPENDING_BUDGETS) FontWeight.Bold else FontWeight.Medium,
+                            color = if (selectedTab == PlanningTab.SPENDING_BUDGETS) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Surface(
+                    onClick = { viewModel.selectTab(PlanningTab.SAVINGS_GOALS) },
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (selectedTab == PlanningTab.SAVINGS_GOALS) Color.White else Color.Transparent,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Savings,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp),
+                            tint = if (selectedTab == PlanningTab.SAVINGS_GOALS) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "Goals",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (selectedTab == PlanningTab.SAVINGS_GOALS) FontWeight.Bold else FontWeight.Medium,
+                            color = if (selectedTab == PlanningTab.SAVINGS_GOALS) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Surface(
+                    onClick = { viewModel.selectTab(PlanningTab.ASSETS_PORTFOLIO) },
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) Color.White else Color.Transparent,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp),
+                            tint = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "Assets",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) FontWeight.Bold else FontWeight.Medium,
+                            color = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Surface(
+                    onClick = { viewModel.selectTab(PlanningTab.DEBT_PAYOFF) },
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (selectedTab == PlanningTab.DEBT_PAYOFF) Color.White else Color.Transparent,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CreditCard,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp),
+                            tint = if (selectedTab == PlanningTab.DEBT_PAYOFF) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "Debts",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (selectedTab == PlanningTab.DEBT_PAYOFF) FontWeight.Bold else FontWeight.Medium,
+                            color = if (selectedTab == PlanningTab.DEBT_PAYOFF) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+
         LazyColumn(
             state = listState,
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-                top = paddingValues.calculateTopPadding(),
                 bottom = paddingValues.calculateBottomPadding() + 32.dp
             ),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Top Segmented Tab Switcher (ALWAYS VISIBLE AT TOP!)
-            item(key = "tab_switcher") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                        .padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Surface(
-                        onClick = { viewModel.selectTab(PlanningTab.SPENDING_BUDGETS) },
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (selectedTab == PlanningTab.SPENDING_BUDGETS) Color.White else Color.Transparent,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PieChart,
-                                contentDescription = null,
-                                modifier = Modifier.size(15.dp),
-                                tint = if (selectedTab == PlanningTab.SPENDING_BUDGETS) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = "Budgets",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (selectedTab == PlanningTab.SPENDING_BUDGETS) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTab == PlanningTab.SPENDING_BUDGETS) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-
-                    Surface(
-                        onClick = { viewModel.selectTab(PlanningTab.SAVINGS_GOALS) },
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (selectedTab == PlanningTab.SAVINGS_GOALS) Color.White else Color.Transparent,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Savings,
-                                contentDescription = null,
-                                modifier = Modifier.size(15.dp),
-                                tint = if (selectedTab == PlanningTab.SAVINGS_GOALS) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = "Goals",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (selectedTab == PlanningTab.SAVINGS_GOALS) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTab == PlanningTab.SAVINGS_GOALS) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-
-                    Surface(
-                        onClick = { viewModel.selectTab(PlanningTab.ASSETS_PORTFOLIO) },
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) Color.White else Color.Transparent,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.TrendingUp,
-                                contentDescription = null,
-                                modifier = Modifier.size(15.dp),
-                                tint = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = "Assets",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTab == PlanningTab.ASSETS_PORTFOLIO) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-
-                    Surface(
-                        onClick = { viewModel.selectTab(PlanningTab.DEBT_PAYOFF) },
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (selectedTab == PlanningTab.DEBT_PAYOFF) Color.White else Color.Transparent,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 2.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CreditCard,
-                                contentDescription = null,
-                                modifier = Modifier.size(15.dp),
-                                tint = if (selectedTab == PlanningTab.DEBT_PAYOFF) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = "Debts",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (selectedTab == PlanningTab.DEBT_PAYOFF) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selectedTab == PlanningTab.DEBT_PAYOFF) Color.Black else MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-            }
 
             if (selectedTab == PlanningTab.SPENDING_BUDGETS) {
                 // SPENDING BUDGETS TAB
