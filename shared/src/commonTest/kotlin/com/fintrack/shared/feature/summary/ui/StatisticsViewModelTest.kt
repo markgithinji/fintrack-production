@@ -2,7 +2,7 @@ package com.fintrack.shared.feature.summary.ui
 
 import com.fintrack.shared.feature.account.domain.repository.FakeAccountRepository
 import com.fintrack.shared.feature.core.util.Result
-import com.fintrack.shared.feature.summary.domain.model.OverviewPeriod
+import com.fintrack.shared.feature.summary.domain.model.TabType
 import com.fintrack.shared.feature.summary.domain.usecase.GetCashflowRunwayUseCase
 import com.fintrack.shared.feature.transaction.domain.repository.FakeTransactionRepository
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
@@ -60,5 +60,20 @@ class StatisticsViewModelTest {
         val testPeriod = Period.Month("2026-10")
         viewModel.onOverviewPeriodChanged(testPeriod)
         assertEquals(testPeriod, viewModel.selectedOverviewPeriod.value)
+    }
+
+    @Test
+    fun `tab changes update selectedTab state`() = runTest {
+        viewModel.onTabChanged(TabType.Income)
+        assertEquals(TabType.Income, viewModel.selectedTab.value)
+
+        viewModel.onTabChanged(TabType.Expense)
+        assertEquals(TabType.Expense, viewModel.selectedTab.value)
+    }
+
+    @Test
+    fun `merchant days selection updates selectedMerchantDays state`() = runTest {
+        viewModel.setMerchantDays(60)
+        assertEquals(60, viewModel.selectedMerchantDays.value)
     }
 }
