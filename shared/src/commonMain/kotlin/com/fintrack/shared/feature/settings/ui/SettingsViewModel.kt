@@ -49,7 +49,7 @@ class SettingsViewModel(
     private val accountRepository: AccountRepository,
     private val budgetRepository: BudgetRepository,
     private val transactionImporter: TransactionImporter,
-    private val backupRestoreUseCase: BackupRestoreUseCase,
+    private val backupRestoreUseCase: BackupRestoreUseCase? = null,
     private val cloudDriveBackupService: CloudDriveBackupService? = null,
 ) : ViewModel() {
 
@@ -584,7 +584,7 @@ class SettingsViewModel(
     fun exportLocalBackup() {
         viewModelScope.launch {
             _localBackupState.value = SaveState.Loading
-            val result = backupRestoreUseCase.exportLocalBackup()
+            val result = backupRestoreUseCase?.exportLocalBackup() ?: Result.Error(Exception("Backup service unavailable"))
             if (result is Result.Success) {
                 _localBackupState.value = SaveState.Success(result.data)
             } else if (result is Result.Error) {
@@ -597,7 +597,7 @@ class SettingsViewModel(
     fun restoreLocalBackup(jsonContent: String) {
         viewModelScope.launch {
             _restoreState.value = SaveState.Loading
-            val result = backupRestoreUseCase.restoreFromBackupJson(jsonContent)
+            val result = backupRestoreUseCase?.restoreFromBackupJson(jsonContent) ?: Result.Error(Exception("Backup service unavailable"))
             if (result is Result.Success) {
                 _restoreState.value = SaveState.Success(Unit)
             } else if (result is Result.Error) {
@@ -610,7 +610,7 @@ class SettingsViewModel(
     fun backupToGoogleDrive() {
         viewModelScope.launch {
             _googleDriveBackupState.value = SaveState.Loading
-            val jsonResult = backupRestoreUseCase.createBackupJson()
+            val jsonResult = backupRestoreUseCase?.createBackupJson() ?: Result.Error(Exception("Backup service unavailable"))
             if (jsonResult is Result.Success) {
                 val uploadResult = cloudDriveBackupService?.uploadBackup(jsonResult.data)
                 if (uploadResult is Result.Success) {
@@ -618,11 +618,10 @@ class SettingsViewModel(
                 } else if (uploadResult is Result.Error) {
                     _googleDriveBackupState.value = SaveState.Error(uploadResult.exception)
                     _error.value = "Google Drive backup failed: ${uploadResult.exception.message}"
-                } else {
-                    _googleDriveBackupState.value = SaveState.Error(Exception("Cloud Drive service unavailable"))
                 }
             } else if (jsonResult is Result.Error) {
                 _googleDriveBackupState.value = SaveState.Error(jsonResult.exception)
+                _error.value = "Failed to create backup JSON: ${jsonResult.exception.message}"
             }
         }
     }
@@ -632,7 +631,7 @@ class SettingsViewModel(
             _restoreState.value = SaveState.Loading
             val downloadResult = cloudDriveBackupService?.downloadLatestBackup()
             if (downloadResult is Result.Success) {
-                val restoreResult = backupRestoreUseCase.restoreFromBackupJson(downloadResult.data)
+                val restoreResult = backupRestoreUseCase?.restoreFromBackupJson(downloadResult.data) ?: Result.Error(Exception("Backup service unavailable"))
                 if (restoreResult is Result.Success) {
                     _restoreState.value = SaveState.Success(Unit)
                 } else if (restoreResult is Result.Error) {
