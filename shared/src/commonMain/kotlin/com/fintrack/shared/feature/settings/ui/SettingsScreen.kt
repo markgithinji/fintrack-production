@@ -737,13 +737,11 @@ fun SettingsScreen(
                             icon = Icons.Default.CloudDone,
                             onClick = { viewModel.restoreFromGoogleDrive() }
                         )
+                    }
+                }
 
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                        )
-
+                item(key = "section_developers") {
+                    SettingsSection(title = "For Developers") {
                         SettingsItem(
                             title = "Export Equity SMS Log",
                             subtitle = "Generate raw SMS vs parsed result comparison log",
@@ -763,11 +761,13 @@ fun SettingsScreen(
                             icon = Icons.Default.Sms,
                             onClick = { viewModel.exportMpesaParsingLog() }
                         )
-                    }
-                }
 
-                item(key = "section_seed") {
-                    SettingsSection(title = "Portfolio Demo") {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+
                         val seedSubtitle = when (val state = seedState) {
                             is SaveState.Loading -> "Seeding... ${(seedProgress * 100).toInt()}%"
                             is SaveState.Success -> "Successfully seeded to ${state.data}!"
@@ -779,7 +779,7 @@ fun SettingsScreen(
                             if (seedState is SaveState.Success) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary
 
                         SettingsItem(
-                            title = "Seed Dummy Data",
+                            title = "Seed Demo Data",
                             subtitle = seedSubtitle,
                             icon = if (seedState is SaveState.Success) Icons.Default.Check else Icons.Default.Refresh,
                             iconTint = iconColor,
