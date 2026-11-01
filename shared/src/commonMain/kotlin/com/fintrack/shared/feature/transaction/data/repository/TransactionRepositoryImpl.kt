@@ -141,7 +141,8 @@ class TransactionRepositoryImpl(
                     isIncome = transaction.isIncome,
                     amount = transaction.amount,
                     cost = transaction.transactionCost,
-                    undo = false
+                    undo = false,
+                    transactionBalance = transaction.balance
                 )
 
                 // Savings Goal Auto-Sync
@@ -192,7 +193,8 @@ class TransactionRepositoryImpl(
                         isIncome = transaction.isIncome,
                         amount = transaction.amount,
                         cost = transaction.transactionCost,
-                        undo = false
+                        undo = false,
+                        transactionBalance = transaction.balance
                     )
 
                     syncSavingsGoalsForCategory(
@@ -396,7 +398,8 @@ class TransactionRepositoryImpl(
                     isIncome = transaction.isIncome,
                     amount = transaction.amount,
                     cost = transaction.transactionCost,
-                    undo = false
+                    undo = false,
+                    transactionBalance = transaction.balance
                 )
 
                 syncSavingsGoalsForCategory(
@@ -487,9 +490,23 @@ class TransactionRepositoryImpl(
         isIncome: Boolean,
         amount: BigDecimal,
         cost: BigDecimal,
-        undo: Boolean
+        undo: Boolean,
+        transactionBalance: BigDecimal? = null
     ) {
         val account = queries.selectAccountById(accountId).executeAsOneOrNull() ?: return
+        val isMpesaAccount = account.type == com.fintrack.shared.feature.account.domain.model.AccountType.MPESA.name ||
+                account.linkedSources.contains("mpesa") ||
+                account.name.contains("mpesa", ignoreCase = true)
+
+        if (isMpesaAccount) {
+            // For M-Pesa accounts: Strictly use the balance extracted directly from the latest M-Pesa SMS statement.
+            // Do NOT do additions/subtractions or calculated tallies!
+            if (transactionBalance != null) {
+                queries.updateAccountBalance(transactionBalance.toPlainString(), accountId)
+            }
+            return
+        }
+
         val currentBalance = BigDecimal.parseString(account.balance)
         
         // Net Impact logic: Income = Amount - Cost, Expense = Amount + Cost
