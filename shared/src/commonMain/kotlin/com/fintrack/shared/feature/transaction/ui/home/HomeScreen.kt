@@ -182,6 +182,7 @@ fun HomeScreen(
     LaunchedEffect(selectedAccountResult) {
         val account = (selectedAccountResult as? Result.Success)?.data
         account?.let { acc ->
+            transactionsViewModel.loadRecentTransactions(acc.id)
             statsViewModel.loadOverview(acc.id)
             statsViewModel.loadCategoryComparisons(acc.id)
         }
