@@ -95,44 +95,46 @@ fun LoadingLineChart() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(240.dp)
-            .padding(top = 4.dp, end = 16.dp)
+            .height(200.dp)
+            .padding(bottom = 16.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().height(180.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(176.dp),
             verticalAlignment = Alignment.Bottom
         ) {
-            // Y-axis labels
+            // Y-axis labels matching 36.dp width
             Column(
                 modifier = Modifier
-                    .width(28.dp)
-                    .fillMaxHeight(),
+                    .width(36.dp)
+                    .fillMaxHeight()
+                    .padding(bottom = 24.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                repeat(5) {
+                repeat(4) {
                     AnimatedShimmerBox(
                         modifier = Modifier
-                            .width(24.dp)
+                            .width(28.dp)
                             .height(10.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(RoundedCornerShape(3.dp))
                     )
                 }
             }
 
-            Spacer(Modifier.width(8.dp))
-
-            // Line Chart Area Placeholder
+            // Line Chart Area Placeholder matching start=36.dp, end=12.dp, bottom=24.dp
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
+                    .padding(end = 12.dp, bottom = 24.dp)
             ) {
                 // Background grid lines shimmers
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    repeat(5) {
+                    repeat(4) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -149,45 +151,29 @@ fun LoadingLineChart() {
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center
                 ) {
-                    // Two wavy-ish lines
-                    Box(
+                    AnimatedShimmerBox(
                         modifier = Modifier
-                            .fillMaxWidth(0.8f)
+                            .fillMaxWidth()
                             .height(3.dp)
-                            .padding(start = 20.dp)
-                            .clip(CircleShape)
-                    ) {
-                        AnimatedShimmerBox(modifier = Modifier.fillMaxSize())
-                    }
-                    Spacer(modifier = Modifier.height(30.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.6f)
-                            .height(3.dp)
-                            .padding(start = 50.dp)
-                            .clip(CircleShape)
-                    ) {
-                        AnimatedShimmerBox(modifier = Modifier.fillMaxSize())
-                    }
+                            .clip(RoundedCornerShape(2.dp))
+                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // X-axis labels shimmers
+        // X-axis dates row shimmer
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 36.dp),
-            horizontalArrangement = Arrangement.SpaceAround
+                .padding(start = 36.dp, end = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            repeat(7) {
+            repeat(6) {
                 AnimatedShimmerBox(
                     modifier = Modifier
-                        .width(20.dp)
+                        .width(22.dp)
                         .height(10.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(RoundedCornerShape(3.dp))
                 )
             }
         }

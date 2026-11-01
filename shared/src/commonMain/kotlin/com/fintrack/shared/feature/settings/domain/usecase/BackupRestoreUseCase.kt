@@ -81,6 +81,7 @@ class BackupRestoreUseCase(
                     transactionCost = it.transactionCost,
                     dateTime = it.dateTime.toString(),
                     description = it.description,
+                    merchantName = it.merchantName ?: com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it.description ?: ""),
                     externalId = it.externalId,
                     balance = it.balance,
                     rawMessage = it.rawMessage
@@ -194,6 +195,7 @@ class BackupRestoreUseCase(
                         transactionCost = tx.transactionCost,
                         dateTime = dtInstant,
                         description = tx.description,
+                        merchantName = tx.merchantName ?: com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(tx.description ?: ""),
                         externalId = tx.externalId,
                         balance = tx.balance,
                         rawMessage = tx.rawMessage,

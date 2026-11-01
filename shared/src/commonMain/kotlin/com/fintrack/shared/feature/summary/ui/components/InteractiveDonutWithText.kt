@@ -1,5 +1,7 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -54,6 +56,7 @@ fun InteractiveDonutWithText(
     onSelectedIndexChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
     chartSize: Dp = 250.dp,
+    isIncome: Boolean = false,
     gapPercentage: Float = 0.03f,
     segmentColors: List<Color> = SegmentColors
 ) {
@@ -72,10 +75,12 @@ fun InteractiveDonutWithText(
 
     // Animate stroke width on selection
     val animatedStrokes = List(categorySums.size) { index ->
-        animateDpAsState(
-            targetValue = if (selectedIndex == index) 52.dp else 36.dp,
-            animationSpec = tween(300)
-        )
+        androidx.compose.runtime.key(categorySums.getOrNull(index)?.first ?: index) {
+            animateDpAsState(
+                targetValue = if (selectedIndex == index) 52.dp else 36.dp,
+                animationSpec = tween(300)
+            )
+        }
     }
 
     val chartScale by animateFloatAsState(
@@ -83,10 +88,16 @@ fun InteractiveDonutWithText(
         animationSpec = tween(500)
     )
 
+    val density = LocalDensity.current
+
     Box(
         modifier = modifier
             .size(chartSize)
             .scale(chartScale)
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[ANALYTICS_DONUT_SIZE_LOG] InteractiveDonutWithText Height: $heightDp (${coordinates.size.height}px)")
+            }
             .pointerInput(selectedIndex) {
                 detectTapGestures { tapOffset ->
                     val center = Offset(size.width / 2f, size.height / 2f)
@@ -117,7 +128,11 @@ fun InteractiveDonutWithText(
 
             categorySums.forEachIndexed { index, (_, amount) ->
                 val allocatedAngle = ((amount / totalAmount) * 360.0).toFloat()
-                val sweep = (allocatedAngle * entranceProgress.value - 360f * gapPercentage).coerceAtLeast(0.1f)
+                val sweep = allocatedAngle * entranceProgress.value - 360f * gapPercentage
+                if (sweep <= 0.5f) {
+                    startAngle += allocatedAngle
+                    return@forEachIndexed
+                }
                 
                 val isSelected = selectedIndex == index
                 val strokeWidth = animatedStrokes[index].value.toPx()
@@ -175,7 +190,7 @@ fun InteractiveDonutWithText(
             modifier = Modifier.padding(horizontal = 40.dp)
         ) {
             if (!isShowingOverallTotal) {
-                val category = Category.fromName(displayText, isExpense = true)
+                val category = Category.fromName(displayText, isExpense = !isIncome)
                 val icon = category.toIcon()
 
                 Icon(

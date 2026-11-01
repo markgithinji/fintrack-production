@@ -34,6 +34,7 @@ CREATE TABLE TransactionEntity (
     transactionCost TEXT NOT NULL DEFAULT '0',
     dateTime INTEGER AS Instant NOT NULL,
     description TEXT,
+    merchantName TEXT,
     externalId TEXT UNIQUE,
     balance TEXT,
     rawMessage TEXT,
@@ -116,12 +117,12 @@ reassignTransactions:
 UPDATE TransactionEntity SET categoryId = :newCategoryId WHERE categoryId = :oldCategoryId AND userId = :userId;
 
 insertTransaction:
-INSERT OR REPLACE INTO TransactionEntity(id, userId, accountId, categoryId, isIncome, amount, transactionCost, dateTime, description, externalId, balance, rawMessage, createdAt, updatedAt)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO TransactionEntity(id, userId, accountId, categoryId, isIncome, amount, transactionCost, dateTime, description, merchantName, externalId, balance, rawMessage, createdAt, updatedAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 updateTransaction:
 UPDATE TransactionEntity
-SET accountId = ?, categoryId = ?, isIncome = ?, amount = ?, transactionCost = ?, dateTime = ?, description = ?, balance = ?, rawMessage = ?, updatedAt = ?
+SET accountId = ?, categoryId = ?, isIncome = ?, amount = ?, transactionCost = ?, dateTime = ?, description = ?, merchantName = ?, balance = ?, rawMessage = ?, updatedAt = ?
 WHERE id = ?;
 
 updateTransactionsCategoryByKeyword:
@@ -131,53 +132,54 @@ WHERE userId = :userId
 AND isIncome = :isIncome
 AND (
     LOWER(description) LIKE '%' || LOWER(:keyword) || '%'
+    OR (merchantName IS NOT NULL AND LOWER(merchantName) LIKE '%' || LOWER(:keyword) || '%')
     OR (rawMessage IS NOT NULL AND LOWER(rawMessage) LIKE '%' || LOWER(:keyword) || '%')
 );
 
 selectAllTransactionsWithCategory:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.userId = ?
 ORDER BY T.dateTime DESC;
 
 selectAllTransactions:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.userId = ?
 ORDER BY T.dateTime DESC;
 
 selectTransactionsByRange:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.userId = ? AND T.dateTime >= ? AND T.dateTime <= ?
 ORDER BY T.dateTime DESC;
 
 selectTransactionsByAccount:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.accountId = ?
 ORDER BY T.dateTime DESC;
 
 selectTransactionsWithRawMessageByAccount:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.accountId = ?
 ORDER BY T.dateTime DESC;
 
 selectAllTransactionsWithRawMessage:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.userId = ?
 ORDER BY T.dateTime DESC;
 
 selectRecentTransactionsByAccount:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE instr(',' || :accountId || ',', ',' || T.accountId || ',') > 0
@@ -191,7 +193,7 @@ deleteTransaction:
 DELETE FROM TransactionEntity WHERE id = ?;
 
 selectTransactionById:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, T.rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.id = ?;
@@ -207,7 +209,7 @@ AND (:end IS NULL OR dateTime <= :end)
 AND (:hasTransactionCost IS NULL OR (CAST(transactionCost AS REAL) > 0) = :hasTransactionCost);
 
 selectTransactionsPaged:
-SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
+SELECT T.id, T.accountId, T.categoryId, T.isIncome, T.amount, T.transactionCost, T.dateTime, T.description, T.merchantName, T.externalId, T.balance, CAST(NULL AS TEXT) AS rawMessage, C.name AS categoryName
 FROM TransactionEntity T
 LEFT JOIN CategoryEntity C ON T.categoryId = C.id
 WHERE T.userId = :userId
@@ -248,6 +250,23 @@ WHERE T.userId = :userId AND (:accountId IS NULL OR instr(',' || :accountId || '
 GROUP BY catId
 ORDER BY totalSum DESC;
 
+getTopMerchants:
+SELECT
+    COALESCE(description, 'Other') AS merchantName,
+    SUM(CAST(amount AS REAL)) AS totalSpent,
+    COUNT(*) AS visitCount,
+    AVG(CAST(amount AS REAL)) AS avgAmount,
+    MIN(dateTime) AS firstSeen,
+    MAX(dateTime) AS lastSeen
+FROM TransactionEntity
+WHERE userId = :userId
+AND isIncome = 0
+AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
+AND dateTime >= :start AND dateTime <= :end
+GROUP BY merchantName
+ORDER BY totalSpent DESC
+LIMIT :limit;
+
 getHighlights:
 SELECT
     SUM(CASE WHEN isIncome = 1 THEN CAST(amount AS REAL) ELSE 0 END) AS incomeTotal,
@@ -272,19 +291,25 @@ SELECT 1;
 selectDistinctMonths:
 SELECT DISTINCT strftime('%Y-%m', dateTime / 1000, 'unixepoch') AS month
 FROM TransactionEntity
-WHERE userId = ? AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
+WHERE userId = ?
+  AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
+  AND dateTime > 0
 ORDER BY month DESC;
 
 selectDistinctYears:
 SELECT DISTINCT strftime('%Y', dateTime / 1000, 'unixepoch') AS year
 FROM TransactionEntity
-WHERE userId = ? AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
+WHERE userId = ?
+  AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
+  AND dateTime > 0
 ORDER BY year DESC;
 
 selectDistinctWeeks:
 SELECT DISTINCT strftime('%Y-W%W', dateTime / 1000, 'unixepoch') AS week
 FROM TransactionEntity
-WHERE userId = ? AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
+WHERE userId = ?
+  AND (:accountId IS NULL OR instr(',' || :accountId || ',', ',' || accountId || ',') > 0)
+  AND dateTime > 0
 ORDER BY week DESC;
 
 getTransactionCountSummary:
@@ -344,3 +369,152 @@ SELECT * FROM CategoryRuleEntity WHERE userId = ? OR userId IS NULL;
 
 deleteCategoryRule:
 DELETE FROM CategoryRuleEntity WHERE id = ?;
+
+-- Savings Goal Queries
+CREATE TABLE IF NOT EXISTS SavingsGoalEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    targetAmount REAL NOT NULL,
+    currentAmount REAL NOT NULL DEFAULT 0.0,
+    targetDate TEXT NOT NULL,
+    categoryId TEXT,
+    accountId TEXT,
+    iconName TEXT NOT NULL DEFAULT 'Savings',
+    colorHex TEXT NOT NULL DEFAULT '#2E7D32',
+    createdAt TEXT NOT NULL
+);
+
+createSavingsGoalTableIfNotExists:
+CREATE TABLE IF NOT EXISTS SavingsGoalEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    targetAmount REAL NOT NULL,
+    currentAmount REAL NOT NULL DEFAULT 0.0,
+    targetDate TEXT NOT NULL,
+    categoryId TEXT,
+    accountId TEXT,
+    iconName TEXT NOT NULL DEFAULT 'Savings',
+    colorHex TEXT NOT NULL DEFAULT '#2E7D32',
+    createdAt TEXT NOT NULL
+);
+
+insertSavingsGoal:
+INSERT OR REPLACE INTO SavingsGoalEntity(id, userId, name, targetAmount, currentAmount, targetDate, categoryId, accountId, iconName, colorHex, createdAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectAllSavingsGoals:
+SELECT * FROM SavingsGoalEntity WHERE userId = ?;
+
+selectSavingsGoalById:
+SELECT * FROM SavingsGoalEntity WHERE id = ?;
+
+updateSavingsGoalAmount:
+UPDATE SavingsGoalEntity SET currentAmount = ? WHERE id = ?;
+
+deleteSavingsGoal:
+DELETE FROM SavingsGoalEntity WHERE id = ?;
+
+deleteAllSavingsGoals:
+DELETE FROM SavingsGoalEntity WHERE userId = ?;
+
+selectSavingsGoalsByCategoryId:
+SELECT * FROM SavingsGoalEntity WHERE categoryId = ?;
+
+-- Debt Queries
+CREATE TABLE IF NOT EXISTS DebtEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    balance REAL NOT NULL,
+    initialBalance REAL NOT NULL,
+    interestRate REAL NOT NULL,
+    minimumPayment REAL NOT NULL,
+    categoryId TEXT,
+    accountId TEXT,
+    colorHex TEXT NOT NULL DEFAULT '#E53935',
+    createdAt TEXT NOT NULL
+);
+
+createDebtTableIfNotExists:
+CREATE TABLE IF NOT EXISTS DebtEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    balance REAL NOT NULL,
+    initialBalance REAL NOT NULL,
+    interestRate REAL NOT NULL,
+    minimumPayment REAL NOT NULL,
+    categoryId TEXT,
+    accountId TEXT,
+    colorHex TEXT NOT NULL DEFAULT '#E53935',
+    createdAt TEXT NOT NULL
+);
+
+insertDebt:
+INSERT OR REPLACE INTO DebtEntity(id, userId, name, balance, initialBalance, interestRate, minimumPayment, categoryId, accountId, colorHex, createdAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectAllDebts:
+SELECT * FROM DebtEntity WHERE userId = ?;
+
+selectDebtById:
+SELECT * FROM DebtEntity WHERE id = ?;
+
+updateDebtBalance:
+UPDATE DebtEntity SET balance = ? WHERE id = ?;
+
+deleteDebt:
+DELETE FROM DebtEntity WHERE id = ?;
+
+deleteAllDebts:
+DELETE FROM DebtEntity WHERE userId = ?;
+
+-- Asset Queries
+CREATE TABLE IF NOT EXISTS AssetEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    assetType TEXT NOT NULL,
+    currentBalance REAL NOT NULL,
+    annualYieldPercentage REAL,
+    categoryId TEXT,
+    accountId TEXT,
+    colorHex TEXT NOT NULL DEFAULT '#2979FF',
+    createdAt TEXT NOT NULL
+);
+
+createAssetTableIfNotExists:
+CREATE TABLE IF NOT EXISTS AssetEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    userId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    assetType TEXT NOT NULL,
+    currentBalance REAL NOT NULL,
+    annualYieldPercentage REAL,
+    categoryId TEXT,
+    accountId TEXT,
+    colorHex TEXT NOT NULL DEFAULT '#2979FF',
+    createdAt TEXT NOT NULL
+);
+
+insertAsset:
+INSERT OR REPLACE INTO AssetEntity(id, userId, name, assetType, currentBalance, annualYieldPercentage, categoryId, accountId, colorHex, createdAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+selectAllAssets:
+SELECT * FROM AssetEntity WHERE userId = ?;
+
+selectAssetById:
+SELECT * FROM AssetEntity WHERE id = ?;
+
+updateAssetBalance:
+UPDATE AssetEntity SET currentBalance = ? WHERE id = ?;
+
+deleteAsset:
+DELETE FROM AssetEntity WHERE id = ?;
+
+deleteAllAssets:
+DELETE FROM AssetEntity WHERE userId = ?;
+

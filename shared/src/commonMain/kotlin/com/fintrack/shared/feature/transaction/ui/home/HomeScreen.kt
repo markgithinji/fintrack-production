@@ -42,7 +42,6 @@ import com.fintrack.shared.feature.transaction.ui.home.components.CurrentBalance
 import com.fintrack.shared.feature.transaction.ui.home.components.IncomeExpenseCards
 import com.fintrack.shared.feature.transaction.ui.home.components.IncomeExpensesOverview
 import com.fintrack.shared.feature.transaction.ui.home.components.TransactionsListCard
-import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -91,11 +90,10 @@ fun HomeScreen(
             
             when (event) {
                 is ImportEvent.Success -> {
-                    if (event.accountId == accountId && accountId != null) {
-                        transactionsViewModel.loadRecentTransactions(accountId, force = true)
+                    val targetAccId = event.accountId ?: accountId
+                    if (targetAccId != null) {
+                        transactionsViewModel.loadRecentTransactions(targetAccId, force = true)
                         accountsViewModel.reloadAccounts(showLoading = false)
-                        delay(1000)
-                        transactionsViewModel.resetImportState(event.accountId)
                     }
                 }
 
@@ -183,15 +181,10 @@ fun HomeScreen(
 
     LaunchedEffect(selectedAccountResult) {
         val account = (selectedAccountResult as? Result.Success)?.data
-        println("[DEBUG_ANR] LaunchedEffect(selectedAccount=${account?.id})")
         account?.let { acc ->
             transactionsViewModel.loadRecentTransactions(acc.id)
             statsViewModel.loadOverview(acc.id)
             statsViewModel.loadCategoryComparisons(acc.id)
-
-            // Trigger auto-sync for account
-            println("[DEBUG_ANR] Triggering auto-sync for ${acc.id}")
-            transactionsViewModel.autoSyncTransactions(acc.id, acc.lastSyncedAt)
         }
     }
 

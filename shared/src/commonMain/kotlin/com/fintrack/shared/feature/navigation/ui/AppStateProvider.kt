@@ -11,6 +11,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.fintrack.shared.feature.core.ui.biometric.BiometricAuthenticator
+import com.fintrack.shared.feature.core.util.formatToCompactCurrency
 import com.fintrack.shared.feature.core.util.formatToCurrency
 import com.fintrack.shared.feature.settings.domain.model.AppTheme
 import com.fintrack.shared.feature.settings.domain.model.Currency
@@ -40,7 +41,7 @@ val LocalNavController = staticCompositionLocalOf<NavHostController> {
 }
 
 @Composable
-fun Double.toCurrencyString(): String {
+fun Double.toCurrencyString(compact: Boolean = false): String {
     val currency = LocalCurrency.current
     val isPrivacyMode = LocalPrivacyMode.current
     val showDecimals = LocalShowDecimals.current
@@ -48,17 +49,23 @@ fun Double.toCurrencyString(): String {
     if (isPrivacyMode) {
         return "${currency.symbol} ****"
     }
+    if (compact) {
+        return this.formatToCompactCurrency(currency.symbol)
+    }
     return this.formatToCurrency(currency.symbol, showDecimals = showDecimals)
 }
 
 @Composable
-fun BigDecimal.toCurrencyString(): String {
+fun BigDecimal.toCurrencyString(compact: Boolean = false): String {
     val currency = LocalCurrency.current
     val isPrivacyMode = LocalPrivacyMode.current
     val showDecimals = LocalShowDecimals.current
 
     if (isPrivacyMode) {
         return "${currency.symbol} ****"
+    }
+    if (compact) {
+        return this.formatToCompactCurrency(currency.symbol)
     }
     return this.formatToCurrency(currency.symbol, showDecimals = showDecimals)
 }

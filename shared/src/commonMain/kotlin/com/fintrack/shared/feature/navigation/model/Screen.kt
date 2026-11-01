@@ -19,7 +19,7 @@ sealed interface Screen {
     data object CustomAnalysis : Screen
 
     @Serializable
-    data object Budget : Screen
+    data object Planning : Screen
 
     @Serializable
     data object Profile : Screen

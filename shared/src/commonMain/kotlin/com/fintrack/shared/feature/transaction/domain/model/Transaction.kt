@@ -18,6 +18,7 @@ data class Transaction(
     val categoryId: String,
     val dateTime: Instant,
     val description: String? = null,
+    val merchantName: String? = null,
     val externalId: String? = null,
     @Serializable(with = BigDecimalSerializer::class)
     val balance: BigDecimal? = null,

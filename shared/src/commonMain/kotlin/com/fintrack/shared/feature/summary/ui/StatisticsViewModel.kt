@@ -8,7 +8,15 @@ import com.fintrack.shared.feature.summary.domain.model.CashflowRunway
 import com.fintrack.shared.feature.summary.domain.model.CategoryComparisonSummary
 import com.fintrack.shared.feature.summary.domain.model.DistributionSummary
 import com.fintrack.shared.feature.summary.domain.model.Highlights
+import com.fintrack.shared.feature.summary.domain.model.EmergencyFundScore
+import com.fintrack.shared.feature.summary.domain.model.MerchantSummary
+import com.fintrack.shared.feature.summary.domain.model.NetWorthSummary
+import com.fintrack.shared.feature.summary.domain.model.OverviewPeriod
 import com.fintrack.shared.feature.summary.domain.model.OverviewSummary
+import com.fintrack.shared.feature.summary.domain.model.SpendSpikeAnomaly
+import com.fintrack.shared.feature.summary.domain.usecase.DetectSpendSpikesUseCase
+import com.fintrack.shared.feature.summary.domain.usecase.GetEmergencyFundScoreUseCase
+import com.fintrack.shared.feature.summary.domain.usecase.GetNetWorthSummaryUseCase
 import com.fintrack.shared.feature.summary.domain.model.StatisticsSummary
 import com.fintrack.shared.feature.summary.domain.model.TabType
 import com.fintrack.shared.feature.summary.domain.model.TransactionCountSummary
@@ -17,9 +25,17 @@ import com.fintrack.shared.feature.account.domain.model.Account
 import com.fintrack.shared.feature.account.domain.repository.AccountRepository
 import com.fintrack.shared.feature.summary.domain.repository.SummaryRepository
 import com.fintrack.shared.feature.summary.domain.usecase.GetCashflowRunwayUseCase
+import com.fintrack.shared.feature.summary.domain.usecase.GetMerchantAnalyticsUseCase
+import com.fintrack.shared.feature.summary.domain.model.BudgetOptimizerSummary
+import com.fintrack.shared.feature.summary.domain.usecase.GetBudgetOptimizerUseCase
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import com.fintrack.shared.feature.core.util.DateTimeHelper
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.CancellationException
@@ -33,12 +49,203 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+import com.fintrack.shared.feature.summary.domain.model.FinancialHealthIndex
+import com.fintrack.shared.feature.summary.domain.model.PassiveIncomeCoverage
+import com.fintrack.shared.feature.summary.domain.usecase.GetFinancialHealthIndexUseCase
+import com.fintrack.shared.feature.summary.domain.usecase.GetPassiveIncomeCoverageUseCase
+
 @OptIn(FlowPreview::class)
 class StatisticsViewModel(
     private val summaryRepository: SummaryRepository,
     private val accountRepository: AccountRepository,
-    private val getCashflowRunwayUseCase: GetCashflowRunwayUseCase
+    private val getCashflowRunwayUseCase: GetCashflowRunwayUseCase,
+    private val getNetWorthSummaryUseCase: GetNetWorthSummaryUseCase? = null,
+    private val detectSpendSpikesUseCase: DetectSpendSpikesUseCase? = null,
+    private val getEmergencyFundScoreUseCase: GetEmergencyFundScoreUseCase? = null,
+    private val getMerchantAnalyticsUseCase: GetMerchantAnalyticsUseCase? = null,
+    private val getBudgetOptimizerUseCase: GetBudgetOptimizerUseCase? = null,
+    private val getPassiveIncomeCoverageUseCase: GetPassiveIncomeCoverageUseCase? = null,
+    private val getFinancialHealthIndexUseCase: GetFinancialHealthIndexUseCase? = null
 ) : ViewModel() {
+
+    private val _spendSpikes = MutableStateFlow<Result<List<SpendSpikeAnomaly>>>(Result.Loading)
+    val spendSpikes: StateFlow<Result<List<SpendSpikeAnomaly>>> = _spendSpikes.asStateFlow()
+
+    private val _budgetOptimizer = MutableStateFlow<Result<BudgetOptimizerSummary>>(Result.Loading)
+    val budgetOptimizer: StateFlow<Result<BudgetOptimizerSummary>> = _budgetOptimizer.asStateFlow()
+
+    private val _selectedBudgetOptimizerDays = MutableStateFlow(30)
+    val selectedBudgetOptimizerDays: StateFlow<Int> = _selectedBudgetOptimizerDays.asStateFlow()
+
+    private var budgetOptimizerJob: Job? = null
+
+    fun setBudgetOptimizerDays(days: Int, accountId: String? = null) {
+        println("[BUDGET_OPTIMIZER_LOG] Duration chip tapped: days=$days, accountId=$accountId")
+        _selectedBudgetOptimizerDays.value = days
+        loadBudgetOptimizer(accountId, force = true)
+    }
+
+    private var lastOptimizerAccountId: String? = null
+
+    fun loadBudgetOptimizer(accountId: String? = null, force: Boolean = false) {
+        if (getBudgetOptimizerUseCase == null) return
+        val accountChanged = lastOptimizerAccountId != accountId
+        if (!force && !accountChanged && _budgetOptimizer.value is Result.Success) return
+
+        val days = _selectedBudgetOptimizerDays.value
+        val dateRange = _selectedPeriod.value?.getDateRange()
+        val startDate = dateRange?.first
+        val endDate = dateRange?.second
+
+        budgetOptimizerJob?.cancel()
+        if (accountChanged || force) {
+            _budgetOptimizer.value = Result.Loading
+        }
+
+        budgetOptimizerJob = viewModelScope.launch {
+            lastOptimizerAccountId = accountId
+            println("[BUDGET_OPTIMIZER_LOG] Calling getBudgetOptimizerUseCase with accountId=$accountId, days=$days, startDate=$startDate, endDate=$endDate")
+            _budgetOptimizer.value = getBudgetOptimizerUseCase(accountId, days, startDate, endDate)
+        }
+    }
+
+    private val _emergencyFundScore = MutableStateFlow<Result<EmergencyFundScore>>(Result.Loading)
+    val emergencyFundScore: StateFlow<Result<EmergencyFundScore>> = _emergencyFundScore.asStateFlow()
+
+    private var lastSpendSpikesAccountId: String? = null
+
+    fun loadSpendSpikes(accountId: String? = null, force: Boolean = false) {
+        if (detectSpendSpikesUseCase == null) return
+        val accountChanged = lastSpendSpikesAccountId != accountId
+        if (!force && !accountChanged && _spendSpikes.value is Result.Success) return
+
+        if (accountChanged || force) {
+            _spendSpikes.value = Result.Loading
+        }
+
+        viewModelScope.launch {
+            lastSpendSpikesAccountId = accountId
+            _spendSpikes.value = detectSpendSpikesUseCase(accountId)
+        }
+    }
+
+    private var lastEmergencyScoreAccountId: String? = null
+
+    fun loadEmergencyFundScore(accountId: String? = null, force: Boolean = false) {
+        if (getEmergencyFundScoreUseCase == null) return
+        val accountChanged = lastEmergencyScoreAccountId != accountId
+        if (!force && !accountChanged && _emergencyFundScore.value is Result.Success) return
+
+        if (accountChanged || force) {
+            _emergencyFundScore.value = Result.Loading
+        }
+
+        viewModelScope.launch {
+            lastEmergencyScoreAccountId = accountId
+            _emergencyFundScore.value = getEmergencyFundScoreUseCase(accountId)
+        }
+    }
+
+    private val _passiveIncomeCoverage = MutableStateFlow<Result<PassiveIncomeCoverage>>(Result.Loading)
+    val passiveIncomeCoverage: StateFlow<Result<PassiveIncomeCoverage>> = _passiveIncomeCoverage.asStateFlow()
+
+    private var lastPassiveCoverageAccountId: String? = null
+
+    fun loadPassiveIncomeCoverage(accountId: String? = null, force: Boolean = false) {
+        if (getPassiveIncomeCoverageUseCase == null) return
+        val accountChanged = lastPassiveCoverageAccountId != accountId
+        if (!force && !accountChanged && _passiveIncomeCoverage.value is Result.Success) return
+
+        if (accountChanged || force) {
+            _passiveIncomeCoverage.value = Result.Loading
+        }
+
+        viewModelScope.launch {
+            lastPassiveCoverageAccountId = accountId
+            _passiveIncomeCoverage.value = getPassiveIncomeCoverageUseCase(accountId)
+        }
+    }
+
+    private val _financialHealthIndex = MutableStateFlow<Result<FinancialHealthIndex>>(Result.Loading)
+    val financialHealthIndex: StateFlow<Result<FinancialHealthIndex>> = _financialHealthIndex.asStateFlow()
+
+    private var lastHealthIndexAccountId: String? = null
+
+    fun loadFinancialHealthIndex(accountId: String? = null, force: Boolean = false) {
+        if (getFinancialHealthIndexUseCase == null) return
+        val accountChanged = lastHealthIndexAccountId != accountId
+        if (!force && !accountChanged && _financialHealthIndex.value is Result.Success) return
+
+        if (accountChanged || force) {
+            _financialHealthIndex.value = Result.Loading
+        }
+
+        viewModelScope.launch {
+            lastHealthIndexAccountId = accountId
+            _financialHealthIndex.value = getFinancialHealthIndexUseCase(accountId)
+        }
+    }
+
+    private val _netWorthSummary = MutableStateFlow<Result<NetWorthSummary>>(Result.Loading)
+    val netWorthSummary: StateFlow<Result<NetWorthSummary>> = _netWorthSummary.asStateFlow()
+
+    private var lastNetWorthAccountId: String? = null
+    private var netWorthJob: Job? = null
+
+    fun loadNetWorthSummary(accountId: String? = null, force: Boolean = false) {
+        if (getNetWorthSummaryUseCase == null) return
+        val accountChanged = lastNetWorthAccountId != accountId
+        if (!force && !accountChanged && _netWorthSummary.value is Result.Success) return
+
+        netWorthJob?.cancel()
+        if (accountChanged || force) {
+            _netWorthSummary.value = Result.Loading
+        }
+
+        netWorthJob = viewModelScope.launch {
+            lastNetWorthAccountId = accountId
+            _netWorthSummary.value = getNetWorthSummaryUseCase(accountId)
+        }
+    }
+
+    private val _selectedOverviewPeriod = MutableStateFlow<Period?>(null)
+    val selectedOverviewPeriod: StateFlow<Period?> = _selectedOverviewPeriod.asStateFlow()
+
+    fun onOverviewPeriodChanged(period: Period, accountId: String? = null) {
+        _selectedOverviewPeriod.value = period
+        val yearCode = when (period) {
+            is Period.Week -> period.code.substringBefore("-")
+            is Period.Month -> period.code.substringBefore("-")
+            is Period.Year -> period.code
+        }
+        loadHighlights(accountId = accountId, period = yearCode, force = true)
+    }
+
+    private val _selectedMerchantDays = MutableStateFlow(60)
+    val selectedMerchantDays: StateFlow<Int> = _selectedMerchantDays.asStateFlow()
+
+    private val _topMerchants = MutableStateFlow<Result<List<MerchantSummary>>>(Result.Loading)
+    val topMerchants: StateFlow<Result<List<MerchantSummary>>> = _topMerchants.asStateFlow()
+
+    fun setMerchantDays(days: Int, accountId: String? = null) {
+        _selectedMerchantDays.value = days
+        loadTopMerchants(accountId, days)
+    }
+
+    private var topMerchantsJob: Job? = null
+
+    fun loadTopMerchants(accountId: String? = null, days: Int? = null) {
+        if (getMerchantAnalyticsUseCase == null) return
+        val targetDays = days ?: _selectedMerchantDays.value
+        val isIncomeMode = _selectedTab.value is TabType.Income
+
+        topMerchantsJob?.cancel()
+        _topMerchants.value = Result.Loading
+
+        topMerchantsJob = viewModelScope.launch {
+            _topMerchants.value = getMerchantAnalyticsUseCase(accountId, targetDays, isIncome = isIncomeMode)
+        }
+    }
 
     private val _availableAccounts = MutableStateFlow<List<Account>>(emptyList())
     val availableAccounts: StateFlow<List<Account>> = _availableAccounts.asStateFlow()
@@ -47,7 +254,7 @@ class StatisticsViewModel(
     val selectedAccountIds: StateFlow<Set<String>> = _selectedAccountIds.asStateFlow()
 
     val selectedAccountFilter: StateFlow<String?> = _selectedAccountIds
-        .combine(_selectedAccountIds) { _, _ -> getEffectiveAccountId() }
+        .map { getEffectiveAccountId() }
         .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
     private val _runway = MutableStateFlow<Result<CashflowRunway>>(Result.Loading)
@@ -58,7 +265,6 @@ class StatisticsViewModel(
             when (val res = accountRepository.getAccounts()) {
                 is Result.Success -> {
                     val accounts = res.data
-                    _availableAccounts.value = accounts
 
                     // Default to M-Pesa account on initial load if no filter selected yet
                     if (_selectedAccountIds.value.isEmpty()) {
@@ -69,16 +275,10 @@ class StatisticsViewModel(
                         }
                         if (mpesaAccount != null) {
                             _selectedAccountIds.value = setOf(mpesaAccount.id)
-                            val effectiveId = mpesaAccount.id
-                            resetStats()
-                            loadAvailablePeriods(effectiveId, force = true)
-                            loadOverview(effectiveId, force = true)
-                            loadCashflowRunway(effectiveId, force = true)
-                            val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
-                            loadHighlights(effectiveId, yearCode, force = true)
-                            reloadDistributionForCurrentSelection(effectiveId, force = true)
                         }
                     }
+
+                    _availableAccounts.value = accounts
                 }
                 else -> {}
             }
@@ -105,11 +305,6 @@ class StatisticsViewModel(
         val effectiveAccountId = getEffectiveAccountId()
         resetStats()
         loadAvailablePeriods(effectiveAccountId, force = true)
-        loadOverview(effectiveAccountId, force = true)
-        loadCashflowRunway(effectiveAccountId, force = true)
-        val yearCode = _selectedPeriod.value?.code?.split("-")?.firstOrNull() ?: _selectedPeriod.value?.code
-        loadHighlights(effectiveAccountId, yearCode, force = true)
-        reloadDistributionForCurrentSelection(effectiveAccountId, force = true)
     }
 
     fun getEffectiveAccountId(): String? {
@@ -224,6 +419,62 @@ class StatisticsViewModel(
         initialValue = false
     )
 
+    val hasNextOverviewPeriod: StateFlow<Boolean> = combine(
+        _selectedOverviewPeriod,
+        _availableYears
+    ) { period, years ->
+        if (period == null || years.isEmpty()) return@combine false
+        val currentYear = period.code.substringBefore("-")
+        val index = years.indexOf(currentYear)
+        index > 0
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
+
+    val hasPreviousOverviewPeriod: StateFlow<Boolean> = combine(
+        _selectedOverviewPeriod,
+        _availableYears
+    ) { period, years ->
+        if (period == null || years.isEmpty()) return@combine false
+        val currentYear = period.code.substringBefore("-")
+        val index = years.indexOf(currentYear)
+        if (index == -1) {
+            years.size > 1
+        } else {
+            index < years.size - 1
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = true
+    )
+
+    fun navigateToNextOverviewPeriod(accountId: String? = null) {
+        val current = _selectedOverviewPeriod.value ?: return
+        val years = _availableYears.value
+        if (years.isEmpty()) return
+
+        val currentYear = current.code.substringBefore("-")
+        val index = years.indexOf(currentYear)
+        val targetIndex = if (index > 0) index - 1 else 0
+        val targetYear = years[targetIndex]
+        onOverviewPeriodChanged(Period.Year(targetYear), accountId)
+    }
+
+    fun navigateToPreviousOverviewPeriod(accountId: String? = null) {
+        val current = _selectedOverviewPeriod.value ?: return
+        val years = _availableYears.value
+        if (years.isEmpty()) return
+
+        val currentYear = current.code.substringBefore("-")
+        val index = years.indexOf(currentYear)
+        val targetIndex = if (index != -1 && index < years.size - 1) index + 1 else if (years.size > 1) 1 else 0
+        val targetYear = years[targetIndex]
+        onOverviewPeriodChanged(Period.Year(targetYear), accountId)
+    }
+
     private var lastHighlightsAccountId: String? = null
     private var lastHighlightsPeriod: String? = null
     private var lastRunwayAccountId: String? = null
@@ -250,6 +501,18 @@ class StatisticsViewModel(
     }
 
     fun resetStats() {
+        highlightsJob?.cancel()
+        availablePeriodsJob?.cancel()
+        overviewJob?.cancel()
+        categoryComparisonsJob?.cancel()
+        transactionCountsJob?.cancel()
+        runwayJob?.cancel()
+        incomeDistributionJob?.cancel()
+        expenseDistributionJob?.cancel()
+        topMerchantsJob?.cancel()
+        netWorthJob?.cancel()
+        budgetOptimizerJob?.cancel()
+
         lastHighlightsAccountId = null
         lastHighlightsPeriod = null
         lastOverviewAccountId = null
@@ -273,6 +536,7 @@ class StatisticsViewModel(
         _expenseDistribution.value = Result.Loading
         _runway.value = Result.Loading
         _metadataState.value = Result.Loading
+        _topMerchants.value = Result.Loading
     }
 
     fun loadHighlights(accountId: String? = null, period: String? = null, force: Boolean = false) {
@@ -391,9 +655,12 @@ class StatisticsViewModel(
 
         availablePeriodsJob = viewModelScope.launch {
             try {
-                val weeksResult = summaryRepository.getAvailableWeeks(accountId)
-                val monthsResult = summaryRepository.getAvailableMonths(accountId)
-                val yearsResult = summaryRepository.getAvailableYears(accountId)
+                val weeksDeferred = async { summaryRepository.getAvailableWeeks(accountId) }
+                val monthsDeferred = async { summaryRepository.getAvailableMonths(accountId) }
+                val yearsDeferred = async { summaryRepository.getAvailableYears(accountId) }
+                val weeksResult = weeksDeferred.await()
+                val monthsResult = monthsDeferred.await()
+                val yearsResult = yearsDeferred.await()
 
                 if (weeksResult is Result.Error || monthsResult is Result.Error || yearsResult is Result.Error) {
                     val error = (weeksResult as? Result.Error ?: monthsResult as? Result.Error ?: yearsResult as? Result.Error)!!.exception
@@ -425,6 +692,15 @@ class StatisticsViewModel(
                     }
                 }
 
+                if (accountChanged || _selectedOverviewPeriod.value == null) {
+                    _selectedOverviewPeriod.value = when {
+                        weeks.isNotEmpty() -> Period.Week(weeks.first())
+                        months.isNotEmpty() -> Period.Month(months.first())
+                        years.isNotEmpty() -> Period.Year(years.first())
+                        else -> null
+                    }
+                }
+
                 reloadDistributionForCurrentSelection(accountId, force = force)
             } catch (e: Exception) {
                 if (e !is CancellationException) _metadataState.value = Result.Error(e)
@@ -437,33 +713,20 @@ class StatisticsViewModel(
         val paramsChanged = lastOverviewAccountId != accountId
         val current = _overview.value
         
-        println("[DEBUG_ANR] StatisticsViewModel.loadOverview(accountId=$accountId, force=$force)")
-        
         if (!force && !paramsChanged) {
-            if (current is Result.Success) {
-                println("[DEBUG_ANR] Skipping loadOverview - already success")
-                return
-            }
-            if (overviewJob?.isActive == true) {
-                println("[DEBUG_ANR] Skipping loadOverview - job active")
-                return
-            }
+            if (current is Result.Success) return
+            if (overviewJob?.isActive == true) return
         }
         
         overviewJob?.cancel()
         
-        // Immediately enter loading state if account changed or if forced
         if (paramsChanged || force) {
             _overview.value = Result.Loading
         }
 
         overviewJob = viewModelScope.launch {
-            val start = DateTimeHelper.now()
-            println("[DEBUG_ANR] Start fetching overview summary")
             lastOverviewAccountId = accountId
             _overview.value = summaryRepository.getOverviewSummary(accountId)
-            val end = DateTimeHelper.now()
-            println("[DEBUG_ANR] Finished fetching overview summary in ${end.toEpochMilliseconds() - start.toEpochMilliseconds()}ms")
         }
     }
 
@@ -498,40 +761,47 @@ class StatisticsViewModel(
         }
 
         categoryComparisonsJob = viewModelScope.launch {
-            val start = DateTimeHelper.now()
-            println("[DEBUG_ANR] Start fetching category comparisons")
-            lastCategoryComparisonAccountId = accountId
-            lastCategoryComparisonPeriod = period
+            try {
+                val start = DateTimeHelper.now()
+                println("[DEBUG_ANR] Start fetching category comparisons")
+                lastCategoryComparisonAccountId = accountId
+                lastCategoryComparisonPeriod = period
 
-            // If no period provided, try to find the last active month
-            val targetPeriod = period ?: if (_availableMonths.value.isNotEmpty()) {
-                _availableMonths.value.first()
-            } else {
-                // Fetch available months if they aren't loaded yet
-                val result = summaryRepository.getAvailableMonths(accountId)
-                if (result is Result.Success && result.data.months.isNotEmpty()) {
-                    val months = result.data.months
-                    _availableMonths.value = months
-                    months.first()
+                // If no period provided, try to find the last active month
+                val targetPeriod = period ?: if (_availableMonths.value.isNotEmpty()) {
+                    _availableMonths.value.first()
                 } else {
-                    null
+                    // Fetch available months if they aren't loaded yet
+                    val result = summaryRepository.getAvailableMonths(accountId)
+                    if (result is Result.Success && result.data.months.isNotEmpty()) {
+                        val months = result.data.months
+                        _availableMonths.value = months
+                        months.first()
+                    } else {
+                        null
+                    }
                 }
-            }
 
-            _categoryComparisons.value = summaryRepository.getCategoryComparisons(accountId, targetPeriod)
-            val end = DateTimeHelper.now()
-            println("[DEBUG_ANR] Finished fetching category comparisons in ${end.toEpochMilliseconds() - start.toEpochMilliseconds()}ms")
+                _categoryComparisons.value = summaryRepository.getCategoryComparisons(accountId, targetPeriod)
+                val end = DateTimeHelper.now()
+                println("[DEBUG_ANR] Finished fetching category comparisons in ${end.toEpochMilliseconds() - start.toEpochMilliseconds()}ms")
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _categoryComparisons.value = Result.Error(e)
+            }
         }
     }
 
     fun onTabChanged(tab: TabType, accountId: String? = null) {
         _selectedTab.value = tab
+        loadTopMerchants(accountId)
     }
 
     fun onPeriodChanged(period: Period, accountId: String? = null) {
         _selectedPeriod.value = period
         // Load BOTH income and expense data for the new period
         reloadDistributionForCurrentSelection(accountId, force = true)
+        loadBudgetOptimizer(accountId, force = true)
     }
 
     fun navigateToNextPeriod(accountId: String? = null) {

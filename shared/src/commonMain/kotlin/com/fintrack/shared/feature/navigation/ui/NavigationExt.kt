@@ -1,5 +1,10 @@
 package com.fintrack.shared.feature.navigation.ui
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
@@ -26,7 +31,7 @@ fun NavDestination.isProfileDetailScreen(): Boolean =
 fun NavDestination.isMainScreen(): Boolean =
     hasRoute<Screen.Home>() ||
             hasRoute<Screen.Statistics>() ||
-            hasRoute<Screen.Budget>() ||
+            hasRoute<Screen.Planning>() ||
             hasRoute<Screen.Profile>()
 
 fun NavDestination.shouldShowBottomBar(): Boolean = isMainScreen()
@@ -38,8 +43,19 @@ fun NavDestination.getAppBarState(entry: NavBackStackEntry?, navController: NavC
 
     return when {
         hasRoute<Screen.Home>() -> AppBarState(title = "Home")
-        hasRoute<Screen.Statistics>() -> AppBarState(title = "Statistics")
-        hasRoute<Screen.Budget>() -> AppBarState(title = "Budget")
+        hasRoute<Screen.Statistics>() -> AppBarState(
+            title = "Statistics",
+            actions = {
+                IconButton(onClick = { navController.navigate(Screen.CustomAnalysis) }) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = "Custom Financial Analysis",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        )
+        hasRoute<Screen.Planning>() -> AppBarState(title = "Planning")
         hasRoute<Screen.Profile>() -> AppBarState(title = "Profile")
         hasRoute<Screen.EditProfile>() -> AppBarState(
             title = "Edit Profile",

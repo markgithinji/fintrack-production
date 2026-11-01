@@ -11,7 +11,8 @@ fun DonutChartSection(
     categorySums: List<Pair<String, Float>>,
     totalAmount: Float,
     selectedIndex: Int,
-    onSelectedIndexChange: (Int) -> Unit
+    onSelectedIndexChange: (Int) -> Unit,
+    isIncome: Boolean = false
 ) {
     if (categorySums.isEmpty() || totalAmount <= 0f) return
 
@@ -50,7 +51,8 @@ fun DonutChartSection(
             totalAmount = totalAmount.toDouble(),
             selectedIndex = selectedIndex,
             onSelectedIndexChange = onSelectedIndexChange,
-            segmentColors = chartColors
+            segmentColors = chartColors,
+            isIncome = isIncome
         )
     }
 }

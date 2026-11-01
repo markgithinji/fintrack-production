@@ -74,7 +74,16 @@ object MpesaParser {
         rules: List<CategoryRule> = emptyList(),
         allCategories: List<Category> = emptyList()
     ): Transaction? {
-        if (!message.contains("Confirmed", ignoreCase = true)) return null
+        val isMpesaCandidate = message.contains("Confirmed", ignoreCase = true) ||
+                message.contains("sent", ignoreCase = true) ||
+                message.contains("received", ignoreCase = true) ||
+                message.contains("paid", ignoreCase = true) ||
+                message.contains("bought", ignoreCase = true) ||
+                message.contains("withdrawn", ignoreCase = true) ||
+                message.contains("transferred", ignoreCase = true) ||
+                message.contains("deposited", ignoreCase = true) ||
+                message.contains("M-PESA", ignoreCase = true)
+        if (!isMpesaCandidate) return null
 
         // Ignore messages that are just balance notifications or meta-info
         if (message.contains("Fuliza M-Pesa amount is", ignoreCase = true)) return null
@@ -285,6 +294,7 @@ object MpesaParser {
         rawMessage: String? = null
     ): Transaction {
         val resolvedCategory = Category.fromName(category, !isIncome)
+        val cleanMerchant = com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(description)
         
         return Transaction(
             accountId = accountId,
@@ -295,6 +305,7 @@ object MpesaParser {
             categoryId = resolvedCategory.id,
             dateTime = dateTime,
             description = "$description (Ref: $code)",
+            merchantName = cleanMerchant,
             externalId = code,
             balance = balance,
             rawMessage = rawMessage

@@ -20,7 +20,8 @@ fun AppTopBar(
     TopBar(
         title = appBarState.title,
         showBackButton = appBarState.showBackButton,
-        onBack = appBarState.onBack
+        onBack = appBarState.onBack,
+        actions = appBarState.actions ?: {}
     )
 }
 

@@ -1,5 +1,7 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import Period
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -125,6 +127,7 @@ fun CategoryTotalsCardWithTabs(
         mutableStateOf(-1)
     }
     var showHelpDialog by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
 
     if (showHelpDialog) {
         DistributionHelpDialog(
@@ -137,7 +140,11 @@ fun CategoryTotalsCardWithTabs(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .padding(top = 8.dp, bottom = 12.dp),
+            .padding(top = 8.dp, bottom = 12.dp)
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[ANALYTICS_DONUT_SIZE_LOG] CategoryTotalsCard Height: $heightDp (${coordinates.size.height}px) | State: ${if (distributionResult is Result.Success) "SUCCESS" else "LOADING"}")
+            },
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -241,7 +248,10 @@ fun CategoryTotalsCardWithTabs(
                     ) {
                         when (result) {
                             is Result.Loading -> {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
                                     LoadingDonutChartSection()
                                     Spacer(Modifier.height(16.dp))
                                     LoadingCategoryList()
@@ -302,7 +312,8 @@ fun CategoryTotalsCardWithTabs(
                                             categorySums = categorySums,
                                             totalAmount = totalAmount.toDouble().toFloat(),
                                             selectedIndex = selectedIndex,
-                                            onSelectedIndexChange = { index -> selectedIndex = index }
+                                            onSelectedIndexChange = { index -> selectedIndex = index },
+                                            isIncome = tabType is TabType.Income
                                         )
                                         Spacer(Modifier.height(16.dp))
                                         CategoryList(
@@ -449,15 +460,18 @@ fun LoadingInteractiveDonutWithText(
             }
         }
 
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 40.dp)
+        ) {
             AnimatedShimmerBox(modifier = Modifier.size(24.dp).clip(CircleShape))
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             AnimatedShimmerBox(
-                modifier = Modifier.width(80.dp).height(14.dp).clip(RoundedCornerShape(4.dp))
+                modifier = Modifier.width(60.dp).height(14.dp).clip(RoundedCornerShape(4.dp))
             )
             Spacer(modifier = Modifier.height(4.dp))
             AnimatedShimmerBox(
-                modifier = Modifier.width(120.dp).height(24.dp).clip(RoundedCornerShape(4.dp))
+                modifier = Modifier.width(110.dp).height(20.dp).clip(RoundedCornerShape(4.dp))
             )
         }
     }
@@ -475,24 +489,26 @@ fun LoadingCategoryList() {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 6.dp, horizontal = 12.dp),
+                    .padding(vertical = 13.5.dp, horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AnimatedShimmerBox(modifier = Modifier.size(10.dp).clip(CircleShape))
+                AnimatedShimmerBox(modifier = Modifier.size(36.dp).clip(CircleShape))
                 Spacer(Modifier.width(12.dp))
-                AnimatedShimmerBox(
-                    modifier = Modifier.width(120.dp).height(14.dp).clip(RoundedCornerShape(4.dp))
-                )
-                Spacer(Modifier.weight(1f))
-                Column(horizontalAlignment = Alignment.End) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     AnimatedShimmerBox(
-                        modifier = Modifier.width(80.dp).height(14.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                        modifier = Modifier.width(110.dp).height(14.dp).clip(RoundedCornerShape(4.dp))
                     )
-                    Spacer(Modifier.height(2.dp))
                     AnimatedShimmerBox(
-                        modifier = Modifier.width(40.dp).height(10.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                        modifier = Modifier.width(60.dp).height(10.dp).clip(RoundedCornerShape(3.dp))
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    AnimatedShimmerBox(
+                        modifier = Modifier.width(85.dp).height(14.dp).clip(RoundedCornerShape(4.dp))
+                    )
+                    AnimatedShimmerBox(
+                        modifier = Modifier.width(45.dp).height(10.dp).clip(RoundedCornerShape(3.dp))
                     )
                 }
             }
@@ -564,8 +580,8 @@ fun CategoryList(
             val amount = model.amount
             val percent = if (totalAmount > BigDecimal.ZERO) {
                 try {
-                    // Calculate using double precision to avoid BigDecimal division truncation (which returns 0 if amount < totalAmount)
-                    (amount.toDouble() / totalAmount.toDouble() * 100).toInt()
+                    // Calculate using double precision with rounding
+                    kotlin.math.round(amount.toDouble() / totalAmount.toDouble() * 100).toInt()
                 } catch (e: Exception) {
                     0
                 }
@@ -737,29 +753,21 @@ fun PeriodSelector(
     var expanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
-    val (options, selectedCode, onSelected, currentType) = when (selectedPeriod) {
-        is Period.Week -> Triple(availableWeeks, selectedPeriod.code, onWeekSelected).let {
-            it.copy(
-                fourth = TimeSpan.WEEK
-            )
-        }
-
-        is Period.Month -> Triple(
-            availableMonths,
-            selectedPeriod.code,
-            onMonthSelected
-        ).let { it.copy(fourth = TimeSpan.MONTH) }
-
-        is Period.Year -> Triple(availableYears, selectedPeriod.code, onYearSelected).let {
-            it.copy(
-                fourth = TimeSpan.YEAR
-            )
-        }
+    val selectionState = when (selectedPeriod) {
+        is Period.Week -> PeriodSelectionState(availableWeeks, selectedPeriod.code, onWeekSelected, TimeSpan.WEEK)
+        is Period.Month -> PeriodSelectionState(availableMonths, selectedPeriod.code, onMonthSelected, TimeSpan.MONTH)
+        is Period.Year -> PeriodSelectionState(availableYears, selectedPeriod.code, onYearSelected, TimeSpan.YEAR)
     }
+    val options = selectionState.options
+    val selectedCode = selectionState.selectedCode
+    val onSelected = selectionState.onSelected
+    val currentType = selectionState.currentType
 
     val selectedIndex = remember(options, selectedCode) {
         options.indexOf(selectedCode).coerceAtLeast(0)
     }
+
+    val density = LocalDensity.current
 
     LaunchedEffect(currentType) {
         // Reset scroll position when switching between Week/Month/Year tabs 
@@ -769,7 +777,8 @@ fun PeriodSelector(
 
     LaunchedEffect(expanded) {
         if (expanded && selectedIndex >= 0) {
-            scrollState.scrollTo(selectedIndex * 120)
+            val itemHeightPx = with(density) { 48.dp.toPx() }.toInt()
+            scrollState.scrollTo((selectedIndex * itemHeightPx).coerceIn(0, scrollState.maxValue))
         }
     }
 
@@ -966,15 +975,11 @@ private fun formatPeriodCode(code: String, type: TimeSpan): String {
     }
 }
 
-private fun <A, B, C> Triple<A, B, C>.copy(fourth: TimeSpan): Quadruple<A, B, C, TimeSpan> {
-    return Quadruple(first, second, third, fourth)
-}
-
-data class Quadruple<out A, out B, out C, out D>(
-    val first: A,
-    val second: B,
-    val third: C,
-    val fourth: D
+private data class PeriodSelectionState(
+    val options: List<String>,
+    val selectedCode: String?,
+    val onSelected: (String) -> Unit,
+    val currentType: TimeSpan
 )
 
 val SegmentColors = listOf(

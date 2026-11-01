@@ -17,3 +17,16 @@ actual fun rememberHapticFeedback(): () -> Unit {
         }
     }
 }
+
+@Composable
+actual fun rememberLongPressHapticFeedback(): () -> Unit {
+    val generator = remember {
+        UIImpactFeedbackGenerator(style = UIImpactFeedbackStyle.UIImpactFeedbackStyleHeavy)
+    }
+    return remember(generator) {
+        {
+            generator.prepare()
+            generator.impactOccurred()
+        }
+    }
+}

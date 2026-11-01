@@ -1,9 +1,21 @@
 package com.fintrack.shared.feature.summary.ui.components
 
+import Period
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.IconButton
+
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +32,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -65,7 +88,14 @@ import com.ionspin.kotlin.bignum.decimal.BigDecimal
 @Composable
 fun SpendingHighlightsSection(
     tabType: TabType,
+    selectedYear: String,
     highlightsResult: Result<StatisticsSummary>,
+    availableYears: List<String> = emptyList(),
+    onYearSelected: (String) -> Unit = {},
+    onPreviousPeriod: () -> Unit = {},
+    onNextPeriod: () -> Unit = {},
+    hasNext: Boolean = false,
+    hasPrevious: Boolean = false,
     loadHighlights: () -> Unit
 ) {
     val sectionTitle = when (tabType) {
@@ -73,15 +103,28 @@ fun SpendingHighlightsSection(
         TabType.Expense -> "Spending Overview"
     }
 
-    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        Row(
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(top = 8.dp, bottom = 12.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(18.dp)
+                .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy)),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = sectionTitle,
                     style = MaterialTheme.typography.titleMedium,
@@ -89,71 +132,87 @@ fun SpendingHighlightsSection(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                if (highlightsResult is Result.Success && !highlightsResult.data.isCurrent) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(8.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    IconButton(
+                        onClick = onPreviousPeriod,
+                        enabled = hasPrevious,
+                        modifier = Modifier.size(32.dp)
                     ) {
-                        Text(
-                            text = "From ${extractYear(highlightsResult.data.period)}",
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "Previous Year",
+                            modifier = Modifier.size(20.dp),
+                            tint = if (hasPrevious)
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        )
+                    }
+
+                    YearSelectorDropdown(
+                        selectedYear = selectedYear,
+                        availableYears = availableYears,
+                        onYearSelected = onYearSelected
+                    )
+
+                    IconButton(
+                        onClick = onNextPeriod,
+                        enabled = hasNext,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Next Year",
+                            modifier = Modifier.size(20.dp),
+                            tint = if (hasNext)
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                         )
                     }
                 }
             }
 
-            if (highlightsResult is Result.Success) {
-                Text(
-                    text = extractYear(highlightsResult.data.period),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (highlightsResult.data.isCurrent)
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    else
-                        MaterialTheme.colorScheme.onSecondaryContainer,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.padding(bottom = 2.dp)
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
 
-        Box(modifier = Modifier.heightIn(min = 264.dp)) {
-            Crossfade(
-                targetState = highlightsResult,
-                animationSpec = tween(durationMillis = 300)
-            ) { result ->
-                when (result) {
-                    is Result.Loading -> {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            LoadingHealthSummaryCard()
+            Box(modifier = Modifier.heightIn(min = 220.dp)) {
+                Crossfade(
+                    targetState = highlightsResult,
+                    animationSpec = tween(durationMillis = 300)
+                ) { result ->
+                    when (result) {
+                        is Result.Loading -> {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                LoadingHealthSummaryCard()
 
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                LoadingHighlightCard(modifier = Modifier.weight(1f))
-                                LoadingHighlightCard(modifier = Modifier.weight(1f))
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                LoadingHighlightCard(modifier = Modifier.weight(1f))
-                                LoadingHighlightCard(modifier = Modifier.weight(1f))
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                LoadingHighlightCard(modifier = Modifier.weight(1f))
-                                LoadingHighlightCard(modifier = Modifier.weight(1f))
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    LoadingHighlightCard(modifier = Modifier.weight(1f))
+                                    LoadingHighlightCard(modifier = Modifier.weight(1f))
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    LoadingHighlightCard(modifier = Modifier.weight(1f))
+                                    LoadingHighlightCard(modifier = Modifier.weight(1f))
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    LoadingHighlightCard(modifier = Modifier.weight(1f))
+                                    LoadingHighlightCard(modifier = Modifier.weight(1f))
+                                }
                             }
                         }
-                    }
 
-                    is Result.Error -> {
-                        ErrorHighlightCard(
-                            message = result.exception.message ?: "Failed to load highlights",
-                            onRetry = loadHighlights
-                        )
-                    }
+                        is Result.Error -> {
+                            ErrorHighlightCard(
+                                message = result.exception.message ?: "Failed to load highlights",
+                                onRetry = loadHighlights
+                            )
+                        }
 
-                    is Result.Success -> {
-                        SuccessContent(tabType, result.data)
+                        is Result.Success -> {
+                            SuccessContent(tabType, result.data)
+                        }
                     }
                 }
             }
@@ -190,7 +249,7 @@ private fun SuccessContent(
                 modifier = Modifier.weight(1f),
                 title = if (isIncome) "Best Month" else "Busiest Month",
                 value = highlights.highestMonth?.value?.toMonthName() ?: "N/A",
-                subValue = highlights.highestMonth?.amount?.toCurrencyString() ?: "$0",
+                subValue = highlights.highestMonth?.amount?.toCurrencyString() ?: BigDecimal.ZERO.toCurrencyString(),
                 icon = Icons.Default.CalendarMonth,
                 color = SegmentColor3
             )
@@ -200,7 +259,7 @@ private fun SuccessContent(
                 modifier = Modifier.weight(1f),
                 title = "Top Category",
                 value = highlights.highestCategory?.value ?: "N/A",
-                subValue = highlights.highestCategory?.amount?.toCurrencyString() ?: "$0",
+                subValue = highlights.highestCategory?.amount?.toCurrencyString() ?: BigDecimal.ZERO.toCurrencyString(),
                 icon = Icons.Default.Category,
                 color = SegmentColor4,
                 badge = volatility?.let {
@@ -266,7 +325,7 @@ private fun SuccessContent(
                 modifier = Modifier.weight(1f),
                 title = "Peak Day",
                 value = highlights.highestDay?.value?.toFormattedDate() ?: "N/A",
-                subValue = highlights.highestDay?.amount?.toCurrencyString() ?: "$0",
+                subValue = highlights.highestDay?.amount?.toCurrencyString() ?: BigDecimal.ZERO.toCurrencyString(),
                 icon = Icons.Default.Today,
                 color = SegmentColor5
             )
@@ -350,27 +409,33 @@ fun HighlightCard(
     color: Color,
     badge: Pair<String, Color>? = null
 ) {
+    val density = LocalDensity.current
     Card(
-        modifier = modifier.height(134.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = modifier
+            .height(96.dp)
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[HIGHLIGHT_CARD_SIZE_LOG] HighlightCard ($title) Height: $heightDp (${coordinates.size.height}px)")
+            },
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
         Column(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(10.dp)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(30.dp)
                         .background(color.copy(alpha = 0.15f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
@@ -378,19 +443,20 @@ fun HighlightCard(
                         imageVector = icon,
                         contentDescription = null,
                         tint = color,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                 }
 
                 if (badge != null) {
                     Surface(
                         color = badge.second.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
                             text = badge.first,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall,
+                            fontSize = 10.sp,
                             color = badge.second,
                             fontWeight = FontWeight.Bold
                         )
@@ -398,15 +464,16 @@ fun HighlightCard(
                 }
             }
 
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -414,9 +481,12 @@ fun HighlightCard(
                 )
                 Text(
                     text = subValue,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Medium,
-                    color = color
+                    color = color,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -428,15 +498,22 @@ fun HealthSummaryCard(
     savingsRate: BigDecimal?,
     essentialRatio: BigDecimal?
 ) {
+    val density = LocalDensity.current
     Card(
-        modifier = Modifier.fillMaxWidth().height(134.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(108.dp)
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[HIGHLIGHT_CARD_SIZE_LOG] HealthSummaryCard Height: $heightDp (${coordinates.size.height}px)")
+            },
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (savingsRate != null) {
@@ -458,7 +535,7 @@ fun HealthSummaryCard(
                         .fillMaxHeight()
                         .width(1.dp)
                         .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
-                        .padding(vertical = 8.dp)
+                        .padding(vertical = 4.dp)
                 )
             }
 
@@ -489,8 +566,8 @@ private fun HealthMetricItem(
     badge: String? = null
 ) {
     Column(
-        modifier = modifier.padding(horizontal = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = modifier.padding(horizontal = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -499,7 +576,7 @@ private fun HealthMetricItem(
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(30.dp)
                     .background(color.copy(alpha = 0.15f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -507,7 +584,7 @@ private fun HealthMetricItem(
                     imageVector = icon,
                     contentDescription = null,
                     tint = color,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
             }
 
@@ -553,14 +630,22 @@ private fun HealthMetricItem(
 
 @Composable
 fun LoadingHealthSummaryCard() {
+    val density = LocalDensity.current
     Card(
-        modifier = Modifier.fillMaxWidth().height(134.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(108.dp)
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[HIGHLIGHT_CARD_SIZE_LOG] LoadingHealthSummaryCard Height: $heightDp (${coordinates.size.height}px)")
+            },
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             LoadingHealthMetricItem(modifier = Modifier.weight(1f))
@@ -569,6 +654,7 @@ fun LoadingHealthSummaryCard() {
                     .fillMaxHeight()
                     .width(1.dp)
                     .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+                    .padding(vertical = 4.dp)
             )
             LoadingHealthMetricItem(modifier = Modifier.weight(1f))
         }
@@ -578,11 +664,18 @@ fun LoadingHealthSummaryCard() {
 @Composable
 private fun LoadingHealthMetricItem(modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.padding(horizontal = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = modifier.padding(horizontal = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        AnimatedShimmerBox(modifier = Modifier.size(36.dp).clip(CircleShape))
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            AnimatedShimmerBox(modifier = Modifier.size(30.dp).clip(CircleShape))
+            AnimatedShimmerBox(modifier = Modifier.width(44.dp).height(16.dp).clip(RoundedCornerShape(6.dp)))
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             AnimatedShimmerBox(
                 modifier = Modifier.width(60.dp).height(10.dp).clip(RoundedCornerShape(4.dp))
             )
@@ -598,36 +691,55 @@ private fun LoadingHealthMetricItem(modifier: Modifier = Modifier) {
 
 @Composable
 fun LoadingHighlightCard(modifier: Modifier = Modifier) {
+    val density = LocalDensity.current
     Card(
-        modifier = modifier.height(134.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = modifier
+            .height(96.dp)
+            .onGloballyPositioned { coordinates ->
+                val heightDp = with(density) { coordinates.size.height.toDp() }
+                println("[HIGHLIGHT_CARD_SIZE_LOG] LoadingHighlightCard Height: $heightDp (${coordinates.size.height}px)")
+            },
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
         Column(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(10.dp)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        CircleShape
-                    ),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(30.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AnimatedShimmerBox(
+                        modifier = Modifier
+                            .size(15.dp)
+                            .clip(CircleShape)
+                    )
+                }
+
                 AnimatedShimmerBox(
                     modifier = Modifier
-                        .size(20.dp)
-                        .clip(CircleShape)
+                        .width(48.dp)
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(6.dp))
                 )
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 AnimatedShimmerBox(
                     modifier = Modifier
                         .width(60.dp)
@@ -636,13 +748,13 @@ fun LoadingHighlightCard(modifier: Modifier = Modifier) {
                 )
                 AnimatedShimmerBox(
                     modifier = Modifier
-                        .width(100.dp)
+                        .width(90.dp)
                         .height(14.dp)
                         .clip(RoundedCornerShape(4.dp))
                 )
                 AnimatedShimmerBox(
                     modifier = Modifier
-                        .width(80.dp)
+                        .width(70.dp)
                         .height(10.dp)
                         .clip(RoundedCornerShape(4.dp))
                 )
@@ -674,4 +786,77 @@ fun ErrorHighlightCard(
 
 private fun extractYear(period: String): String {
     return period.split("-").firstOrNull() ?: period
+}
+
+@Composable
+fun YearSelectorDropdown(
+    selectedYear: String,
+    availableYears: List<String>,
+    onYearSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        Row(
+            modifier = Modifier
+                .width(96.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .clickable { if (availableYears.isNotEmpty()) expanded = true }
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = selectedYear.ifBlank { com.fintrack.shared.feature.core.util.DateTimeHelper.currentMonthCode().substringBefore("-") },
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                textAlign = TextAlign.Center
+            )
+            Icon(
+                imageVector = Icons.Default.ArrowDropDown,
+                contentDescription = "Select Year",
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .width(110.dp)
+                .heightIn(max = 280.dp)
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
+                .border(
+                    BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)),
+                    RoundedCornerShape(16.dp)
+                )
+        ) {
+            availableYears.forEach { year ->
+                val isSelected = year == selectedYear
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = year,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    modifier = Modifier.background(
+                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                        else Color.Transparent
+                    ),
+                    onClick = {
+                        onYearSelected(year)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
 }

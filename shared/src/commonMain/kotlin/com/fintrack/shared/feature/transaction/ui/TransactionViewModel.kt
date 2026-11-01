@@ -24,6 +24,7 @@ import com.fintrack.shared.feature.transaction.domain.usecase.CreateTransactionU
 import com.fintrack.shared.feature.transaction.domain.usecase.ValidateTransactionUseCase
 import com.fintrack.shared.feature.core.util.DateTimeHelper
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.datetime.atTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
@@ -170,6 +171,12 @@ class TransactionViewModel(
                 _importEvents.emit(ImportEvent.Success(accountId))
                 if (accountId != null && accountId == lastLoadedRecentAccountId) {
                     loadRecentTransactions(accountId, force = true)
+                }
+
+                // Guaranteed auto-dismiss of success state in ViewModel scope after 2s
+                launch {
+                    delay(2000)
+                    resetImportState(accountId)
                 }
             } catch (e: Exception) {
                 if (e !is CancellationException) {

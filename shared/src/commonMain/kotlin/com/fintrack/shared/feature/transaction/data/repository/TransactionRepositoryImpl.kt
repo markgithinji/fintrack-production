@@ -12,6 +12,7 @@ import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.core.util.randomUUID
 import com.fintrack.shared.feature.core.util.toDouble
 import com.fintrack.shared.feature.transaction.domain.model.RecurringBill
+import com.fintrack.shared.feature.transaction.domain.model.RecurringFrequency
 import com.fintrack.shared.feature.transaction.domain.model.Transaction
 import com.fintrack.shared.feature.transaction.domain.repository.TransactionRepository
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
@@ -23,6 +24,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.atTime
@@ -73,6 +77,7 @@ class TransactionRepositoryImpl(
                         categoryId = row.categoryId,
                         dateTime = row.dateTime,
                         description = row.description,
+                        merchantName = row.merchantName ?: row.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                         externalId = row.externalId,
                         balance = row.balance?.let { BigDecimal.parseString(it) },
                         rawMessage = row.rawMessage
@@ -92,6 +97,7 @@ class TransactionRepositoryImpl(
                         categoryId = row.categoryId,
                         dateTime = row.dateTime,
                         description = row.description,
+                        merchantName = row.merchantName ?: row.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                         externalId = row.externalId,
                         balance = row.balance?.let { BigDecimal.parseString(it) },
                         rawMessage = row.rawMessage
@@ -121,6 +127,7 @@ class TransactionRepositoryImpl(
                     transactionCost = transaction.transactionCost.toPlainString(),
                     dateTime = transaction.dateTime,
                     description = transaction.description,
+                    merchantName = transaction.merchantName ?: transaction.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                     externalId = transaction.externalId,
                     balance = transaction.balance?.toPlainString(),
                     rawMessage = transaction.rawMessage,
@@ -134,6 +141,21 @@ class TransactionRepositoryImpl(
                     isIncome = transaction.isIncome,
                     amount = transaction.amount,
                     cost = transaction.transactionCost,
+                    undo = false,
+                    transactionBalance = transaction.balance
+                )
+
+                // Savings Goal Auto-Sync
+                syncSavingsGoalsForCategory(
+                    categoryId = transaction.categoryId,
+                    amount = transaction.amount,
+                    isIncome = transaction.isIncome,
+                    undo = false
+                )
+
+                // Debt Balance Auto-Sync
+                syncDebtBalanceForTransaction(
+                    transaction = transaction,
                     undo = false
                 )
             }
@@ -158,6 +180,7 @@ class TransactionRepositoryImpl(
                         transactionCost = transaction.transactionCost.toPlainString(),
                         dateTime = transaction.dateTime,
                         description = transaction.description,
+                        merchantName = transaction.merchantName ?: transaction.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                         externalId = transaction.externalId,
                         balance = transaction.balance?.toPlainString(),
                         rawMessage = transaction.rawMessage,
@@ -170,6 +193,19 @@ class TransactionRepositoryImpl(
                         isIncome = transaction.isIncome,
                         amount = transaction.amount,
                         cost = transaction.transactionCost,
+                        undo = false,
+                        transactionBalance = transaction.balance
+                    )
+
+                    syncSavingsGoalsForCategory(
+                        categoryId = transaction.categoryId,
+                        amount = transaction.amount,
+                        isIncome = transaction.isIncome,
+                        undo = false
+                    )
+
+                    syncDebtBalanceForTransaction(
+                        transaction = transaction,
                         undo = false
                     )
                 }
@@ -200,6 +236,7 @@ class TransactionRepositoryImpl(
                         categoryId = row.categoryId,
                         dateTime = row.dateTime,
                         description = row.description,
+                        merchantName = row.merchantName ?: row.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                         externalId = row.externalId,
                         balance = row.balance?.let { BigDecimal.parseString(it) },
                         rawMessage = row.rawMessage
@@ -220,8 +257,25 @@ class TransactionRepositoryImpl(
         accountId: String?
     ): Result<List<Transaction>> = withContext(Dispatchers.IO) {
         try {
-            val transactions = if (accountId != null) {
-                queries.selectTransactionsWithRawMessageByAccount(accountId).executeAsList().map { row ->
+            val targetAccountIds = accountId?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+            val tz = TimeZone.currentSystemDefault()
+
+            val startInstant = if (!startDate.isNullOrBlank()) {
+                try {
+                    val date = kotlinx.datetime.LocalDate.parse(startDate)
+                    date.atStartOfDayIn(tz)
+                } catch (_: Exception) { null }
+            } else null
+
+            val endInstant = if (!endDate.isNullOrBlank()) {
+                try {
+                    val date = kotlinx.datetime.LocalDate.parse(endDate)
+                    date.atTime(23, 59, 59).toInstant(tz)
+                } catch (_: Exception) { null }
+            } else null
+
+            val rawList: List<Transaction> = if (startInstant != null && endInstant != null) {
+                queries.selectTransactionsByRange(offlineUserId, startInstant, endInstant).executeAsList().map { row ->
                     Transaction(
                         id = row.id,
                         accountId = row.accountId,
@@ -232,13 +286,36 @@ class TransactionRepositoryImpl(
                         categoryId = row.categoryId,
                         dateTime = row.dateTime,
                         description = row.description,
+                        merchantName = row.merchantName ?: row.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                         externalId = row.externalId,
                         balance = row.balance?.let { BigDecimal.parseString(it) },
-                        rawMessage = row.rawMessage
+                        rawMessage = null
+                    )
+                }.let { list ->
+                    if (targetAccountIds.isNotEmpty()) {
+                        list.filter { targetAccountIds.contains(it.accountId) }
+                    } else list
+                }
+            } else if (targetAccountIds.size == 1) {
+                queries.selectTransactionsByAccount(targetAccountIds.first()).executeAsList().map { row ->
+                    Transaction(
+                        id = row.id,
+                        accountId = row.accountId,
+                        isIncome = row.isIncome != 0L,
+                        amount = BigDecimal.parseString(row.amount),
+                        transactionCost = BigDecimal.parseString(row.transactionCost),
+                        category = row.categoryName ?: "Uncategorized",
+                        categoryId = row.categoryId,
+                        dateTime = row.dateTime,
+                        description = row.description,
+                        merchantName = row.merchantName ?: row.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
+                        externalId = row.externalId,
+                        balance = row.balance?.let { BigDecimal.parseString(it) },
+                        rawMessage = null
                     )
                 }
             } else {
-                queries.selectAllTransactionsWithRawMessage(offlineUserId).executeAsList().map { row ->
+                val all = queries.selectAllTransactions(offlineUserId).executeAsList().map { row ->
                     Transaction(
                         id = row.id,
                         accountId = row.accountId,
@@ -249,13 +326,29 @@ class TransactionRepositoryImpl(
                         categoryId = row.categoryId,
                         dateTime = row.dateTime,
                         description = row.description,
+                        merchantName = row.merchantName ?: row.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                         externalId = row.externalId,
                         balance = row.balance?.let { BigDecimal.parseString(it) },
-                        rawMessage = row.rawMessage
+                        rawMessage = null
                     )
                 }
+                if (targetAccountIds.size > 1) {
+                    all.filter { targetAccountIds.contains(it.accountId) }
+                } else all
             }
-            Result.Success(transactions)
+
+            val filtered = if (!startDate.isNullOrBlank() || !endDate.isNullOrBlank()) {
+                rawList.filter { tx ->
+                    val txDateStr = try {
+                        tx.dateTime.toLocalDateTime(tz).date.toString()
+                    } catch (_: Exception) { null }
+                    val afterStart = startDate.isNullOrBlank() || (txDateStr != null && txDateStr >= startDate)
+                    val beforeEnd = endDate.isNullOrBlank() || (txDateStr != null && txDateStr <= endDate)
+                    afterStart && beforeEnd
+                }
+            } else rawList
+
+            Result.Success(filtered)
         } catch (e: Exception) {
             logger.error(TAG, "Error fetching all transactions", e)
             Result.Error(e)
@@ -275,6 +368,12 @@ class TransactionRepositoryImpl(
                         cost = BigDecimal.parseString(oldRow.transactionCost),
                         undo = true
                     )
+                    syncSavingsGoalsForCategory(
+                        categoryId = oldRow.categoryId,
+                        amount = BigDecimal.parseString(oldRow.amount),
+                        isIncome = oldRow.isIncome != 0L,
+                        undo = true
+                    )
                 }
 
                 // Database Update
@@ -286,6 +385,7 @@ class TransactionRepositoryImpl(
                     transactionCost = transaction.transactionCost.toPlainString(),
                     dateTime = transaction.dateTime,
                     description = transaction.description,
+                    merchantName = transaction.merchantName ?: transaction.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                     balance = transaction.balance?.toPlainString(),
                     rawMessage = transaction.rawMessage,
                     updatedAt = DateTimeHelper.now(),
@@ -298,6 +398,14 @@ class TransactionRepositoryImpl(
                     isIncome = transaction.isIncome,
                     amount = transaction.amount,
                     cost = transaction.transactionCost,
+                    undo = false,
+                    transactionBalance = transaction.balance
+                )
+
+                syncSavingsGoalsForCategory(
+                    categoryId = transaction.categoryId,
+                    amount = transaction.amount,
+                    isIncome = transaction.isIncome,
                     undo = false
                 )
             }
@@ -318,6 +426,12 @@ class TransactionRepositoryImpl(
                         isIncome = oldRow.isIncome != 0L,
                         amount = BigDecimal.parseString(oldRow.amount),
                         cost = BigDecimal.parseString(oldRow.transactionCost),
+                        undo = true
+                    )
+                    syncSavingsGoalsForCategory(
+                        categoryId = oldRow.categoryId,
+                        amount = BigDecimal.parseString(oldRow.amount),
+                        isIncome = oldRow.isIncome != 0L,
                         undo = true
                     )
                 }
@@ -376,9 +490,23 @@ class TransactionRepositoryImpl(
         isIncome: Boolean,
         amount: BigDecimal,
         cost: BigDecimal,
-        undo: Boolean
+        undo: Boolean,
+        transactionBalance: BigDecimal? = null
     ) {
         val account = queries.selectAccountById(accountId).executeAsOneOrNull() ?: return
+        val isMpesaAccount = account.type == com.fintrack.shared.feature.account.domain.model.AccountType.MPESA.name ||
+                account.linkedSources.contains("mpesa") ||
+                account.name.contains("mpesa", ignoreCase = true)
+
+        if (isMpesaAccount) {
+            // For M-Pesa accounts: Strictly use the balance extracted directly from the latest M-Pesa SMS statement.
+            // Do NOT do additions/subtractions or calculated tallies!
+            if (transactionBalance != null) {
+                queries.updateAccountBalance(transactionBalance.toPlainString(), accountId)
+            }
+            return
+        }
+
         val currentBalance = BigDecimal.parseString(account.balance)
         
         // Net Impact logic: Income = Amount - Cost, Expense = Amount + Cost
@@ -398,9 +526,9 @@ class TransactionRepositoryImpl(
 
     override suspend fun getRecurringBills(): Result<List<RecurringBill>> = withContext(Dispatchers.IO) {
         try {
-            // 1. Fetch last 90 days of transactions (Backend Parity)
+            // 1. Fetch 365 days (1 year) of transactions to validate long-term recurring bill patterns
             val now = DateTimeHelper.now()
-            val analysisStart = Instant.fromEpochMilliseconds(now.toEpochMilliseconds() - 90 * 24 * 60 * 60 * 1000L)
+            val analysisStart = Instant.fromEpochMilliseconds(now.toEpochMilliseconds() - 365L * 24 * 60 * 60 * 1000L)
             
             val transactions = queries.selectTransactionsByRange(
                 offlineUserId,
@@ -418,9 +546,9 @@ class TransactionRepositoryImpl(
 
             val recurringBills = mutableListOf<RecurringBill>()
 
-            // 3. Detect regular intervals (~30 days)
+            // 3. Detect regular intervals (Weekly ~7d, Bi-Weekly ~14d, Monthly ~30d)
             groups.forEach { (_, txns) ->
-                if (txns.size >= 3) {
+                if (txns.size >= 2) {
                     val sortedTxns = txns.sortedBy { it.dateTime.toEpochMilliseconds() }
                     
                     val intervals = mutableListOf<Long>()
@@ -430,15 +558,34 @@ class TransactionRepositoryImpl(
                     }
 
                     val avgInterval = if (intervals.isEmpty()) 0.0 else intervals.average()
-                    val isRegular = if (intervals.isEmpty()) false 
-                        else intervals.all { abs(it - avgInterval) <= 3 } && avgInterval in 25.0..35.0
+
+                    val (isRegular, frequencyEnum, intervalDays) = when {
+                        // Bi-Weekly bills require a 1-year pattern with at least 8 occurrences to prevent false positives
+                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 3.5 } && avgInterval in 12.0..16.0 -> {
+                            Triple(txns.size >= 8, RecurringFrequency.BI_WEEKLY, 14)
+                        }
+                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 2.5 } && avgInterval in 5.0..9.0 -> {
+                            Triple(txns.size >= 4, RecurringFrequency.WEEKLY, 7)
+                        }
+                        intervals.isNotEmpty() && intervals.all { abs(it - avgInterval) <= 5.0 } && avgInterval in 25.0..35.0 -> {
+                            Triple(txns.size >= 2, RecurringFrequency.MONTHLY, 30)
+                        }
+                        else -> Triple(false, RecurringFrequency.CUSTOM, 30)
+                    }
 
                     if (isRegular) {
                         val lastTxn = sortedTxns.last()
                         val avgAmountRaw = sortedTxns.sumOf { BigDecimal.parseString(it.amount).toDouble() } / sortedTxns.size
                         
                         val name = lastTxn.description?.split("(Ref:")?.get(0)?.trim() ?: "Recurring Bill"
-                        val nextDueDate = lastTxn.dateTime.toLocalDateTime(TimeZone.currentSystemDefault()).date.plus(DatePeriod(days = 30))
+                        
+                        val tz = TimeZone.currentSystemDefault()
+                        val today = DateTimeHelper.now().toLocalDateTime(tz).date
+                        var nextDueDate = lastTxn.dateTime.toLocalDateTime(tz).date.plus(DatePeriod(days = intervalDays))
+
+                        while (nextDueDate < today) {
+                            nextDueDate = nextDueDate.plus(DatePeriod(days = intervalDays))
+                        }
 
                         recurringBills.add(
                             RecurringBill(
@@ -447,7 +594,7 @@ class TransactionRepositoryImpl(
                                 amount = BigDecimal.fromDouble(avgAmountRaw),
                                 category = lastTxn.categoryName ?: "General",
                                 categoryId = lastTxn.categoryId,
-                                frequency = "Monthly",
+                                frequency = frequencyEnum,
                                 nextDueDate = nextDueDate,
                                 isActive = true
                             )
@@ -531,11 +678,72 @@ class TransactionRepositoryImpl(
                     categoryId = row.categoryId,
                     dateTime = row.dateTime,
                     description = row.description,
+                    merchantName = row.merchantName ?: row.description?.let { com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(it) },
                     externalId = row.externalId,
                     balance = row.balance?.let { BigDecimal.parseString(it) },
                     rawMessage = row.rawMessage
                 )
             }
+        }
+    }
+
+    private fun syncSavingsGoalsForCategory(
+        categoryId: String,
+        amount: BigDecimal,
+        isIncome: Boolean,
+        undo: Boolean = false
+    ) {
+        try {
+            val goals = queries.selectSavingsGoalsByCategoryId(categoryId).executeAsList()
+            if (goals.isNotEmpty()) {
+                val amountDouble = amount.doubleValue(false)
+                val baseDelta = if (isIncome) amountDouble else -amountDouble
+                val finalDelta = if (undo) -baseDelta else baseDelta
+
+                goals.forEach { goal ->
+                    val newAmount = (goal.currentAmount + finalDelta).coerceAtLeast(0.0)
+                    queries.updateSavingsGoalAmount(newAmount, goal.id)
+                }
+            }
+        } catch (e: Exception) {
+            logger.error(TAG, "Error syncing savings goals for category $categoryId", e)
+        }
+    }
+
+    private fun syncDebtBalanceForTransaction(
+        transaction: Transaction,
+        undo: Boolean = false
+    ) {
+        try {
+            val desc = (transaction.description ?: "").lowercase()
+            val category = (transaction.category ?: "").lowercase()
+
+            val isDebtPayment = !transaction.isIncome && (
+                category.contains("loan") || category.contains("debt") || category.contains("fuliza") ||
+                desc.contains("fuliza") || desc.contains("loan repayment") || desc.contains("repay loan") ||
+                desc.contains("kcb mpesa loan") || desc.contains("m-shwari loan") || desc.contains("soft debt")
+            )
+
+            if (isDebtPayment) {
+                val debts = queries.selectAllDebts(offlineUserId).executeAsList()
+                if (debts.isNotEmpty()) {
+                    val amountDouble = transaction.amount.doubleValue(false)
+                    val delta = if (undo) amountDouble else -amountDouble
+
+                    // Only auto-deduct if there is an EXACT name match in transaction description
+                    val matchingDebt = debts.find { debt ->
+                        val debtName = debt.name.trim().lowercase()
+                        debtName.isNotBlank() && (desc.contains(debtName) || (debtName.contains("fuliza") && desc.contains("fuliza")))
+                    }
+
+                    if (matchingDebt != null) {
+                        val newBalance = (matchingDebt.balance + delta).coerceAtLeast(0.0)
+                        queries.updateDebtBalance(newBalance, matchingDebt.id)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            logger.error(TAG, "Error syncing debt balance for transaction ${transaction.id}", e)
         }
     }
 }

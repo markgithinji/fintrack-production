@@ -30,12 +30,11 @@ object CategoryMatcher {
         val isExpense = !isIncome
 
         // 2. Dynamic Rule Matching
-        rules.filter { it.isExpense == isExpense }.forEach { rule ->
-            val words = rule.keyword.lowercase().trim().split(Regex("""\s+""")).filter { it.isNotBlank() }
-            if (words.isNotEmpty()) {
-                val matchesText = words.all { textToMatch.contains(it) }
-                val matchesDesc = description?.lowercase()?.let { desc -> words.all { desc.contains(it) } } == true
-                if (matchesText || matchesDesc) {
+        for (i in rules.indices) {
+            val rule = rules[i]
+            if (rule.isExpense == isExpense && rule.keyword.isNotBlank()) {
+                val kw = rule.keyword.lowercase().trim()
+                if (textToMatch.contains(kw) || (description != null && description.lowercase().contains(kw))) {
                     return rule.categoryId
                 }
             }

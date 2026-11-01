@@ -48,6 +48,7 @@ class SummaryRepositoryImpl(
     private val essentialCategories = setOf(
         "Rent", "Groceries", "Transport", "Bills", "Health", "Education", "Utilities", "Insurance"
     )
+    private val essentialCategoriesLower = essentialCategories.map { it.lowercase() }.toSet()
 
     // Default fallback category IDs (Salary and Food)
     private val defaultIncomeId = "aaaaaaaa-aaaa-4aaa-baaa-000000000001"
@@ -57,12 +58,24 @@ class SummaryRepositoryImpl(
 
     private val ratioMode = DecimalMode(decimalPrecision = 20, roundingMode = RoundingMode.ROUND_HALF_AWAY_FROM_ZERO)
 
+    private fun BigDecimal.percentageOf(total: BigDecimal): BigDecimal {
+        if (total <= BigDecimal.ZERO) return BigDecimal.ZERO
+        return this.divide(total, ratioMode).multiply(BigDecimal.fromInt(100))
+    }
+
+    private fun BigDecimal.percentageChangeFrom(previous: BigDecimal): BigDecimal? {
+        if (previous <= BigDecimal.ZERO) return null
+        return (this - previous).divide(previous, ratioMode).multiply(BigDecimal.fromInt(100))
+    }
+
     override suspend fun getHighlightsSummary(
         accountId: String?,
         period: String?
     ): Result<StatisticsSummary> = withContext(Dispatchers.IO) {
         try {
-            val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+            val sysZone = TimeZone.currentSystemDefault()
+            val clockNow = Clock.System.now()
+            val now = clockNow.toLocalDateTime(sysZone).date
             val targetPeriod = period ?: DateTimeHelper.currentMonthCode()
             
             val range = if (targetPeriod.contains("-W")) {
@@ -74,8 +87,8 @@ class SummaryRepositoryImpl(
                 LocalDate(year, 1, 1) to LocalDate(year, 12, 31)
             } else null
 
-            val startInstant = range?.first?.atStartOfDayIn(TimeZone.currentSystemDefault()) ?: Instant.fromEpochSeconds(0)
-            val endInstant = range?.second?.atTime(23, 59, 59)?.toInstant(TimeZone.currentSystemDefault()) ?: Clock.System.now()
+            val startInstant = range?.first?.atStartOfDayIn(sysZone) ?: Instant.fromEpochSeconds(0)
+            val endInstant = range?.second?.atTime(23, 59, 59)?.toInstant(sysZone) ?: clockNow
 
             val targetAccountId = accountId
 
@@ -92,9 +105,7 @@ class SummaryRepositoryImpl(
             val fees = BigDecimal.fromDouble(highlightsResult.feesTotal ?: 0.0)
 
             // Calculate ratios using high-precision math
-            val savingsRate = if (income > BigDecimal.ZERO) {
-                (income - totalExpense).divide(income, ratioMode).multiply(BigDecimal.fromInt(100))
-            } else BigDecimal.ZERO
+            val savingsRate = (income - totalExpense).percentageOf(income)
 
             val expenseCategoryTotals = queries.getCategoryTotals(
                 userId = offlineUserId,
@@ -105,19 +116,17 @@ class SummaryRepositoryImpl(
             ).executeAsList()
 
             val essentialSpend = expenseCategoryTotals
-                .filter { cat -> essentialCategories.any { it.equals(cat.catName.trim(), ignoreCase = true) } }
+                .filter { cat -> cat.catName.trim().lowercase() in essentialCategoriesLower }
                 .sumOf { it.totalSum ?: 0.0 }
             
-            val essentialSpendRatio = if (totalExpense > BigDecimal.ZERO) {
-                BigDecimal.fromDouble(essentialSpend).divide(totalExpense, ratioMode).multiply(BigDecimal.fromInt(100))
-            } else BigDecimal.ZERO
+            val essentialSpendRatio = BigDecimal.fromDouble(essentialSpend).percentageOf(totalExpense)
 
             // Annual Forecast logic from backend
             val currentYear = now.year
             val isCurrentYearView = targetPeriod.startsWith(currentYear.toString())
             
-            val ytdStart = LocalDate(currentYear, 1, 1).atStartOfDayIn(TimeZone.currentSystemDefault())
-            val ytdEnd = Clock.System.now()
+            val ytdStart = LocalDate(currentYear, 1, 1).atStartOfDayIn(sysZone)
+            val ytdEnd = clockNow
             
             val ytdHighlights = queries.getHighlightsByRange(
                 accountId = accountId,
@@ -156,14 +165,14 @@ class SummaryRepositoryImpl(
 
             // YoY Growth: Calculate totals for the same period last year (Backend Parity)
             val lastYear = currentYear - 1
-            val lyStart = LocalDate(lastYear, 1, 1).atStartOfDayIn(TimeZone.currentSystemDefault())
+            val lyStart = LocalDate(lastYear, 1, 1).atStartOfDayIn(sysZone)
             val lyEnd = if (isCurrentYearView) {
                 @Suppress("DEPRECATION") val currentMonth = now.monthNumber
                 @Suppress("DEPRECATION") val currentDay = now.dayOfMonth
                 val safeDay = if (currentMonth == 2 && currentDay == 29) 28 else currentDay
-                LocalDate(lastYear, currentMonth, safeDay).atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+                LocalDate(lastYear, currentMonth, safeDay).atTime(23, 59, 59).toInstant(sysZone)
             } else {
-                LocalDate(lastYear, 12, 31).atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+                LocalDate(lastYear, 12, 31).atTime(23, 59, 59).toInstant(sysZone)
             }
 
             val lyHighlights = queries.getHighlightsByRange(accountId, offlineUserId, lyStart, lyEnd).executeAsOne()
@@ -172,17 +181,12 @@ class SummaryRepositoryImpl(
             val lyFeeAmount = lyExpenseRaw.find { it.catName.trim() in feeCategoryNames }?.totalSum ?: 0.0
             val lyTotalExpense = BigDecimal.fromDouble(lyExpenseRaw.sumOf { it.totalSum ?: 0.0 } - lyFeeAmount) + BigDecimal.fromDouble(lyHighlights.feesTotal ?: 0.0)
 
-            val ytdIncomeChange = if (lyIncome > BigDecimal.ZERO) {
-                (ytdIncome - lyIncome).divide(lyIncome, ratioMode).multiply(BigDecimal.fromInt(100))
-            } else null
-            
-            val ytdExpenseChange = if (lyTotalExpense > BigDecimal.ZERO) {
-                (ytdTotalExpense - lyTotalExpense).divide(lyTotalExpense, ratioMode).multiply(BigDecimal.fromInt(100))
-            } else null
+            val ytdIncomeChange = ytdIncome.percentageChangeFrom(lyIncome)
+            val ytdExpenseChange = ytdTotalExpense.percentageChangeFrom(lyTotalExpense)
 
             // Volatility Tracking: Get data from previous year
-            val prevYearStart = LocalDate(currentYear - 1, 1, 1).atStartOfDayIn(TimeZone.currentSystemDefault())
-            val prevYearEnd = LocalDate(currentYear - 1, 12, 31).atTime(23, 59, 59).toInstant(TimeZone.currentSystemDefault())
+            val prevYearStart = LocalDate(currentYear - 1, 1, 1).atStartOfDayIn(sysZone)
+            val prevYearEnd = LocalDate(currentYear - 1, 12, 31).atTime(23, 59, 59).toInstant(sysZone)
             
             val prevYearCategoryTotals = queries.getCategoryTotals(
                 userId = offlineUserId,
@@ -231,8 +235,7 @@ class SummaryRepositoryImpl(
                         val curAmount = BigDecimal.fromDouble(current.totalSum ?: 0.0)
                         val prevMatch = prevTotals.find { it.catId == current.catId }
                         val volatility = if (prevMatch != null && (prevMatch.totalSum ?: 0.0) > 0) {
-                            val prevAmount = BigDecimal.fromDouble(prevMatch.totalSum ?: 0.0)
-                            (curAmount - prevAmount).divide(prevAmount, ratioMode).multiply(BigDecimal.fromInt(100))
+                            curAmount.percentageChangeFrom(BigDecimal.fromDouble(prevMatch.totalSum ?: 0.0))
                         } else null
 
                         Highlight(
@@ -315,6 +318,8 @@ class SummaryRepositoryImpl(
         accountId: String?
     ): Result<DistributionSummary> = withContext(Dispatchers.IO) {
         try {
+            val sysZone = TimeZone.currentSystemDefault()
+            val clockNow = Clock.System.now()
             val isIncomeValue = if (type?.lowercase() == "income") 1L else if (type?.lowercase() == "expense") 0L else null
             
             // 1. Determine Date Range
@@ -323,17 +328,17 @@ class SummaryRepositoryImpl(
             } else if (weekOrMonthCode.length == 7) {
                 DateTimeUtils.getMonthRange(weekOrMonthCode)
             } else if (weekOrMonthCode.length == 4) {
-                val year = weekOrMonthCode.toIntOrNull() ?: Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
+                val year = weekOrMonthCode.toIntOrNull() ?: clockNow.toLocalDateTime(sysZone).year
                 LocalDate(year, 1, 1) to LocalDate(year, 12, 31)
             } else null
 
             val startInstant = start?.let { Instant.parse(it) } 
-                ?: range?.first?.atStartOfDayIn(TimeZone.currentSystemDefault()) 
+                ?: range?.first?.atStartOfDayIn(sysZone) 
                 ?: Instant.fromEpochSeconds(0)
                 
             val endInstant = end?.let { Instant.parse(it) } 
-                ?: range?.second?.atTime(23, 59, 59)?.toInstant(TimeZone.currentSystemDefault()) 
-                ?: Clock.System.now()
+                ?: range?.second?.atTime(23, 59, 59)?.toInstant(sysZone) 
+                ?: clockNow
 
             val targetAccountId = accountId
 
@@ -386,7 +391,7 @@ class SummaryRepositoryImpl(
                 .groupBy { it.categoryId }
                 .mapValues { (_, txs) ->
                     val catName = txs.firstOrNull()?.let { queries.selectCategoryById(it.categoryId).executeAsOneOrNull()?.name } ?: "Unknown"
-                    txs.mapNotNull { it.description }
+                    txs.mapNotNull { it.merchantName.takeIf { m -> !m.isNullOrBlank() } ?: it.description }
                         .filter { MerchantInsightUtils.isDescriptionMeaningful(it, catName) }
                         .map { MerchantInsightUtils.cleanMerchantName(it) }
                         .groupBy { it }
@@ -406,7 +411,7 @@ class SummaryRepositoryImpl(
                 otherCategories.flatMap { cat -> 
                     allTransactionsForPeriod.filter { it.categoryId == cat.catId }
                 }
-                .mapNotNull { it.description }
+                .mapNotNull { it.merchantName.takeIf { m -> !m.isNullOrBlank() } ?: it.description }
                 .filter { MerchantInsightUtils.isDescriptionMeaningful(it, "Others") }
                 .map { MerchantInsightUtils.cleanMerchantName(it) }
                 .groupBy { it }
@@ -614,8 +619,13 @@ class SummaryRepositoryImpl(
     override suspend fun getAvailableWeeks(accountId: String?): Result<AvailableWeeks> = withContext(Dispatchers.IO) {
         try {
             val targetAccountId = accountId
-            val weeks = queries.selectDistinctWeeks(offlineUserId, targetAccountId).executeAsList()
-            Result.Success(AvailableWeeks(weeks))
+            val ceilingWeekCode = com.fintrack.shared.feature.core.util.DateTimeHelper.currentSqliteWeekCode()
+            val rawWeeks = queries.selectDistinctWeeks(offlineUserId, targetAccountId).executeAsList()
+            val validWeeks = rawWeeks.filter { weekStr ->
+                val yearPart = weekStr.split("-").firstOrNull()?.toIntOrNull()
+                yearPart != null && yearPart > 1970 && yearPart <= 2100 && weekStr <= ceilingWeekCode
+            }
+            Result.Success(AvailableWeeks(validWeeks))
         } catch (e: Exception) {
             Result.Error(e)
         }
@@ -624,8 +634,13 @@ class SummaryRepositoryImpl(
     override suspend fun getAvailableMonths(accountId: String?): Result<AvailableMonths> = withContext(Dispatchers.IO) {
         try {
             val targetAccountId = accountId
-            val months = queries.selectDistinctMonths(offlineUserId, targetAccountId).executeAsList()
-            Result.Success(AvailableMonths(months))
+            val ceilingMonthCode = com.fintrack.shared.feature.core.util.DateTimeHelper.currentMonthCode()
+            val rawMonths = queries.selectDistinctMonths(offlineUserId, targetAccountId).executeAsList()
+            val validMonths = rawMonths.filter { monthStr ->
+                val yearPart = monthStr.split("-").firstOrNull()?.toIntOrNull()
+                yearPart != null && yearPart > 1970 && yearPart <= 2100 && monthStr <= ceilingMonthCode
+            }
+            Result.Success(AvailableMonths(validMonths))
         } catch (e: Exception) {
             Result.Error(e)
         }
@@ -634,14 +649,23 @@ class SummaryRepositoryImpl(
     override suspend fun getAvailableYears(accountId: String?): Result<AvailableYears> = withContext(Dispatchers.IO) {
         try {
             val targetAccountId = accountId
-            val years = queries.selectDistinctYears(offlineUserId, targetAccountId).executeAsList()
-            Result.Success(AvailableYears(years))
+            val ceilingYearCode = com.fintrack.shared.feature.core.util.DateTimeHelper.currentYearCode()
+            val rawYears = queries.selectDistinctYears(offlineUserId, targetAccountId).executeAsList()
+            val validYears = rawYears.filter { yr ->
+                val num = yr.toIntOrNull()
+                num != null && num > 1970 && num <= 2100 && yr <= ceilingYearCode
+            }
+            Result.Success(AvailableYears(validYears))
         } catch (e: Exception) {
             Result.Error(e)
         }
     }
 
-    override suspend fun getOverviewSummary(accountId: String?): Result<OverviewSummary> = withContext(Dispatchers.IO) {
+    override suspend fun getOverviewSummary(
+        accountId: String?,
+        startDate: String?,
+        endDate: String?
+    ): Result<OverviewSummary> = withContext(Dispatchers.IO) {
         try {
             val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
             
@@ -650,12 +674,17 @@ class SummaryRepositoryImpl(
             val targetMonthCode = currentMonthCode
             val isCurrent = true
             
-            val monthStart = try { LocalDate.parse("$targetMonthCode-01") } catch(_: Exception) { now }
-            val monthEnd = monthStart.plus(DatePeriod(months = 1)).minus(DatePeriod(days = 1))
+            val monthStart = if (!startDate.isNullOrBlank()) {
+                try { LocalDate.parse(startDate) } catch (_: Exception) { now }
+            } else try { LocalDate.parse("$targetMonthCode-01") } catch(_: Exception) { now }
 
-            val trendEnd = if (isCurrent) now else monthEnd
+            val monthEnd = if (!endDate.isNullOrBlank()) {
+                try { LocalDate.parse(endDate) } catch (_: Exception) { now }
+            } else monthStart.plus(DatePeriod(months = 1)).minus(DatePeriod(days = 1))
+
+            val trendEnd = if (isCurrent && endDate.isNullOrBlank()) now else monthEnd
             val weeklyStart = trendEnd.minus(DatePeriod(days = 6))
-            val monthlyStart = trendEnd.minus(DatePeriod(days = 29))
+            val monthlyStart = if (!startDate.isNullOrBlank()) monthStart else trendEnd.minus(DatePeriod(days = 29))
 
             val weeklyData = queries.getDailyTotals(
                 userId = offlineUserId,
@@ -996,6 +1025,101 @@ class SummaryRepositoryImpl(
             )
         } catch (e: Exception) {
             logger.error(tag, "Error fetching profile metrics", e)
+            Result.Error(e)
+        }
+    }
+
+    override suspend fun getTopMerchants(
+        accountId: String?,
+        days: Int,
+        limit: Long,
+        isIncome: Boolean
+    ): Result<List<MerchantSummary>> = withContext(Dispatchers.IO) {
+        try {
+            val nowInstant = kotlin.time.Clock.System.now()
+            val startDaysAgo = nowInstant.minus(days, kotlinx.datetime.DateTimeUnit.DAY, TimeZone.currentSystemDefault())
+
+            val targetAccountIds = accountId?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+
+            data class TempTxRow(
+                val isIncome: Long,
+                val accountId: String,
+                val description: String?,
+                val merchantName: String?,
+                val amount: String,
+                val dateTime: kotlinx.datetime.Instant
+            )
+
+            val filteredTx: List<TempTxRow> = queries.selectTransactionsByRange(
+                userId = offlineUserId,
+                dateTime = startDaysAgo,
+                dateTime_ = nowInstant
+            ).executeAsList().map {
+                TempTxRow(it.isIncome, it.accountId, it.description, it.merchantName, it.amount, it.dateTime)
+            }.filter { tx ->
+                val matchesType = if (isIncome) tx.isIncome != 0L else tx.isIncome == 0L
+                val matchesAccount = if (targetAccountIds.isNotEmpty()) {
+                    targetAccountIds.contains(tx.accountId)
+                } else true
+                matchesType && matchesAccount
+            }
+
+            class MerchantAccumulator(
+                val cleanName: String,
+                var totalSpent: Double = 0.0,
+                var visitCount: Int = 0,
+                var firstSeen: kotlinx.datetime.Instant? = null,
+                var lastSeen: kotlinx.datetime.Instant? = null
+            )
+
+            val map = mutableMapOf<String, MerchantAccumulator>()
+
+            for (tx in filteredTx) {
+                val cleanName = if (!tx.merchantName.isNullOrBlank()) {
+                    tx.merchantName
+                } else {
+                    val rawDesc = tx.description ?: "Other"
+                    com.fintrack.shared.feature.transaction.util.MerchantNameCleaner.clean(rawDesc)
+                }
+
+                val mapKey = cleanName.lowercase()
+
+                val acc = map.getOrPut(mapKey) { MerchantAccumulator(cleanName) }
+                val amount = tx.amount.toDoubleOrNull() ?: 0.0
+                acc.totalSpent = acc.totalSpent + amount
+                acc.visitCount += 1
+
+                val txTime = tx.dateTime
+                if (acc.firstSeen == null || txTime < acc.firstSeen!!) {
+                    acc.firstSeen = txTime
+                }
+                if (acc.lastSeen == null || txTime > acc.lastSeen!!) {
+                    acc.lastSeen = txTime
+                }
+            }
+
+            val merchantSummaries = map.values
+                .sortedByDescending { it.totalSpent }
+                .take(limit.toInt())
+                .mapIndexed { index, acc ->
+                    val avgCost = if (acc.visitCount > 0) acc.totalSpent / acc.visitCount else 0.0
+                    val firstSeenStr = acc.firstSeen?.toLocalDateTime(TimeZone.currentSystemDefault())?.date?.toString() ?: ""
+                    val lastSeenStr = acc.lastSeen?.toLocalDateTime(TimeZone.currentSystemDefault())?.date?.toString() ?: ""
+
+                    MerchantSummary(
+                        rank = index + 1,
+                        merchantName = acc.cleanName,
+                        totalSpent = BigDecimal.fromDouble(acc.totalSpent),
+                        visitCount = acc.visitCount,
+                        averageTransactionCost = BigDecimal.fromDouble(avgCost),
+                        firstSeenDate = firstSeenStr,
+                        lastSeenDate = lastSeenStr
+                    )
+                }
+
+            Result.Success(merchantSummaries)
+        } catch (e: Exception) {
+            logger.error(tag, "Error fetching top merchants", e)
             Result.Error(e)
         }
     }

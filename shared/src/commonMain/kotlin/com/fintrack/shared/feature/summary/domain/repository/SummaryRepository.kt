@@ -7,6 +7,7 @@ import com.fintrack.shared.feature.summary.domain.model.AvailableYears
 import com.fintrack.shared.feature.summary.domain.model.CategoryComparison
 import com.fintrack.shared.feature.summary.domain.model.CategoryComparisonSummary
 import com.fintrack.shared.feature.summary.domain.model.DistributionSummary
+import com.fintrack.shared.feature.summary.domain.model.MerchantSummary
 import com.fintrack.shared.feature.summary.domain.model.OverviewSummary
 import com.fintrack.shared.feature.summary.domain.model.ProfileMetrics
 import com.fintrack.shared.feature.summary.domain.model.StatisticsSummary
@@ -27,7 +28,11 @@ interface SummaryRepository {
     suspend fun getAvailableWeeks(accountId: String?): Result<AvailableWeeks>
     suspend fun getAvailableMonths(accountId: String?): Result<AvailableMonths>
     suspend fun getAvailableYears(accountId: String?): Result<AvailableYears>
-    suspend fun getOverviewSummary(accountId: String?): Result<OverviewSummary>
+    suspend fun getOverviewSummary(
+        accountId: String?,
+        startDate: String? = null,
+        endDate: String? = null
+    ): Result<OverviewSummary>
     suspend fun getCategoryComparisons(
         accountId: String?,
         period: String? = null
@@ -42,4 +47,11 @@ interface SummaryRepository {
     ): Result<TransactionCountSummary>
 
     suspend fun getProfileMetrics(): Result<ProfileMetrics>
+
+    suspend fun getTopMerchants(
+        accountId: String?,
+        days: Int = 30,
+        limit: Long = 10,
+        isIncome: Boolean = false
+    ): Result<List<MerchantSummary>>
 }

@@ -96,10 +96,24 @@ class CustomAnalysisViewModel(
                 startOfYear.toString() to today.toString()
             }
             DatePreset.ALL_TIME -> null to null
-            DatePreset.CUSTOM -> _state.value.startDate to _state.value.endDate
+            DatePreset.CUSTOM -> {
+                val singleDate = _state.value.startDate ?: today.toString()
+                singleDate to singleDate
+            }
         }
 
         _state.update { it.copy(datePreset = preset, startDate = start, endDate = end) }
+        runAnalysis()
+    }
+
+    fun setCustomDate(date: String) {
+        _state.update {
+            it.copy(
+                datePreset = DatePreset.CUSTOM,
+                startDate = date,
+                endDate = date
+            )
+        }
         runAnalysis()
     }
 
@@ -292,21 +306,22 @@ class CustomAnalysisViewModel(
             val net = income - expense
             val count = filtered.size
             val avg = if (count > 0) (income + expense) / count else 0.0
-            val highest = filtered.maxByOrNull { it.amount.doubleValue(false) }
+            val highest = filtered.maxByOrNull { it.totalAmount.doubleValue(false) }
 
             // Category breakdown
             val categoryGrouped = filtered.groupBy { it.categoryId }
-            val totalVol = income + expense
             val breakdown = categoryGrouped.map { (catId, list) ->
                 val catName = currentState.allCategories.find { it.id == catId }?.name ?: list.firstOrNull()?.category ?: "Other"
                 val sum = list.sumOf { it.amount.doubleValue(false) }
-                val pct = if (totalVol > 0) (sum / totalVol) * 100 else 0.0
+                val isExpenseCat = list.firstOrNull()?.let { !it.isIncome } ?: true
+                val denominator = if (isExpenseCat) expense else income
+                val pct = if (denominator > 0) (sum / denominator) * 100 else 0.0
                 CategoryShare(
                     categoryId = catId,
                     categoryName = catName,
                     totalAmount = sum,
                     percentage = pct,
-                    isExpense = list.firstOrNull()?.let { !it.isIncome } ?: true
+                    isExpense = isExpenseCat
                 )
             }.sortedByDescending { it.totalAmount }
 
@@ -347,15 +362,26 @@ class CustomAnalysisViewModel(
 
             val savedPath = fileSaver.saveFile(filename, content)
             _state.update {
-                it.copy(
-                    isExporting = false,
-                    exportSuccessMessage = if (savedPath != null) "Exported report to $savedPath successfully!" else "Export failed or cancelled."
-                )
+                if (savedPath != null) {
+                    it.copy(
+                        isExporting = false,
+                        exportSuccessMessage = "Exported report to $savedPath successfully!"
+                    )
+                } else {
+                    it.copy(
+                        isExporting = false,
+                        error = "Export failed or cancelled"
+                    )
+                }
             }
         }
     }
 
     fun clearExportMessage() {
         _state.update { it.copy(exportSuccessMessage = null) }
+    }
+
+    fun clearError() {
+        _state.update { it.copy(error = null) }
     }
 }

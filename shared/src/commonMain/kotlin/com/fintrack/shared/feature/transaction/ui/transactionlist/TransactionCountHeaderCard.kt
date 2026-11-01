@@ -33,7 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -196,7 +195,7 @@ private fun TransactionCountSuccessState(
                         when {
                             isIncome == true -> counts.totalAmount - counts.totalTransactionCost
                             isIncome == false || hasTransactionCost == true -> counts.totalAmount + counts.totalTransactionCost
-                            else -> counts.totalAmount
+                            else -> counts.totalAmount + counts.totalTransactionCost
                         }
                     } else {
                         counts.totalAmount
@@ -223,9 +222,7 @@ private fun TransactionCountSuccessState(
                         Checkbox(
                             checked = includeFees,
                             onCheckedChange = onIncludeFeesChange,
-                            modifier = Modifier
-                                .size(12.dp)
-                                .scale(0.7f),
+                            modifier = Modifier.size(18.dp),
                             colors = CheckboxDefaults.colors(checkedColor = themeColor)
                         )
                         Spacer(modifier = Modifier.width(4.dp))

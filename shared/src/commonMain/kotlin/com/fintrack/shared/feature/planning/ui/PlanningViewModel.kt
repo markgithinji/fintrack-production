@@ -1,14 +1,19 @@
-package com.fintrack.shared.feature.budget.ui
+package com.fintrack.shared.feature.planning.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlin.time.Clock
+import kotlinx.coroutines.delay
 import com.fintrack.shared.feature.account.domain.model.Account
 import com.fintrack.shared.feature.budget.domain.model.Budget
 import com.fintrack.shared.feature.budget.domain.model.BudgetFormState
 import com.fintrack.shared.feature.budget.domain.model.BudgetWithStatus
 import com.fintrack.shared.feature.budget.domain.repository.BudgetRepository
 import com.fintrack.shared.feature.budget.domain.usecase.BudgetValidationUseCase
+import com.fintrack.shared.feature.budget.domain.model.SavingsGoal
+import com.fintrack.shared.feature.budget.domain.model.SavingsGoalWithCalculation
+import com.fintrack.shared.feature.budget.domain.repository.SavingsGoalRepository
+import com.fintrack.shared.feature.budget.domain.usecase.GetSavingsGoalsUseCase
+import com.fintrack.shared.feature.core.util.randomUUID
 import com.fintrack.shared.feature.category.data.LocalCategoryDataSource
 import com.fintrack.shared.feature.category.domain.model.Category
 import com.fintrack.shared.feature.category.domain.usecase.SyncCategoriesUseCase
@@ -16,6 +21,11 @@ import com.fintrack.shared.feature.core.domain.SaveState
 import com.fintrack.shared.feature.core.domain.ValidationResult
 import com.fintrack.shared.feature.core.util.Result
 import com.fintrack.shared.feature.core.util.formatToTwoPrecision
+import com.fintrack.shared.feature.planning.domain.model.Debt
+import com.fintrack.shared.feature.planning.domain.model.DebtPayoffPlan
+import com.fintrack.shared.feature.planning.domain.model.DebtStrategy
+import com.fintrack.shared.feature.planning.domain.repository.DebtRepository
+import com.fintrack.shared.feature.planning.domain.usecase.CalculateDebtPayoffPlanUseCase
 import com.fintrack.shared.feature.transaction.domain.service.ReceiptScanner
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,19 +36,267 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
+import com.fintrack.shared.feature.planning.domain.model.Asset
+import com.fintrack.shared.feature.planning.domain.model.AssetType
+import com.fintrack.shared.feature.planning.domain.repository.AssetRepository
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 
-class BudgetViewModel(
+enum class PlanningTab {
+    SPENDING_BUDGETS,
+    SAVINGS_GOALS,
+    ASSETS_PORTFOLIO,
+    DEBT_PAYOFF
+}
+
+class PlanningViewModel(
     private val budgetRepository: BudgetRepository,
+    private val savingsGoalRepository: SavingsGoalRepository,
+    private val getSavingsGoalsUseCase: GetSavingsGoalsUseCase,
     private val validationUseCase: BudgetValidationUseCase,
     private val localCategoryDataSource: LocalCategoryDataSource,
     private val syncCategoriesUseCase: SyncCategoriesUseCase,
-    private val receiptScanner: ReceiptScanner? = null
+    private val debtRepository: DebtRepository? = null,
+    private val calculateDebtPayoffPlanUseCase: CalculateDebtPayoffPlanUseCase = CalculateDebtPayoffPlanUseCase(),
+    private val receiptScanner: ReceiptScanner? = null,
+    private val assetRepository: AssetRepository? = null
 ) : ViewModel() {
+
+    private val _selectedTab = MutableStateFlow(PlanningTab.SPENDING_BUDGETS)
+    val selectedTab: StateFlow<PlanningTab> = _selectedTab.asStateFlow()
+
+    private val _savingsGoals = MutableStateFlow<Result<List<SavingsGoalWithCalculation>>>(Result.Loading)
+    val savingsGoals: StateFlow<Result<List<SavingsGoalWithCalculation>>> = _savingsGoals.asStateFlow()
+
+    private val _assets = MutableStateFlow<Result<List<Asset>>>(Result.Loading)
+    val assets: StateFlow<Result<List<Asset>>> = _assets.asStateFlow()
+
+    private val _debts = MutableStateFlow<Result<List<Debt>>>(Result.Loading)
+    val debts: StateFlow<Result<List<Debt>>> = _debts.asStateFlow()
+
+    private val _selectedStrategy = MutableStateFlow(DebtStrategy.SNOWBALL)
+    val selectedStrategy: StateFlow<DebtStrategy> = _selectedStrategy.asStateFlow()
+
+    private val _extraMonthlyPayment = MutableStateFlow(0.0)
+    val extraMonthlyPayment: StateFlow<Double> = _extraMonthlyPayment.asStateFlow()
+
+    private val _payoffPlan = MutableStateFlow<DebtPayoffPlan?>(null)
+    val payoffPlan: StateFlow<DebtPayoffPlan?> = _payoffPlan.asStateFlow()
+
+    fun selectTab(tab: PlanningTab) {
+        _selectedTab.value = tab
+        if (tab == PlanningTab.SAVINGS_GOALS && _savingsGoals.value is Result.Loading) {
+            loadSavingsGoals()
+        } else if (tab == PlanningTab.ASSETS_PORTFOLIO && _assets.value is Result.Loading) {
+            loadAssets()
+        } else if (tab == PlanningTab.DEBT_PAYOFF && _debts.value is Result.Loading) {
+            loadDebts()
+        }
+    }
+
+    fun loadAssets() {
+        if (assetRepository == null) return
+        viewModelScope.launch {
+            _assets.value = Result.Loading
+            _assets.value = assetRepository.getAssets()
+        }
+    }
+
+    fun saveOrUpdateAsset(
+        id: String? = null,
+        name: String,
+        assetType: AssetType,
+        balance: Double,
+        annualYieldPercentage: Double?
+    ) {
+        if (assetRepository == null) return
+        viewModelScope.launch {
+            val assetId = id ?: randomUUID()
+            val existingAsset = if (id != null) (assetRepository.getAssetById(id) as? Result.Success)?.data else null
+
+            val asset = Asset(
+                id = assetId,
+                userId = existingAsset?.userId ?: "local_user",
+                name = name,
+                assetType = assetType,
+                currentBalance = balance,
+                annualYieldPercentage = annualYieldPercentage,
+                categoryId = existingAsset?.categoryId,
+                accountId = existingAsset?.accountId,
+                colorHex = existingAsset?.colorHex ?: "#2979FF",
+                createdAt = existingAsset?.createdAt ?: kotlin.time.Clock.System.now().toString()
+            )
+            val res = assetRepository.saveAsset(asset)
+            if (res is Result.Success) {
+                loadAssets()
+            }
+        }
+    }
+
+    fun deleteAsset(assetId: String) {
+        if (assetRepository == null) return
+        viewModelScope.launch {
+            val res = assetRepository.deleteAsset(assetId)
+            if (res is Result.Success) {
+                loadAssets()
+            }
+        }
+    }
+
+    fun loadDebts() {
+        if (debtRepository == null) return
+        viewModelScope.launch {
+            _debts.value = Result.Loading
+            val res = debtRepository.getDebts()
+            _debts.value = res
+            if (res is Result.Success) {
+                recalculatePayoffPlan(res.data)
+            }
+        }
+    }
+
+    fun setStrategy(strategy: DebtStrategy) {
+        _selectedStrategy.value = strategy
+        val currentDebts = (_debts.value as? Result.Success)?.data ?: emptyList()
+        recalculatePayoffPlan(currentDebts)
+    }
+
+    fun setExtraMonthlyPayment(amount: Double) {
+        _extraMonthlyPayment.value = amount
+        val currentDebts = (_debts.value as? Result.Success)?.data ?: emptyList()
+        recalculatePayoffPlan(currentDebts)
+    }
+
+    private fun recalculatePayoffPlan(debtList: List<Debt>) {
+        _payoffPlan.value = calculateDebtPayoffPlanUseCase(
+            debts = debtList,
+            strategy = _selectedStrategy.value,
+            extraMonthlyPayment = _extraMonthlyPayment.value
+        )
+    }
+
+    fun saveOrUpdateDebt(id: String? = null, name: String, balance: Double, interestRate: Double, minimumPayment: Double) {
+        if (debtRepository == null) return
+        viewModelScope.launch {
+            val debtId = id ?: randomUUID()
+            val existingDebt = if (id != null) (debtRepository.getDebtById(id) as? Result.Success)?.data else null
+
+            val updatedDebt = Debt(
+                id = debtId,
+                userId = existingDebt?.userId ?: "local_user",
+                name = name,
+                balance = balance,
+                initialBalance = existingDebt?.initialBalance ?: balance,
+                interestRate = interestRate,
+                minimumPayment = minimumPayment,
+                categoryId = existingDebt?.categoryId,
+                accountId = existingDebt?.accountId,
+                colorHex = existingDebt?.colorHex ?: "#E53935",
+                createdAt = existingDebt?.createdAt ?: kotlin.time.Clock.System.now().toString()
+            )
+            val res = debtRepository.saveDebt(updatedDebt)
+            if (res is Result.Success) {
+                loadDebts()
+            }
+        }
+    }
+
+    fun logDebtRepayment(debtId: String, amount: Double) {
+        if (debtRepository == null) return
+        viewModelScope.launch {
+            val debtRes = debtRepository.getDebtById(debtId)
+            if (debtRes is Result.Success && debtRes.data != null) {
+                val debt = debtRes.data!!
+                val newBal = (debt.balance - amount).coerceAtLeast(0.0)
+                val res = debtRepository.updateDebtBalance(debtId, newBal)
+                if (res is Result.Success) {
+                    loadDebts()
+                }
+            }
+        }
+    }
+
+    fun deleteDebt(debtId: String) {
+        if (debtRepository == null) return
+        viewModelScope.launch {
+            val res = debtRepository.deleteDebt(debtId)
+            if (res is Result.Success) {
+                loadDebts()
+            }
+        }
+    }
+
+    fun loadSavingsGoals() {
+        viewModelScope.launch {
+            _savingsGoals.value = Result.Loading
+            _savingsGoals.value = getSavingsGoalsUseCase()
+        }
+    }
+
+    fun saveOrUpdateSavingsGoal(
+        id: String? = null,
+        name: String,
+        targetAmount: Double,
+        targetDate: String,
+        categoryId: String? = null,
+        accountId: String? = null,
+        iconName: String = "Savings",
+        colorHex: String = "#2E7D32",
+        goalType: com.fintrack.shared.feature.budget.domain.model.GoalType = com.fintrack.shared.feature.budget.domain.model.GoalType.SAVINGS_ASSET,
+        annualRatePercentage: Double? = null
+    ) {
+        viewModelScope.launch {
+            val goalId = id ?: randomUUID()
+            val existingGoal = if (id != null) (savingsGoalRepository.getSavingsGoalById(id) as? Result.Success)?.data else null
+
+            val goal = SavingsGoal(
+                id = goalId,
+                userId = existingGoal?.userId ?: "local_user",
+                name = name,
+                targetAmount = targetAmount,
+                currentAmount = existingGoal?.currentAmount ?: 0.0,
+                targetDate = targetDate,
+                categoryId = categoryId ?: existingGoal?.categoryId,
+                accountId = accountId ?: existingGoal?.accountId,
+                iconName = existingGoal?.iconName ?: iconName,
+                colorHex = existingGoal?.colorHex ?: colorHex,
+                createdAt = existingGoal?.createdAt ?: kotlin.time.Clock.System.now().toString(),
+                goalType = existingGoal?.goalType ?: goalType,
+                annualRatePercentage = existingGoal?.annualRatePercentage ?: annualRatePercentage
+            )
+            val res = savingsGoalRepository.saveSavingsGoal(goal)
+            if (res is Result.Success) {
+                loadSavingsGoals()
+            } else if (res is Result.Error) {
+                println("[SAVINGS_GOAL_LOG] Error saving savings goal: ${res.exception.message}")
+            }
+        }
+    }
+
+    fun depositToGoal(goalId: String, amount: Double) {
+        viewModelScope.launch {
+            val currentResult = savingsGoalRepository.getSavingsGoalById(goalId)
+            if (currentResult is Result.Success && currentResult.data != null) {
+                val goal = currentResult.data
+                val newAmount = goal.currentAmount + amount
+                savingsGoalRepository.updateGoalAmount(goalId, newAmount)
+                loadSavingsGoals()
+            }
+        }
+    }
+
+    fun deleteSavingsGoal(goalId: String) {
+        viewModelScope.launch {
+            val res = savingsGoalRepository.deleteSavingsGoal(goalId)
+            if (res is Result.Success) {
+                loadSavingsGoals()
+            }
+        }
+    }
 
     private val _categories = MutableStateFlow<List<Category>>(emptyList())
     val categories: StateFlow<List<Category>> = _categories.asStateFlow()
@@ -64,6 +322,13 @@ class BudgetViewModel(
     private val _receiptScanState = MutableStateFlow<Result<Unit>?>(null)
     val receiptScanState: StateFlow<Result<Unit>?> = _receiptScanState.asStateFlow()
 
+    private val _calculatorsState = MutableStateFlow(com.fintrack.shared.feature.planning.domain.calculator.FinancialCalculatorsState())
+    val calculatorsState: StateFlow<com.fintrack.shared.feature.planning.domain.calculator.FinancialCalculatorsState> = _calculatorsState.asStateFlow()
+
+    fun updateCalculatorsState(transform: (com.fintrack.shared.feature.planning.domain.calculator.FinancialCalculatorsState) -> com.fintrack.shared.feature.planning.domain.calculator.FinancialCalculatorsState) {
+        _calculatorsState.update(transform)
+    }
+
     private var hasInitializedForm = false
 
     fun scanReceipt(imageBytes: ByteArray) {
@@ -79,7 +344,6 @@ class BudgetViewModel(
             if (result is Result.Success) {
                 val data = result.data
                 
-                // Match the suggested category
                 val currentCategories = _categories.value
                 val matchedCategory = data.suggestedCategoryName?.let { suggested ->
                     currentCategories.find { it.name.contains(suggested, ignoreCase = true) }
@@ -148,7 +412,7 @@ class BudgetViewModel(
     }
 
     private fun computeInitialFormState(): BudgetFormState {
-        val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+        val today = kotlin.time.Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
         return BudgetFormState(
             name = "",
             amount = "",

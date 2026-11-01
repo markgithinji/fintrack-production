@@ -1,10 +1,13 @@
 package com.fintrack.shared.feature.budget.di
 
 import com.fintrack.shared.feature.budget.data.repository.BudgetRepositoryImpl
+import com.fintrack.shared.feature.budget.data.repository.SavingsGoalRepositoryImpl
 import com.fintrack.shared.feature.budget.domain.repository.BudgetRepository
+import com.fintrack.shared.feature.budget.domain.repository.SavingsGoalRepository
 import com.fintrack.shared.feature.budget.domain.usecase.BudgetValidationUseCase
 import com.fintrack.shared.feature.budget.domain.usecase.CheckBudgetThresholdsUseCase
-import com.fintrack.shared.feature.budget.ui.BudgetViewModel
+import com.fintrack.shared.feature.budget.domain.usecase.GetSavingsGoalsUseCase
+import com.fintrack.shared.feature.planning.ui.PlanningViewModel
 import com.fintrack.shared.feature.transaction.domain.service.ReceiptScanner
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
@@ -12,11 +15,15 @@ import org.koin.dsl.module
 
 val budgetModule = module {
     single<BudgetRepository> { BudgetRepositoryImpl(database = get(), logger = get()) }
+    single<SavingsGoalRepository> { SavingsGoalRepositoryImpl(database = get()) }
     singleOf(::BudgetValidationUseCase)
     singleOf(::CheckBudgetThresholdsUseCase)
+    single { GetSavingsGoalsUseCase(savingsGoalRepository = get(), transactionRepository = get(), accountRepository = getOrNull()) }
     viewModel { 
-        BudgetViewModel(
+        PlanningViewModel(
             budgetRepository = get(),
+            savingsGoalRepository = get(),
+            getSavingsGoalsUseCase = get(),
             validationUseCase = get(),
             localCategoryDataSource = get(),
             syncCategoriesUseCase = get(),
